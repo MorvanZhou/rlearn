@@ -5,8 +5,8 @@ import typing as tp
 import numpy as np
 from tensorflow import keras
 
-from rllearn.model import tools
-from rllearn.model.base import BaseRLNet
+from rlearn.model import tools
+from rlearn.model.base import BaseRLNet
 
 
 class DQN(BaseRLNet):

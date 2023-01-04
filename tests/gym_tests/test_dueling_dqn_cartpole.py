@@ -2,34 +2,34 @@ import os
 
 import gym
 
-import rllearn
+import rlearn
 
-conf = rllearn.TrainConfig(
-    trainer=rllearn.DuelingDQNTrainer.name,
+conf = rlearn.TrainConfig(
+    trainer=rlearn.DuelingDQNTrainer.name,
     batch_size=32,
     epochs=1000,
     action_transform=[0, 1],
-    nets=[rllearn.NetConfig(
+    nets=[rlearn.NetConfig(
         input_shape=(4,),
         layers=[
-            rllearn.LayerConfig("dense", args={"units": 20}),
-            rllearn.LayerConfig("relu"),
+            rlearn.LayerConfig("dense", args={"units": 20}),
+            rlearn.LayerConfig("relu"),
         ]
     )],
     gamma=0.9,
     learning_rates=(0.01,),
-    replay_buffer=rllearn.ReplayBufferConfig(500),
+    replay_buffer=rlearn.ReplayBufferConfig(500),
     replace_step=100,
     not_learn_epochs=5,
     epsilon_decay=0.01,
     min_epsilon=0.1,
 )
 
-trainer = rllearn.DuelingDQNTrainer(
+trainer = rlearn.DuelingDQNTrainer(
     conf.learning_rates,
     log_dir=os.path.join(os.pardir, os.pardir, "tmp", "test_dueling_dqn")
 )
-rllearn.set_config_to_trainer(conf, trainer)
+rlearn.set_config_to_trainer(conf, trainer)
 
 env = gym.make('CartPole-v1', new_step_api=True, render_mode="human")
 for ep in range(conf.epochs):

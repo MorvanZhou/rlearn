@@ -4,10 +4,10 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-from rllearn.config import TrainConfig
-from rllearn.model.ppo import PPOContinue, PPODiscrete
-from rllearn.model.tools import build_encoder_from_config
-from rllearn.trainer.base import BaseTrainer
+from rlearn.config import TrainConfig
+from rlearn.model.ppo import PPOContinue, PPODiscrete
+from rlearn.model.tools import build_encoder_from_config
+from rlearn.trainer.base import BaseTrainer
 
 
 class _PPOTrainer(BaseTrainer):

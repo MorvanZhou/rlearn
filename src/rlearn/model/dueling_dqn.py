@@ -1,6 +1,6 @@
 from tensorflow import keras
 
-from rllearn.model.dqn import DQN
+from rlearn.model.dqn import DQN
 
 
 class DuelingDQN(DQN):

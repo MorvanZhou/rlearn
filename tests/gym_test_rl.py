@@ -5,7 +5,7 @@ import unittest
 
 import gym
 
-import rllearn
+import rlearn
 
 
 class GymTest(unittest.TestCase):
@@ -14,32 +14,32 @@ class GymTest(unittest.TestCase):
         shutil.rmtree(os.path.join(os.path.dirname(__file__), "tmp"), ignore_errors=True)
 
     def test_dqn(self):
-        conf = rllearn.TrainConfig(
-            trainer=rllearn.DQNTrainer.name,
+        conf = rlearn.TrainConfig(
+            trainer=rlearn.DQNTrainer.name,
             batch_size=32,
             epochs=10,
             action_transform=[0, 1],
-            nets=[rllearn.NetConfig(
+            nets=[rlearn.NetConfig(
                 input_shape=(4,),
                 layers=[
-                    rllearn.LayerConfig("dense", args={"units": 20}),
-                    rllearn.LayerConfig("relu"),
+                    rlearn.LayerConfig("dense", args={"units": 20}),
+                    rlearn.LayerConfig("relu"),
                 ]
             )],
             gamma=0.9,
             learning_rates=(0.01,),
-            replay_buffer=rllearn.ReplayBufferConfig(500),
+            replay_buffer=rlearn.ReplayBufferConfig(500),
             replace_step=100,
             not_learn_epochs=2,
             epsilon_decay=0.1,
             min_epsilon=0.1,
             args={}
         )
-        trainer = rllearn.get_trainer_by_name(
+        trainer = rlearn.get_trainer_by_name(
             conf.trainer, conf.learning_rates, log_dir=os.path.join(tempfile.tempdir, "test_dqn"),
             seed=2
         )
-        rllearn.set_config_to_trainer(conf, trainer)
+        rlearn.set_config_to_trainer(conf, trainer)
 
         moving_r = 0
         env = gym.make('CartPole-v1', new_step_api=True)
@@ -76,16 +76,16 @@ class GymTest(unittest.TestCase):
         env.close()
 
     def test_dueling_dqn(self):
-        conf = rllearn.TrainConfig(
-            trainer=rllearn.DuelingDQNTrainer.name,
+        conf = rlearn.TrainConfig(
+            trainer=rlearn.DuelingDQNTrainer.name,
             batch_size=16,
             epochs=10,
             action_transform=[0, 1],
-            nets=[rllearn.NetConfig(
+            nets=[rlearn.NetConfig(
                 input_shape=(4,),
                 layers=[
-                    rllearn.LayerConfig("dense", args={"units": 20}),
-                    rllearn.LayerConfig("relu"),
+                    rlearn.LayerConfig("dense", args={"units": 20}),
+                    rlearn.LayerConfig("relu"),
                 ]
             )],
             gamma=0.9,
@@ -97,11 +97,11 @@ class GymTest(unittest.TestCase):
             min_epsilon=0.1,
             args={}
         )
-        trainer = rllearn.get_trainer_by_name(
+        trainer = rlearn.get_trainer_by_name(
             conf.trainer, conf.learning_rates, log_dir=os.path.join(tempfile.tempdir, "test_dueling_dqn"),
             seed=4
         )
-        rllearn.set_config_to_trainer(conf, trainer)
+        rlearn.set_config_to_trainer(conf, trainer)
 
         env = gym.make('CartPole-v1', new_step_api=True)
         env.reset(seed=1)
@@ -142,26 +142,26 @@ class GymTest(unittest.TestCase):
         env.close()
 
     def test_ppo(self):
-        conf = rllearn.TrainConfig(
-            trainer=rllearn.PPOContinueTrainer.name,
+        conf = rlearn.TrainConfig(
+            trainer=rlearn.PPOContinueTrainer.name,
             batch_size=16,
             epochs=10,
             action_transform=[[-2, 2]],
             memory_capacity=1000,
             replace_step=100,
             nets=[
-                rllearn.NetConfig(
+                rlearn.NetConfig(
                     input_shape=(3,),
                     layers=[
-                        rllearn.LayerConfig("dense", args={"units": 20}),
-                        rllearn.LayerConfig("relu"),
+                        rlearn.LayerConfig("dense", args={"units": 20}),
+                        rlearn.LayerConfig("relu"),
                     ]
                 ),
-                rllearn.NetConfig(
+                rlearn.NetConfig(
                     input_shape=(3,),
                     layers=[
-                        rllearn.LayerConfig("dense", args={"units": 20}),
-                        rllearn.LayerConfig("relu"),
+                        rlearn.LayerConfig("dense", args={"units": 20}),
+                        rlearn.LayerConfig("relu"),
                     ]
                 )
             ],
@@ -169,12 +169,12 @@ class GymTest(unittest.TestCase):
             learning_rates=(0.01, 0.01),
             args={}
         )
-        trainer: rllearn.PPOContinueTrainer = rllearn.get_trainer_by_name(
+        trainer: rlearn.PPOContinueTrainer = rlearn.get_trainer_by_name(
             conf.trainer, conf.learning_rates, log_dir=os.path.join(tempfile.tempdir, "test_ppo"),
             seed=4
         )
-        rllearn.set_config_to_trainer(conf, trainer)
-        action_transformer = rllearn.transformer.ContinuousAction(conf.action_transform)
+        rlearn.set_config_to_trainer(conf, trainer)
+        action_transformer = rlearn.transformer.ContinuousAction(conf.action_transform)
 
         env = gym.make('Pendulum-v1', new_step_api=True)
         env.reset(seed=1)
@@ -214,33 +214,33 @@ class GymTest(unittest.TestCase):
         env.close()
 
     def test_prioritized_dqn(self):
-        conf = rllearn.TrainConfig(
-            trainer=rllearn.DQNTrainer.name,
+        conf = rlearn.TrainConfig(
+            trainer=rlearn.DQNTrainer.name,
             batch_size=16,
             epochs=10,
             action_transform=[0, 1, 2],
-            nets=[rllearn.NetConfig(
+            nets=[rlearn.NetConfig(
                 input_shape=(2,),
                 layers=[
-                    rllearn.LayerConfig("dense", args={"units": 20}),
-                    rllearn.LayerConfig("relu"),
+                    rlearn.LayerConfig("dense", args={"units": 20}),
+                    rlearn.LayerConfig("relu"),
                 ]
             )],
             gamma=0.95,
             learning_rates=(0.001,),
-            replay_buffer=rllearn.ReplayBufferConfig(10000),
+            replay_buffer=rlearn.ReplayBufferConfig(10000),
             replace_step=600,
             not_learn_epochs=0,
             epsilon_decay=0.1,
             min_epsilon=0.1,
-            args={"buffer": rllearn.PrioritizedReplayBuffer.name, "seed": 8}
+            args={"buffer": rlearn.PrioritizedReplayBuffer.name, "seed": 8}
         )
 
-        trainer = rllearn.get_trainer_by_name(
+        trainer = rlearn.get_trainer_by_name(
             conf.trainer, conf.learning_rates, log_dir=os.path.join(tempfile.tempdir, "test_p_dqn"),
             seed=4
         )
-        rllearn.set_config_to_trainer(conf, trainer)
+        rlearn.set_config_to_trainer(conf, trainer)
         passed = False
         ep_pass_record = []
         env = gym.make('MountainCar-v0', new_step_api=True)

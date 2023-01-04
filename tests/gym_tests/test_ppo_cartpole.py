@@ -2,27 +2,27 @@ import os
 
 import gym
 
-import rllearn
+import rlearn
 
-conf = rllearn.TrainConfig(
-    trainer=rllearn.PPODiscreteTrainer.name,
+conf = rlearn.TrainConfig(
+    trainer=rlearn.PPODiscreteTrainer.name,
     batch_size=32,
     epochs=10000,
     action_transform=[0, 1],
-    replay_buffer=rllearn.ReplayBufferConfig(1000),
+    replay_buffer=rlearn.ReplayBufferConfig(1000),
     nets=[
-        rllearn.NetConfig(
+        rlearn.NetConfig(
             input_shape=(4,),
             layers=[
-                rllearn.LayerConfig("dense", args={"units": 32}),
-                rllearn.LayerConfig("relu"),
+                rlearn.LayerConfig("dense", args={"units": 32}),
+                rlearn.LayerConfig("relu"),
             ]
         ),
-        rllearn.NetConfig(
+        rlearn.NetConfig(
             input_shape=(4,),
             layers=[
-                rllearn.LayerConfig("dense", args={"units": 32}),
-                rllearn.LayerConfig("relu"),
+                rlearn.LayerConfig("dense", args={"units": 32}),
+                rlearn.LayerConfig("relu"),
             ]
         )
     ],
@@ -31,10 +31,10 @@ conf = rllearn.TrainConfig(
     replace_step=0,
 )
 
-trainer = rllearn.PPODiscreteTrainer(
+trainer = rlearn.PPODiscreteTrainer(
     learning_rates=conf.learning_rates,
     log_dir=os.path.join(os.pardir, os.pardir, "tmp", "test_ppo_discrete"))
-rllearn.set_config_to_trainer(conf, trainer)
+rlearn.set_config_to_trainer(conf, trainer)
 
 env = gym.make('CartPole-v1', new_step_api=True, render_mode="human")
 max_ep_step = 200

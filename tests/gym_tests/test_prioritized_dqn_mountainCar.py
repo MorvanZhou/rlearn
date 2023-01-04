@@ -2,34 +2,34 @@ import os
 
 import gym
 
-import rllearn
+import rlearn
 
-conf = rllearn.TrainConfig(
-    trainer=rllearn.DQNTrainer.name,
+conf = rlearn.TrainConfig(
+    trainer=rlearn.DQNTrainer.name,
     batch_size=16,
     epochs=1000,
     action_transform=[0, 1, 2],
-    nets=[rllearn.NetConfig(
+    nets=[rlearn.NetConfig(
         input_shape=(2,),
         layers=[
-            rllearn.LayerConfig("dense", args={"units": 32}),
-            rllearn.LayerConfig("relu"),
+            rlearn.LayerConfig("dense", args={"units": 32}),
+            rlearn.LayerConfig("relu"),
         ]
     )],
     gamma=0.9,
     learning_rates=(0.1,),
-    replay_buffer=rllearn.ReplayBufferConfig(10000, rllearn.PrioritizedReplayBuffer.name),
+    replay_buffer=rlearn.ReplayBufferConfig(10000, rlearn.PrioritizedReplayBuffer.name),
     replace_step=500,
     not_learn_epochs=0,
     epsilon_decay=0.05,
     min_epsilon=0.05,
 )
 
-trainer = rllearn.DQNTrainer(
+trainer = rlearn.DQNTrainer(
     conf.learning_rates,
     log_dir=os.path.join(os.pardir, os.pardir, "tmp", "test_prioritized_dqn"),
 )
-rllearn.set_config_to_trainer(conf, trainer)
+rlearn.set_config_to_trainer(conf, trainer)
 
 env = gym.make('MountainCar-v0', new_step_api=True, render_mode="human")
 env.reset(seed=1)

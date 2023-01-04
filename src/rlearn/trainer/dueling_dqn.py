@@ -1,7 +1,7 @@
 import typing as tp
 
-from rllearn.model.dueling_dqn import DuelingDQN
-from rllearn.trainer.dqn import DQNTrainer
+from rlearn.model.dueling_dqn import DuelingDQN
+from rlearn.trainer.dqn import DQNTrainer
 
 
 class DuelingDQNTrainer(DQNTrainer):
@@ -14,4 +14,3 @@ class DuelingDQNTrainer(DQNTrainer):
     ):
         super().__init__(learning_rates, log_dir)
         self.model = DuelingDQN(training=True)
-

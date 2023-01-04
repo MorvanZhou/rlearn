@@ -2,31 +2,31 @@ import os
 
 import gym
 
-import rllearn
+import rlearn
 
-conf = rllearn.TrainConfig(
-    trainer=rllearn.DDPGTrainer.name,
+conf = rlearn.TrainConfig(
+    trainer=rlearn.DDPGTrainer.name,
     batch_size=32,
     epochs=1000,
     action_transform=[[-2, 2]],
     nets=[
-        rllearn.NetConfig(
+        rlearn.NetConfig(
             input_shape=(3,),
             layers=[
-                rllearn.LayerConfig("dense", args={"units": 30, }),
-                rllearn.LayerConfig("relu"),
+                rlearn.LayerConfig("dense", args={"units": 30, }),
+                rlearn.LayerConfig("relu"),
             ]),
-        rllearn.NetConfig(
+        rlearn.NetConfig(
             input_shape=(3,),
             layers=[
-                rllearn.LayerConfig("dense", args={"units": 30}),
-                rllearn.LayerConfig("relu"),
+                rlearn.LayerConfig("dense", args={"units": 30}),
+                rlearn.LayerConfig("relu"),
             ]
         )
     ],
     gamma=0.9,
     learning_rates=(0.001, 0.01),
-    replay_buffer=rllearn.ReplayBufferConfig(3000),
+    replay_buffer=rlearn.ReplayBufferConfig(3000),
     not_learn_epochs=0,
     epsilon_decay=0.01,
     min_epsilon=0.1,
@@ -34,13 +34,13 @@ conf = rllearn.TrainConfig(
     replace_ratio=1.,  # tau
 )
 
-trainer = rllearn.DDPGTrainer(
+trainer = rlearn.DDPGTrainer(
     learning_rates=conf.learning_rates,
     log_dir=os.path.join(os.pardir, os.pardir, "tmp", "test_ddpg")
 )
-rllearn.set_config_to_trainer(conf, trainer)
+rlearn.set_config_to_trainer(conf, trainer)
 
-action_transformer = rllearn.transformer.ContinuousAction(conf.action_transform)
+action_transformer = rlearn.transformer.ContinuousAction(conf.action_transform)
 
 env = gym.make('Pendulum-v1', new_step_api=True, render_mode="human")
 MAX_EP_STEP = 200

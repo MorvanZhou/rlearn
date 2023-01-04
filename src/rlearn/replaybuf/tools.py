@@ -1,6 +1,6 @@
 import typing as tp
 
-from rllearn.replaybuf.base import BaseReplayBuffer
+from rlearn.replaybuf.base import BaseReplayBuffer
 
 __BUF_MAP: tp.Dict[str, tp.Type[BaseReplayBuffer]] = {}
 

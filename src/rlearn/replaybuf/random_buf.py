@@ -2,7 +2,7 @@ import typing as tp
 
 import numpy as np
 
-from rllearn.replaybuf.base import BaseReplayBuffer
+from rlearn.replaybuf.base import BaseReplayBuffer
 
 
 class RandomReplayBuffer(BaseReplayBuffer):

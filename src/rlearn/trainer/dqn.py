@@ -4,11 +4,11 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-from rllearn.config import TrainConfig
-from rllearn.model.dqn import DQN
-from rllearn.model.tools import build_encoder_from_config
-from rllearn.replaybuf.prioritized_buf import PrioritizedReplayBuffer
-from rllearn.trainer.base import BaseTrainer
+from rlearn.config import TrainConfig
+from rlearn.model.dqn import DQN
+from rlearn.model.tools import build_encoder_from_config
+from rlearn.replaybuf.prioritized_buf import PrioritizedReplayBuffer
+from rlearn.trainer.base import BaseTrainer
 
 
 class DQNTrainer(BaseTrainer):

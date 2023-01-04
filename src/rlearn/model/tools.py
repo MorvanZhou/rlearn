@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from tensorflow import keras
 
-from rllearn.config import NetConfig
+from rlearn.config import NetConfig
 
 
 def zip_model(src_dir, dest_path=None):

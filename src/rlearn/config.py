@@ -89,9 +89,3 @@ def dump(conf: TrainConfig, path: str):
     json_str = json.dumps(conf, indent=2, ensure_ascii=False, cls=EnhancedJSONEncoder)
     with open(path, "w", encoding="utf-8") as f:
         f.write(json_str)
-
-
-
-
-
-

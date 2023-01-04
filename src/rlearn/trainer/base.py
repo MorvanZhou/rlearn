@@ -6,9 +6,9 @@ from pathlib import Path
 import numpy as np
 from tensorflow import keras
 
-from rllearn import replaybuf, board
-from rllearn.config import TrainConfig
-from rllearn.replaybuf.base import BaseReplayBuffer
+from rlearn import replaybuf, board
+from rlearn.config import TrainConfig
+from rlearn.replaybuf.base import BaseReplayBuffer
 
 
 class BaseTrainer(ABC):

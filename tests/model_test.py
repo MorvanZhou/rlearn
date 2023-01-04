@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 from tensorflow import keras
 
-import rllearn
+import rlearn
 
 
 class ModelTest(unittest.TestCase):
@@ -15,12 +15,12 @@ class ModelTest(unittest.TestCase):
             keras.layers.Dense(32),
             keras.layers.ReLU(),
         ])
-        m = rllearn.DQN()
+        m = rlearn.DQN()
         m.build(net, 3)
         self.assertIsInstance(m.predict(np.zeros([2, ])), int)
 
     def test_ppo_continuous(self):
-        m = rllearn.PPOContinue()
+        m = rlearn.PPOContinue()
         m.build(
             pi_encoder=keras.Sequential([
                 keras.layers.InputLayer((2, )),
@@ -32,7 +32,7 @@ class ModelTest(unittest.TestCase):
             ]),
             action_num=1
         )
-        action_transformer = rllearn.transformer.ContinuousAction([[0, 360]])
+        action_transformer = rlearn.transformer.ContinuousAction([[0, 360]])
 
         for _ in range(10):
             a = m.predict(np.random.random((2,)))
@@ -40,7 +40,7 @@ class ModelTest(unittest.TestCase):
             self.assertTrue(0 <= a <= 360, msg=f"{a}")
 
     def test_ppo_discrete(self):
-        m = rllearn.PPODiscrete()
+        m = rlearn.PPODiscrete()
         m.build(
             pi_encoder=keras.Sequential([
                 keras.layers.InputLayer((2,)),
@@ -58,7 +58,7 @@ class ModelTest(unittest.TestCase):
             self.assertIsInstance(a, int, msg=f"{a}")
 
     def test_dueling_dqn(self):
-        m = rllearn.DuelingDQN()
+        m = rlearn.DuelingDQN()
         m.build(keras.Sequential([
                 keras.layers.InputLayer(2),
                 keras.layers.Dense(32),
@@ -67,10 +67,10 @@ class ModelTest(unittest.TestCase):
             action_num=3
         )
         self.assertIsInstance(m.predict(np.zeros([2, ])), int)
-        self.assertEqual(rllearn.DuelingDQN.name, m.name)
+        self.assertEqual(rlearn.DuelingDQN.name, m.name)
 
     def test_ddpg(self):
-        m = rllearn.DDPG()
+        m = rlearn.DDPG()
         m.build(
             actor_encoder=keras.Sequential([
                 keras.layers.InputLayer(2),
@@ -87,4 +87,4 @@ class ModelTest(unittest.TestCase):
         pred = m.predict(np.zeros([2, ]))
         self.assertIsInstance(pred, np.ndarray)
         self.assertEqual(3, len(pred))
-        self.assertEqual(rllearn.DDPG.name, m.name)
+        self.assertEqual(rlearn.DDPG.name, m.name)

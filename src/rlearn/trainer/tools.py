@@ -3,8 +3,8 @@ import typing as tp
 import numpy as np
 import tensorflow as tf
 
-from rllearn.config import TrainConfig
-from rllearn.trainer.base import BaseTrainer
+from rlearn.config import TrainConfig
+from rlearn.trainer.base import BaseTrainer
 
 
 def set_config_to_trainer(

@@ -2,14 +2,14 @@ import unittest
 
 import numpy as np
 
-import rllearn
+import rlearn
 
 
 class MemoryTest(unittest.TestCase):
 
     def test_random_put_one(self):
         max_size = 10
-        m = rllearn.replaybuf.RandomReplayBuffer(max_size=max_size)
+        m = rlearn.replaybuf.RandomReplayBuffer(max_size=max_size)
         with self.assertRaises(ValueError):
             m.sample(1)
 
@@ -33,7 +33,7 @@ class MemoryTest(unittest.TestCase):
 
     def test_random_batch_put(self):
         max_size = 10
-        m = rllearn.replaybuf.RandomReplayBuffer(max_size=max_size)
+        m = rlearn.replaybuf.RandomReplayBuffer(max_size=max_size)
         with self.assertRaises(ValueError):
             # different batch size
             m.put_batch(np.full([22, 3], 1), np.full([21, 2], 2), np.full([22, ], 3), np.full([22, 3], 4))
@@ -52,12 +52,12 @@ class MemoryTest(unittest.TestCase):
         self.assertEqual(2, m.pointer)
 
     def test_class_name(self):
-        for k, v in rllearn.replaybuf.tools.get_all_buffers().items():
+        for k, v in rlearn.replaybuf.tools.get_all_buffers().items():
             self.assertEqual(k, v.name)
 
     def test_prioritized_put(self):
         max_size = 10
-        m = rllearn.replaybuf.PrioritizedReplayBuffer(max_size)
+        m = rlearn.replaybuf.PrioritizedReplayBuffer(max_size)
         m.put_one(np.full([4, ], 1), 1.2, 2, np.full([4, ], 2))
         self.assertEqual(1, m.tree.sum)
         m.put_one(np.full([4, ], 2), 1.2, 2, np.full([4, ], 2))

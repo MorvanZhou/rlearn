@@ -7,8 +7,8 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow import keras
 
-from rllearn.model import tools
-from rllearn.model.base import BaseRLNet
+from rlearn.model import tools
+from rlearn.model.base import BaseRLNet
 
 
 class _PPO(BaseRLNet, metaclass=ABCMeta):

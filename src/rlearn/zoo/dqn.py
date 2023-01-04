@@ -1,6 +1,6 @@
 from tensorflow import keras
 
-from rllearn import model
+from rlearn import model
 
 
 class DQNSmall(model.DQN):

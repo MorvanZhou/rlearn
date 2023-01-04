@@ -5,8 +5,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-from rllearn.model import tools
-from rllearn.model.base import BaseRLNet
+from rlearn.model import tools
+from rlearn.model.base import BaseRLNet
 
 
 class DDPG(BaseRLNet):

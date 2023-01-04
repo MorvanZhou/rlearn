@@ -2,27 +2,27 @@ import os
 
 import gym
 
-import rllearn
+import rlearn
 
-conf = rllearn.TrainConfig(
-    trainer=rllearn.PPOContinueTrainer.name,
+conf = rlearn.TrainConfig(
+    trainer=rlearn.PPOContinueTrainer.name,
     batch_size=32,
     epochs=1000,
     action_transform=[[-2, 2]],
-    replay_buffer=rllearn.ReplayBufferConfig(2000),
+    replay_buffer=rlearn.ReplayBufferConfig(2000),
     nets=[
-        rllearn.NetConfig(
+        rlearn.NetConfig(
             input_shape=(3,),
             layers=[
-                rllearn.LayerConfig("dense", args={"units": 32}),
-                rllearn.LayerConfig("relu"),
+                rlearn.LayerConfig("dense", args={"units": 32}),
+                rlearn.LayerConfig("relu"),
             ]
         ),
-        rllearn.NetConfig(
+        rlearn.NetConfig(
             input_shape=(3,),
             layers=[
-                rllearn.LayerConfig("dense", args={"units": 32}),
-                rllearn.LayerConfig("relu"),
+                rlearn.LayerConfig("dense", args={"units": 32}),
+                rlearn.LayerConfig("relu"),
             ]
         )
     ],
@@ -31,12 +31,12 @@ conf = rllearn.TrainConfig(
     replace_step=200,
 )
 
-trainer = rllearn.PPOContinueTrainer(
+trainer = rlearn.PPOContinueTrainer(
     learning_rates=conf.learning_rates,
     log_dir=os.path.join(os.pardir, os.pardir, "tmp", "test_ppo_continuous"))
-rllearn.set_config_to_trainer(conf, trainer)
+rlearn.set_config_to_trainer(conf, trainer)
 
-action_transformer = rllearn.transformer.ContinuousAction(conf.action_transform)
+action_transformer = rlearn.transformer.ContinuousAction(conf.action_transform)
 
 env = gym.make('Pendulum-v1', new_step_api=True, render_mode="human")
 max_ep_step = 200
