@@ -1,0 +1,5 @@
+gym[classic_control]==0.25.0
+tox==3.24.3
+build
+twine
+pylint

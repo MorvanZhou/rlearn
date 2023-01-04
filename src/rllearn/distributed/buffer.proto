@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.examples.env";
+option java_outer_classname = "ReplayBufferProto";
+option objc_class_prefix = "HLW";
+
+package replayBuffer;
+
+// The greeting service definition.
+service ReplayBuffer {
+  rpc ServiceReady (ServiceReadyReq) returns (ServiceReadyResp) {}
+  rpc UploadData (UploadDataReq) returns (UploadDataResp) {}
+  rpc DownloadData (DownloadDataReq) returns (DownloadDataResp) {}
+}
+
+message ServiceReadyReq {
+}
+
+message ServiceReadyResp {
+  bool ready = 1;
+}
+
+message Data {
+  repeated float values = 1;
+  string attributes = 2;  // 包含 shape 和其他信息
+}
+
+message UploadDataReq {
+  Data data = 1;
+}
+
+message UploadDataResp {
+  bool done = 1;
+  string err = 2;
+}
+
+message DownloadDataReq {
+  int32 maxSize = 1;
+}
+
+message DownloadDataResp {
+  Data data = 1;
+  string err = 2;
+}

@@ -1,0 +1,8 @@
+tensorflow==2.9.1; python_version >= '3.8' and platform_system == "Windows"
+tensorflow==2.9.1; python_version >= '3.8' and platform_system == "Linux"
+tensorflow==2.9.1; python_version >= '3.8' and platform_system == "Darwin" and platform_machine != "arm64"
+tensorflow-macos==2.9.2; python_version >= '3.8' and platform_system == "Darwin" and platform_machine == "arm64"
+tensorflow-metal==0.5.0; python_version >= '3.8' and platform_system == "Darwin" and platform_machine == "arm64"
+tensorflow_probability==0.17.0
+grpcio-tools==1.45.0
+grpcio==1.45.0
