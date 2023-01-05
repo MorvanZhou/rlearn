@@ -5,6 +5,7 @@
 **/__pycache__/
 /src/*.egg-info
 /dist
+/.tox
 
 /logs
 **/*.log

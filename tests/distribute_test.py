@@ -1,16 +1,16 @@
 import json
+import os
 import shutil
 import unittest
-import os
 
 import grpc
-import numpy as np
 import gym
+import numpy as np
 
-from rlearn.distribute.tools import get_available_port, unpack_transitions
-from rlearn.distribute import buffer_pb2, buffer_pb2_grpc
-from rlearn import distribute
 import rlearn
+from rlearn import distribute
+from rlearn.distribute import buffer_pb2, buffer_pb2_grpc
+from rlearn.distribute.tools import get_available_port, unpack_transitions
 
 
 class BufferTest(unittest.TestCase):
@@ -185,7 +185,7 @@ class ActorTest(unittest.TestCase):
             self.assertGreaterEqual(data[i].shape[0], buffer.max_size)
 
         cache_model_dir = os.path.join(os.path.dirname(__file__), "cacheModel")
-        shutil.rmtree(cache_model_dir)
+        shutil.rmtree(cache_model_dir, ignore_errors=True)
 
     def test_ready(self):
         pass
