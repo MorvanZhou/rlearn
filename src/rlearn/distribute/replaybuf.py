@@ -1,15 +1,15 @@
+import inspect
 import logging
 import time
-import inspect
 import typing as tp
 from concurrent import futures
 
 import grpc
 
 from rlearn import replaybuf
-from rlearn.replaybuf.base import BaseReplayBuffer
 from rlearn.distribute import buffer_pb2, buffer_pb2_grpc, tools
 from rlearn.distribute.logger import get_logger
+from rlearn.replaybuf.base import BaseReplayBuffer
 
 
 class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):

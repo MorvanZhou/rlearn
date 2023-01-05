@@ -1,7 +1,7 @@
 import json
-import typing as tp
 import os
 import socket
+import typing as tp
 import uuid
 
 import numpy as np

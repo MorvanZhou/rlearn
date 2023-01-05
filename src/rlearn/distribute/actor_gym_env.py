@@ -1,4 +1,3 @@
-
 def on_cart_pole_v1(update, conf, env, map_data):
     for ep in range(conf.epochs):
         s = env.reset(return_info=False)

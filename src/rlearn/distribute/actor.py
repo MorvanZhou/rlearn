@@ -1,14 +1,14 @@
-import os
 import logging
+import multiprocessing as mp
+import os
 import tempfile
+import time
 import typing as tp
 import uuid
-import time
 from abc import ABC, abstractmethod
-import multiprocessing as mp
 
-import numpy as np
 import grpc
+import numpy as np
 
 from rlearn.distribute import actor_pb2, actor_pb2_grpc, buffer_pb2_grpc, buffer_pb2, tools
 from rlearn.distribute.logger import get_logger
@@ -188,7 +188,6 @@ class ActorService(actor_pb2_grpc.ActorServicer):
         self.logger.debug("""Terminate | {"reqId": "%s"}""", request.requestId)
         self.actor.terminate()
         return actor_pb2.TerminateResp(done=True, err="", requestId=request.requestId)
-
 
 # def start_actor_server(
 #         port,

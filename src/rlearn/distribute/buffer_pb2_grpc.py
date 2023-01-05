@@ -16,20 +16,20 @@ class ReplayBufferStub(object):
             channel: A grpc.Channel.
         """
         self.ServiceReady = channel.unary_unary(
-                '/replayBuffer.ReplayBuffer/ServiceReady',
-                request_serializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.SerializeToString,
-                response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.FromString,
-                )
+            '/replayBuffer.ReplayBuffer/ServiceReady',
+            request_serializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.SerializeToString,
+            response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.FromString,
+        )
         self.UploadData = channel.unary_unary(
-                '/replayBuffer.ReplayBuffer/UploadData',
-                request_serializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataReq.SerializeToString,
-                response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataResp.FromString,
-                )
+            '/replayBuffer.ReplayBuffer/UploadData',
+            request_serializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataReq.SerializeToString,
+            response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataResp.FromString,
+        )
         self.DownloadData = channel.unary_unary(
-                '/replayBuffer.ReplayBuffer/DownloadData',
-                request_serializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataReq.SerializeToString,
-                response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataResp.FromString,
-                )
+            '/replayBuffer.ReplayBuffer/DownloadData',
+            request_serializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataReq.SerializeToString,
+            response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataResp.FromString,
+        )
 
 
 class ReplayBufferServicer(object):
@@ -57,79 +57,79 @@ class ReplayBufferServicer(object):
 
 def add_ReplayBufferServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'ServiceReady': grpc.unary_unary_rpc_method_handler(
-                    servicer.ServiceReady,
-                    request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.FromString,
-                    response_serializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.SerializeToString,
-            ),
-            'UploadData': grpc.unary_unary_rpc_method_handler(
-                    servicer.UploadData,
-                    request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataReq.FromString,
-                    response_serializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataResp.SerializeToString,
-            ),
-            'DownloadData': grpc.unary_unary_rpc_method_handler(
-                    servicer.DownloadData,
-                    request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataReq.FromString,
-                    response_serializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataResp.SerializeToString,
-            ),
+        'ServiceReady': grpc.unary_unary_rpc_method_handler(
+            servicer.ServiceReady,
+            request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.FromString,
+            response_serializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.SerializeToString,
+        ),
+        'UploadData': grpc.unary_unary_rpc_method_handler(
+            servicer.UploadData,
+            request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataReq.FromString,
+            response_serializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataResp.SerializeToString,
+        ),
+        'DownloadData': grpc.unary_unary_rpc_method_handler(
+            servicer.DownloadData,
+            request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataReq.FromString,
+            response_serializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataResp.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'replayBuffer.ReplayBuffer', rpc_method_handlers)
+        'replayBuffer.ReplayBuffer', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
- # This class is part of an EXPERIMENTAL API.
+# This class is part of an EXPERIMENTAL API.
 class ReplayBuffer(object):
     """The greeting service definition.
     """
 
     @staticmethod
     def ServiceReady(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                     target,
+                     options=(),
+                     channel_credentials=None,
+                     call_credentials=None,
+                     insecure=False,
+                     compression=None,
+                     wait_for_ready=None,
+                     timeout=None,
+                     metadata=None):
         return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/ServiceReady',
-            rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.SerializeToString,
-            rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                             rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.SerializeToString,
+                                             rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def UploadData(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                   target,
+                   options=(),
+                   channel_credentials=None,
+                   call_credentials=None,
+                   insecure=False,
+                   compression=None,
+                   wait_for_ready=None,
+                   timeout=None,
+                   metadata=None):
         return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/UploadData',
-            rlearn_dot_distribute_dot_buffer__pb2.UploadDataReq.SerializeToString,
-            rlearn_dot_distribute_dot_buffer__pb2.UploadDataResp.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                             rlearn_dot_distribute_dot_buffer__pb2.UploadDataReq.SerializeToString,
+                                             rlearn_dot_distribute_dot_buffer__pb2.UploadDataResp.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def DownloadData(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                     target,
+                     options=(),
+                     channel_credentials=None,
+                     call_credentials=None,
+                     insecure=False,
+                     compression=None,
+                     wait_for_ready=None,
+                     timeout=None,
+                     metadata=None):
         return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/DownloadData',
-            rlearn_dot_distribute_dot_buffer__pb2.DownloadDataReq.SerializeToString,
-            rlearn_dot_distribute_dot_buffer__pb2.DownloadDataResp.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                             rlearn_dot_distribute_dot_buffer__pb2.DownloadDataReq.SerializeToString,
+                                             rlearn_dot_distribute_dot_buffer__pb2.DownloadDataResp.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
