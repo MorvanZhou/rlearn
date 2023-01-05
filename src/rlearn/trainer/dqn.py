@@ -29,18 +29,22 @@ class DQNTrainer(BaseTrainer):
         )
         self.loss = keras.losses.MeanSquaredError()
 
-    def build_model(self, net: keras.Model, action_num: int):
-        self.model.build(net, action_num)
-        self._set_tensorboard(self.model.net)
+    def add_model_encoder(self, q: keras.Model, action_num: int):
+        self.model.add_encoder(q, action_num)
+        self._set_tensorboard(self.model.q)
 
-    def build_model_from_config(self, config: TrainConfig):
+    def add_model_encoder_from_config(self, config: TrainConfig):
         action_num = len(config.action_transform)
         encoder = build_encoder_from_config(config.nets[0], trainable=True)
-        self.build_model(encoder, action_num)
+        self.add_model_encoder(encoder, action_num)
+
+    def add_model(self, q: keras.Model):
+        self.model.add_model(q=q)
+        self._set_tensorboard([self.model.q])
 
     def predict(self, s: np.ndarray) -> int:
         if np.random.random() < self.epsilon:
-            return np.random.randint(0, sum(self.model.net.output_shape[1:]))
+            return np.random.randint(0, sum(self.model.q.output_shape[1:]))
         return self.model.predict(s)
 
     def store_transition(self, s, a, r, s_):
@@ -54,14 +58,14 @@ class DQNTrainer(BaseTrainer):
         bs, ba, br, bs_ = self.replay_buffer.sample(self.batch_size)
         ba = ba.ravel().astype(np.int32)
 
-        self.try_replace_params(src=self.model.net, target=self.model.net_)
+        self.try_replace_params(src=self.model.q, target=self.model.q_)
         self.decay_epsilon()
 
-        q_ = self.model.net_.predict(bs_, verbose=0)
+        q_ = self.model.q_.predict(bs_, verbose=0)
         q_target = br.ravel() + self.gamma * tf.reduce_max(q_, axis=1)
         a_indices = tf.stack([tf.range(tf.shape(ba)[0], dtype=tf.int32), ba], axis=1)
         with tf.GradientTape() as tape:
-            q = self.model.net(bs)
+            q = self.model.q(bs)
             q_wrt_a = tf.gather_nd(params=q, indices=a_indices)
             if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
                 td = q_target - q_wrt_a
@@ -71,8 +75,8 @@ class DQNTrainer(BaseTrainer):
                 self.replay_buffer.batch_update(np.abs(td.numpy()))
             else:
                 loss = self.loss(q_target, q_wrt_a)
-        grads = tape.gradient(loss, self.model.net.trainable_variables)
-        self.opt.apply_gradients(zip(grads, self.model.net.trainable_variables))
+        grads = tape.gradient(loss, self.model.q.trainable_variables)
+        self.opt.apply_gradients(zip(grads, self.model.q.trainable_variables))
 
         res.update({"loss": loss.numpy(), "q": q_wrt_a.numpy().ravel().mean()})
         return res

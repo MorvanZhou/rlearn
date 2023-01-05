@@ -5,3 +5,4 @@ from rlearn.model import *
 from rlearn.replaybuf import *
 from rlearn.trainer import *
 from rlearn.trainer.tools import get_trainer_by_name, set_config_to_trainer
+from rlearn import distribute

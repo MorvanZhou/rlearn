@@ -61,14 +61,20 @@ class BaseTrainer(ABC):
         pass
 
     @abstractmethod
-    def build_model_from_config(self, config: TrainConfig):
+    def add_model_encoder_from_config(self, config: TrainConfig):
         pass
 
     @abstractmethod
-    def build_model(self, *args, **kwargs):
+    def add_model_encoder(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def add_model(self, *args, **kwargs):
         pass
 
     def trace(self, data: dict, step: int):
+        if self.board is None:
+            raise AttributeError("tensorboard is not defined")
         self.board.trace(data, step=step)
 
     def set_replay_buffer(
@@ -81,7 +87,7 @@ class BaseTrainer(ABC):
             name = buf
         self.replay_buffer = replaybuf.get_buffer_by_name(name=name, max_size=max_size)
 
-    def _set_tensorboard(self, models):
+    def _set_tensorboard(self, models: tp.List[keras.Model]):
         if self.log_dir is not None and self.board is None:
             board_dir = Path(self.log_dir) / "board"
             self.board = board.Tensorboard(

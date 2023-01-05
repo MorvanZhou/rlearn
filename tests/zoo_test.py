@@ -9,11 +9,11 @@ class ZooTest(unittest.TestCase):
         self.assertEqual(4, m.state_dim)
         self.assertEqual(3, m.action_dim)
         self.assertTrue(m.training)
-        self.assertIsNotNone(m.net_)
+        self.assertIsNotNone(m.q_)
 
     def test_dqn_not_train(self):
         m = rlearn.zoo.DQNMiddle(4, 3, training=False)
         self.assertEqual(4, m.state_dim)
         self.assertEqual(3, m.action_dim)
         self.assertFalse(m.training)
-        self.assertIsNone(m.net_)
+        self.assertIsNone(m.q_)

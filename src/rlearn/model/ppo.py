@@ -8,10 +8,10 @@ import tensorflow_probability as tfp
 from tensorflow import keras
 
 from rlearn.model import tools
-from rlearn.model.base import BaseRLNet
+from rlearn.model.base import BaseRLModel
 
 
-class _PPO(BaseRLNet, metaclass=ABCMeta):
+class _PPO(BaseRLModel, metaclass=ABCMeta):
     is_on_policy = True
 
     def __init__(
@@ -30,22 +30,26 @@ class _PPO(BaseRLNet, metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def build_default_pi_callback(encoder: keras.Sequential, action_num: int):
+    def add_pi_encoder_callback(encoder: keras.Sequential, action_num: int):
         pass
 
     @staticmethod
-    def build_default_critic_callback(encoder: keras.Sequential):
+    def add_critic_encoder_callback(encoder: keras.Sequential):
         o = keras.layers.Dense(1)(encoder.output)
         return keras.Model(inputs=encoder.inputs, outputs=[o])
 
-    def build(self, pi_encoder: keras.Model, critic_encoder: keras.Model, action_num: int):
-        self.pi_ = self.build_default_pi_callback(pi_encoder, action_num)
-        self.pi_._name = "pi_old"
+    def add_encoder(self, pi: keras.Model, critic: keras.Model, action_num: int):
+        old_pi = self.add_pi_encoder_callback(pi, action_num)
+        c = None
         if self.training:
-            self.pi = keras.models.clone_model(self.pi_)
-            self.pi._name = "pi"
-            self.critic = self.build_default_critic_callback(critic_encoder)
-            self.critic._name = "critic"
+            c = self.add_critic_encoder_callback(critic)
+        self.add_model(old_pi, c)
+
+    def add_model(self, pi: keras.Model, critic: keras.Model):
+        self.pi_ = pi
+        if self.training:
+            self.pi = self.clone_model(self.pi_)
+            self.critic = critic
 
     def predict(self, s):
         s = np.expand_dims(s, axis=0)
@@ -94,7 +98,7 @@ class PPODiscrete(_PPO):
         return tfp.distributions.Categorical(probs=o)
 
     @staticmethod
-    def build_default_pi_callback(encoder: keras.Sequential, action_num: int):
+    def add_pi_encoder_callback(encoder: keras.Sequential, action_num: int):
         o = keras.layers.Dense(action_num)(encoder.output)
         o = keras.layers.Softmax()(o)
         return keras.Model(inputs=encoder.inputs, outputs=[o])
@@ -116,6 +120,6 @@ class PPOContinue(_PPO):
         return tfp.distributions.Normal(loc=loc, scale=scale)
 
     @staticmethod
-    def build_default_pi_callback(encoder: keras.Sequential, action_num: int):
+    def add_pi_encoder_callback(encoder: keras.Sequential, action_num: int):
         o = keras.layers.Dense(action_num * 2)(encoder.output)
         return keras.Model(inputs=encoder.inputs, outputs=[o])

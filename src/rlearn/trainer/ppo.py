@@ -45,12 +45,16 @@ class _PPOTrainer(BaseTrainer):
         self.buffer_a = []
         self.buffer_r = []
 
-    def build_model(self, pi_encoder: keras.Model, critic_encoder: keras.Model, action_num: int):
-        self.model.build(pi_encoder, critic_encoder, action_num)
+    def add_model_encoder(self, pi: keras.Model, critic: keras.Model, action_num: int):
+        self.model.add_encoder(pi, critic, action_num)
         self._set_tensorboard([self.model.pi, self.model.critic])
 
-    def build_model_from_config(self, config: TrainConfig):
+    def add_model_encoder_from_config(self, config: TrainConfig):
         raise NotImplemented
+
+    def add_model(self, pi: keras.Model, critic: keras.Model):
+        self.model.add_model(pi=pi, critic=critic)
+        self._set_tensorboard([self.model.actor, self.model.critic])
 
     def predict(self, s: np.ndarray) -> np.ndarray:
         return self.model.predict(s)
@@ -98,19 +102,19 @@ class _PPOTrainer(BaseTrainer):
             return res
 
         for _ in range(self.update_time):
-            bs, ba, br, _ = self.replay_buffer.sample(self.batch_size)
+            bs, ba, b_future_return, _ = self.replay_buffer.sample(self.batch_size)
 
             with tf.GradientTape() as tape:
                 # critic
                 vs = self.model.critic(bs)
-                lc = self.loss(br, vs)
+                lc = self.loss(b_future_return, vs)
 
                 grads = tape.gradient(lc, self.model.critic.trainable_variables)
                 self.opt_a.apply_gradients(zip(grads, self.model.critic.trainable_variables))
 
             with tf.GradientTape() as tape:
                 # actor
-                advantage = br - vs
+                advantage = b_future_return - vs
                 dist_ = self.model.dist(self.model.pi_, bs)
                 dist = self.model.dist(self.model.pi, bs)
                 ratio = tf.exp(dist.log_prob(ba) - dist_.log_prob(ba))
@@ -152,12 +156,12 @@ class PPODiscreteTrainer(_PPOTrainer):
     ):
         super().__init__(PPODiscrete(training=True), learning_rates, log_dir, clip_epsilon, entropy_coef, update_time)
 
-    def build_model_from_config(self, config: TrainConfig):
+    def add_model_encoder_from_config(self, config: TrainConfig):
         action_num = len(config.action_transform)
 
         pi_encoder = build_encoder_from_config(config.nets[0], trainable=True)
         critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
-        self.build_model(pi_encoder, critic_encoder, action_num)
+        self.add_model_encoder(pi_encoder, critic_encoder, action_num)
 
 
 class PPOContinueTrainer(_PPOTrainer):
@@ -173,8 +177,8 @@ class PPOContinueTrainer(_PPOTrainer):
     ):
         super().__init__(PPOContinue(training=True), learning_rates, log_dir, clip_epsilon, entropy_coef, update_time)
 
-    def build_model_from_config(self, config: TrainConfig):
+    def add_model_encoder_from_config(self, config: TrainConfig):
         action_num = len(config.action_transform)
         pi_encoder = build_encoder_from_config(config.nets[0], trainable=True)
         critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
-        self.build_model(pi_encoder, critic_encoder, action_num)
+        self.add_model_encoder(pi_encoder, critic_encoder, action_num)

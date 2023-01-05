@@ -6,29 +6,29 @@ import tensorflow as tf
 from tensorflow import keras
 
 from rlearn.model import tools
-from rlearn.model.base import BaseRLNet
+from rlearn.model.base import BaseRLModel
 
 
-class DDPG(BaseRLNet):
+class DDPG(BaseRLModel):
     name = __qualname__
 
     def __init__(
             self,
             training: bool = True,
     ):
-        BaseRLNet.__init__(self, training=training)
+        BaseRLModel.__init__(self, training=training)
         self.critic = None
         self.critic_ = None
         self.actor = None
         self.actor_ = None
 
     @staticmethod
-    def default_build_actor_callback(encoder: keras.Sequential, action_num: int):
+    def add_actor_encoder_callback(encoder: keras.Sequential, action_num: int):
         o = keras.layers.Dense(action_num, activation="tanh")(encoder.output)
         return keras.Model(inputs=encoder.inputs, outputs=[o])
 
     @staticmethod
-    def default_build_critic_callback(encoder: keras.Sequential, action_num: int):
+    def add_critic_encoder_callback(encoder: keras.Sequential, action_num: int):
         action_inputs = keras.layers.InputLayer(
             input_shape=(action_num,),
             name="action_inputs",
@@ -39,16 +39,19 @@ class DDPG(BaseRLNet):
         o = keras.layers.Dense(1)(o)
         return keras.Model(inputs=encoder.inputs + [action_inputs.input, ], outputs=[o])
 
-    def build(self, actor_encoder: keras.Model, critic_encoder: keras.Model, action_num: int):
-        self.actor = self.default_build_actor_callback(actor_encoder, action_num)
-        self.actor._name = "actor"
+    def add_encoder(self, actor: keras.Model, critic: keras.Model, action_num: int):
+        a = self.add_actor_encoder_callback(actor, action_num)
+        c = None
         if self.training:
-            self.actor_ = keras.models.clone_model(self.actor)
-            self.actor_._name = "actor_"
-            self.critic = self.default_build_critic_callback(critic_encoder, action_num)
-            self.critic._name = "critic"
-            self.critic_ = keras.models.clone_model(self.critic)
-            self.critic_._name = "critic_"
+            c = self.add_critic_encoder_callback(critic, action_num)
+        self.add_model(a, c)
+
+    def add_model(self, actor: keras.Model, critic: keras.Model):
+        self.actor = actor
+        if self.training:
+            self.actor_ = self.clone_model(self.actor)
+            self.critic = critic
+            self.critic_ = self.clone_model(self.critic)
 
     def predict(self, s) -> np.ndarray:
         return self.actor.predict(np.expand_dims(s, axis=0), verbose=0)[0]

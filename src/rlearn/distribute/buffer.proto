@@ -15,10 +15,12 @@ service ReplayBuffer {
 }
 
 message ServiceReadyReq {
+  string requestId = 1;
 }
 
 message ServiceReadyResp {
   bool ready = 1;
+  string requestId = 2;
 }
 
 message Data {
@@ -28,18 +30,22 @@ message Data {
 
 message UploadDataReq {
   Data data = 1;
+  string requestId = 2;
 }
 
 message UploadDataResp {
   bool done = 1;
   string err = 2;
+  string requestId = 3;
 }
 
 message DownloadDataReq {
   int32 maxSize = 1;
+  string requestId = 2;
 }
 
 message DownloadDataResp {
   Data data = 1;
   string err = 2;
+  string requestId = 3;
 }

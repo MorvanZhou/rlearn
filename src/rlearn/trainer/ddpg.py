@@ -34,15 +34,19 @@ class DDPGTrainer(BaseTrainer):
         )
         self.loss = keras.losses.MeanSquaredError()
 
-    def build_model(self, actor_encoder: keras.Model, critic_encoder: keras.Model, action_num: int):
-        self.model.build(actor_encoder=actor_encoder, critic_encoder=critic_encoder, action_num=action_num)
+    def add_model_encoder(self, actor: keras.Model, critic: keras.Model, action_num: int):
+        self.model.add_encoder(actor=actor, critic=critic, action_num=action_num)
         self._set_tensorboard([self.model.actor, self.model.critic])
 
-    def build_model_from_config(self, config: TrainConfig):
+    def add_model(self, actor: keras.Model, critic: keras.Model):
+        self.model.add_model(actor=actor, critic=critic)
+        self._set_tensorboard([self.model.actor, self.model.critic])
+
+    def add_model_encoder_from_config(self, config: TrainConfig):
         action_num = len(config.action_transform)
         actor_encoder = build_encoder_from_config(config.nets[0], trainable=True)
         critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
-        self.build_model(actor_encoder=actor_encoder, critic_encoder=critic_encoder, action_num=action_num)
+        self.add_model_encoder(actor=actor_encoder, critic=critic_encoder, action_num=action_num)
 
     def train_batch(self) -> tp.Dict[str, tp.Any]:
         res = {

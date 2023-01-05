@@ -19,7 +19,7 @@ def set_config_to_trainer(
         min_epsilon=config.min_epsilon,
         epsilon_decay=config.epsilon_decay,
     )
-    trainer.build_model_from_config(config=config)
+    trainer.add_model_encoder_from_config(config=config)
     trainer.set_replay_buffer(
         max_size=config.replay_buffer.max_size,
         buf=config.replay_buffer.buf,
