@@ -29,17 +29,17 @@ class DQNTrainer(BaseTrainer):
         )
         self.loss = keras.losses.MeanSquaredError()
 
-    def add_model_encoder(self, q: keras.Model, action_num: int):
-        self.model.add_encoder(q, action_num)
+    def set_model_encoder(self, q: keras.Model, action_num: int):
+        self.model.set_encoder(q, action_num)
         self._set_tensorboard(self.model.q)
 
-    def add_model_encoder_from_config(self, config: TrainConfig):
+    def set_model_encoder_from_config(self, config: TrainConfig):
         action_num = len(config.action_transform)
         encoder = build_encoder_from_config(config.nets[0], trainable=True)
-        self.add_model_encoder(encoder, action_num)
+        self.set_model_encoder(encoder, action_num)
 
-    def add_model(self, q: keras.Model):
-        self.model.add_model(q=q)
+    def set_model(self, q: keras.Model):
+        self.model.set_model(q=q)
         self._set_tensorboard([self.model.q])
 
     def predict(self, s: np.ndarray) -> int:

@@ -45,15 +45,15 @@ class _PPOTrainer(BaseTrainer):
         self.buffer_a = []
         self.buffer_r = []
 
-    def add_model_encoder(self, pi: keras.Model, critic: keras.Model, action_num: int):
-        self.model.add_encoder(pi, critic, action_num)
+    def set_model_encoder(self, pi: keras.Model, critic: keras.Model, action_num: int):
+        self.model.set_encoder(pi, critic, action_num)
         self._set_tensorboard([self.model.pi, self.model.critic])
 
-    def add_model_encoder_from_config(self, config: TrainConfig):
+    def set_model_encoder_from_config(self, config: TrainConfig):
         raise NotImplemented
 
-    def add_model(self, pi: keras.Model, critic: keras.Model):
-        self.model.add_model(pi=pi, critic=critic)
+    def set_model(self, pi: keras.Model, critic: keras.Model):
+        self.model.set_model(pi=pi, critic=critic)
         self._set_tensorboard([self.model.actor, self.model.critic])
 
     def predict(self, s: np.ndarray) -> np.ndarray:
@@ -156,12 +156,12 @@ class PPODiscreteTrainer(_PPOTrainer):
     ):
         super().__init__(PPODiscrete(training=True), learning_rates, log_dir, clip_epsilon, entropy_coef, update_time)
 
-    def add_model_encoder_from_config(self, config: TrainConfig):
+    def set_model_encoder_from_config(self, config: TrainConfig):
         action_num = len(config.action_transform)
 
         pi_encoder = build_encoder_from_config(config.nets[0], trainable=True)
         critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
-        self.add_model_encoder(pi_encoder, critic_encoder, action_num)
+        self.set_model_encoder(pi_encoder, critic_encoder, action_num)
 
 
 class PPOContinueTrainer(_PPOTrainer):
@@ -177,8 +177,8 @@ class PPOContinueTrainer(_PPOTrainer):
     ):
         super().__init__(PPOContinue(training=True), learning_rates, log_dir, clip_epsilon, entropy_coef, update_time)
 
-    def add_model_encoder_from_config(self, config: TrainConfig):
+    def set_model_encoder_from_config(self, config: TrainConfig):
         action_num = len(config.action_transform)
         pi_encoder = build_encoder_from_config(config.nets[0], trainable=True)
         critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
-        self.add_model_encoder(pi_encoder, critic_encoder, action_num)
+        self.set_model_encoder(pi_encoder, critic_encoder, action_num)

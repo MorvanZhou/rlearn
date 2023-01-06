@@ -61,15 +61,15 @@ class BaseTrainer(ABC):
         pass
 
     @abstractmethod
-    def add_model_encoder_from_config(self, config: TrainConfig):
+    def set_model_encoder_from_config(self, config: TrainConfig):
         pass
 
     @abstractmethod
-    def add_model_encoder(self, *args, **kwargs):
+    def set_model_encoder(self, *args, **kwargs):
         pass
 
     @abstractmethod
-    def add_model(self, *args, **kwargs):
+    def set_model(self, *args, **kwargs):
         pass
 
     def trace(self, data: dict, step: int):

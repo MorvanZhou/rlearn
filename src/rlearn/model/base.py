@@ -16,11 +16,11 @@ class BaseRLModel(ABC):
         return self.predict(*args, **kwargs)
 
     @abstractmethod
-    def add_encoder(self, *args, **kwargs):
+    def set_encoder(self, *args, **kwargs):
         pass
 
     @abstractmethod
-    def add_model(self, *args, **kwargs):
+    def set_model(self, *args, **kwargs):
         pass
 
     @abstractmethod

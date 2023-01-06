@@ -13,7 +13,7 @@ class DuelingDQN(DQN):
         super().__init__(training=training)
 
     @staticmethod
-    def add_encoder_callback(encoder: keras.Model, action_num: int):
+    def set_encoder_callback(encoder: keras.Model, action_num: int):
         oa = keras.layers.Dense(64)(encoder.output)
         oa = keras.layers.Dense(action_num)(oa)
         ov = keras.layers.Dense(64)(encoder.output)

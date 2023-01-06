@@ -21,15 +21,15 @@ class DQN(BaseRLModel):
         self.q_: tp.Optional[keras.Model] = None
 
     @staticmethod
-    def add_encoder_callback(encoder: keras.Sequential, action_num: int):
+    def set_encoder_callback(encoder: keras.Sequential, action_num: int):
         o = keras.layers.Dense(action_num)(encoder.output)
         return keras.Model(inputs=encoder.inputs, outputs=[o])
 
-    def add_encoder(self, encoder: keras.Model, action_num: int):
-        q = self.add_encoder_callback(encoder, action_num)
-        self.add_model(q)
+    def set_encoder(self, encoder: keras.Model, action_num: int):
+        q = self.set_encoder_callback(encoder, action_num)
+        self.set_model(q)
 
-    def add_model(self, q: keras.Model):
+    def set_model(self, q: keras.Model):
         self.q = q
         if self.training:
             self.q_ = self.clone_model(self.q)

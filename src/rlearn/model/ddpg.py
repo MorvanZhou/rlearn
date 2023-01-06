@@ -23,12 +23,12 @@ class DDPG(BaseRLModel):
         self.actor_ = None
 
     @staticmethod
-    def add_actor_encoder_callback(encoder: keras.Sequential, action_num: int):
+    def set_actor_encoder_callback(encoder: keras.Sequential, action_num: int):
         o = keras.layers.Dense(action_num, activation="tanh")(encoder.output)
         return keras.Model(inputs=encoder.inputs, outputs=[o])
 
     @staticmethod
-    def add_critic_encoder_callback(encoder: keras.Sequential, action_num: int):
+    def set_critic_encoder_callback(encoder: keras.Sequential, action_num: int):
         action_inputs = keras.layers.InputLayer(
             input_shape=(action_num,),
             name="action_inputs",
@@ -39,14 +39,14 @@ class DDPG(BaseRLModel):
         o = keras.layers.Dense(1)(o)
         return keras.Model(inputs=encoder.inputs + [action_inputs.input, ], outputs=[o])
 
-    def add_encoder(self, actor: keras.Model, critic: keras.Model, action_num: int):
-        a = self.add_actor_encoder_callback(actor, action_num)
+    def set_encoder(self, actor: keras.Model, critic: keras.Model, action_num: int):
+        a = self.set_actor_encoder_callback(actor, action_num)
         c = None
         if self.training:
-            c = self.add_critic_encoder_callback(critic, action_num)
-        self.add_model(a, c)
+            c = self.set_critic_encoder_callback(critic, action_num)
+        self.set_model(a, c)
 
-    def add_model(self, actor: keras.Model, critic: keras.Model):
+    def set_model(self, actor: keras.Model, critic: keras.Model):
         self.actor = actor
         if self.training:
             self.actor_ = self.clone_model(self.actor)

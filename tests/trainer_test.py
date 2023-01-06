@@ -3,8 +3,8 @@ import tempfile
 import unittest
 
 import numpy as np
-from tensorflow import keras
 import tensorflow as tf
+from tensorflow import keras
 
 import rlearn
 from rlearn.trainer.base import BaseTrainer
@@ -55,7 +55,7 @@ class TrainerTest(unittest.TestCase):
         trainer = rlearn.trainer.DDPGTrainer(
             learning_rates=[0.01, 0.01],
             log_dir=os.path.join(tempfile.tempdir, "test_ddpg"))
-        trainer.add_model_encoder(
+        trainer.set_model_encoder(
             actor=keras.Sequential([
                 keras.layers.InputLayer(2),
                 keras.layers.Dense(16)
@@ -90,7 +90,7 @@ class TrainerTest(unittest.TestCase):
                 o = self.l1(o)
                 return self.o(o)
 
-        trainer.add_model(
+        trainer.set_model(
             actor=a,
             critic=C(),
         )
@@ -107,7 +107,7 @@ class TrainerTest(unittest.TestCase):
         trainer = rlearn.trainer.DQNTrainer(
             learning_rates=[0.01, 0.01],
             log_dir=os.path.join(tempfile.tempdir, "test_dqn"))
-        trainer.add_model(
+        trainer.set_model(
             q=keras.Sequential([
                 keras.layers.InputLayer(2),
                 keras.layers.Dense(16),
@@ -130,7 +130,7 @@ class TrainerTest(unittest.TestCase):
             keras.layers.Dense(32),
             keras.layers.ReLU(),
         ])
-        trainer.add_model_encoder(net, 3)
+        trainer.set_model_encoder(net, 3)
         trainer.set_replay_buffer(100)
         replace_ratio = 0.1
         trainer.set_params(
@@ -152,13 +152,13 @@ class TrainerTest(unittest.TestCase):
         trainer = rlearn.PPOContinueTrainer(
             learning_rates=[0.01, 0.01],
         )
-        trainer.add_model_encoder(
+        trainer.set_model_encoder(
             pi=keras.Sequential([
-                keras.layers.InputLayer((2, )),
+                keras.layers.InputLayer((2,)),
                 keras.layers.Dense(10),
             ]),
             critic=keras.Sequential([
-                keras.layers.InputLayer((2, )),
+                keras.layers.InputLayer((2,)),
                 keras.layers.Dense(10),
             ]),
             action_num=1
@@ -186,7 +186,7 @@ class TrainerTest(unittest.TestCase):
         trainer = rlearn.PPODiscreteTrainer(
             learning_rates=[0.001, 0.001]
         )
-        trainer.add_model_encoder(
+        trainer.set_model_encoder(
             pi=keras.Sequential([
                 keras.layers.InputLayer((2,)),
                 keras.layers.Dense(10),
@@ -219,7 +219,7 @@ class TrainerTest(unittest.TestCase):
             keras.layers.Dense(32),
             keras.layers.ReLU(),
         ])
-        trainer.add_model_encoder(net, 3)
+        trainer.set_model_encoder(net, 3)
         replace_ratio = 0.1
         trainer.set_params(
             batch_size=32,
@@ -244,7 +244,7 @@ class TrainerTest(unittest.TestCase):
             keras.layers.Dense(32),
             keras.layers.ReLU(),
         ])
-        trainer.add_model_encoder(actor=actor_encoder, critic=critic_encoder, action_num=3)
+        trainer.set_model_encoder(actor=actor_encoder, critic=critic_encoder, action_num=3)
         trainer.set_params(
             batch_size=32,
         )

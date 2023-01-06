@@ -15,7 +15,7 @@ class DQNSmall(model.DQN):
             keras.layers.Dense(32),
             keras.layers.ReLU(),
         ])
-        self.add_encoder(net, self.action_dim)
+        self.set_encoder(net, self.action_dim)
 
 
 class DQNMiddle(model.DQN):
@@ -33,7 +33,7 @@ class DQNMiddle(model.DQN):
             keras.layers.ReLU(),
             keras.layers.Dense(self.action_dim)
         ])
-        self.add_encoder(net, self.action_dim)
+        self.set_encoder(net, self.action_dim)
 
 
 class DQNLarge(model.DQN):
@@ -53,7 +53,7 @@ class DQNLarge(model.DQN):
             keras.layers.ReLU(),
             keras.layers.Dense(self.action_dim)
         ])
-        self.add_encoder(net, self.action_dim)
+        self.set_encoder(net, self.action_dim)
 
 
 __all__ = ["DQNLarge", "DQNSmall", "DQNMiddle"]

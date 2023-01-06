@@ -30,22 +30,22 @@ class _PPO(BaseRLModel, metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def add_pi_encoder_callback(encoder: keras.Sequential, action_num: int):
+    def set_pi_encoder_callback(encoder: keras.Sequential, action_num: int):
         pass
 
     @staticmethod
-    def add_critic_encoder_callback(encoder: keras.Sequential):
+    def set_critic_encoder_callback(encoder: keras.Sequential):
         o = keras.layers.Dense(1)(encoder.output)
         return keras.Model(inputs=encoder.inputs, outputs=[o])
 
-    def add_encoder(self, pi: keras.Model, critic: keras.Model, action_num: int):
-        old_pi = self.add_pi_encoder_callback(pi, action_num)
+    def set_encoder(self, pi: keras.Model, critic: keras.Model, action_num: int):
+        old_pi = self.set_pi_encoder_callback(pi, action_num)
         c = None
         if self.training:
-            c = self.add_critic_encoder_callback(critic)
-        self.add_model(old_pi, c)
+            c = self.set_critic_encoder_callback(critic)
+        self.set_model(old_pi, c)
 
-    def add_model(self, pi: keras.Model, critic: keras.Model):
+    def set_model(self, pi: keras.Model, critic: keras.Model):
         self.pi_ = pi
         if self.training:
             self.pi = self.clone_model(self.pi_)
@@ -98,7 +98,7 @@ class PPODiscrete(_PPO):
         return tfp.distributions.Categorical(probs=o)
 
     @staticmethod
-    def add_pi_encoder_callback(encoder: keras.Sequential, action_num: int):
+    def set_pi_encoder_callback(encoder: keras.Sequential, action_num: int):
         o = keras.layers.Dense(action_num)(encoder.output)
         o = keras.layers.Softmax()(o)
         return keras.Model(inputs=encoder.inputs, outputs=[o])
@@ -120,6 +120,6 @@ class PPOContinue(_PPO):
         return tfp.distributions.Normal(loc=loc, scale=scale)
 
     @staticmethod
-    def add_pi_encoder_callback(encoder: keras.Sequential, action_num: int):
+    def set_pi_encoder_callback(encoder: keras.Sequential, action_num: int):
         o = keras.layers.Dense(action_num * 2)(encoder.output)
         return keras.Model(inputs=encoder.inputs, outputs=[o])

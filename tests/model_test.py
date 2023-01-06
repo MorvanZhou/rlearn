@@ -16,7 +16,7 @@ class ModelTest(unittest.TestCase):
             keras.layers.ReLU(),
         ])
         m = rlearn.DQN()
-        m.add_encoder(net, 3)
+        m.set_encoder(net, 3)
         self.assertIsInstance(m.predict(np.zeros([2, ])), int)
 
     def test_dqn_add_model(self):
@@ -29,19 +29,19 @@ class ModelTest(unittest.TestCase):
             keras.layers.Dense(3)
         ])
         m = rlearn.DQN()
-        m.add_model(net)
+        m.set_model(net)
         pred = m.predict(np.zeros([2, ]))
         self.assertIsInstance(pred, int)
 
     def test_ppo_continuous(self):
         m = rlearn.PPOContinue()
-        m.add_encoder(
+        m.set_encoder(
             pi=keras.Sequential([
-                keras.layers.InputLayer((2, )),
+                keras.layers.InputLayer((2,)),
                 keras.layers.Dense(10),
             ]),
             critic=keras.Sequential([
-                keras.layers.InputLayer((2, )),
+                keras.layers.InputLayer((2,)),
                 keras.layers.Dense(10),
             ]),
             action_num=1
@@ -55,7 +55,7 @@ class ModelTest(unittest.TestCase):
 
     def test_ppo_continuous_add_model(self):
         m = rlearn.PPOContinue()
-        m.add_model(
+        m.set_model(
             pi=keras.Sequential([
                 keras.layers.InputLayer((2,)),
                 keras.layers.Dense(10),
@@ -72,7 +72,7 @@ class ModelTest(unittest.TestCase):
 
     def test_ppo_discrete(self):
         m = rlearn.PPODiscrete()
-        m.add_encoder(
+        m.set_encoder(
             pi=keras.Sequential([
                 keras.layers.InputLayer((2,)),
                 keras.layers.Dense(10),
@@ -90,11 +90,11 @@ class ModelTest(unittest.TestCase):
 
     def test_dueling_dqn(self):
         m = rlearn.DuelingDQN()
-        m.add_encoder(keras.Sequential([
-                keras.layers.InputLayer(2),
-                keras.layers.Dense(32),
-                keras.layers.ReLU(),
-            ]),
+        m.set_encoder(keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.Dense(32),
+            keras.layers.ReLU(),
+        ]),
             action_num=3
         )
         self.assertIsInstance(m.predict(np.zeros([2, ])), int)
@@ -102,7 +102,7 @@ class ModelTest(unittest.TestCase):
 
     def test_ddpg(self):
         m = rlearn.DDPG()
-        m.add_encoder(
+        m.set_encoder(
             actor=keras.Sequential([
                 keras.layers.InputLayer(2),
                 keras.layers.Dense(32),
@@ -122,7 +122,7 @@ class ModelTest(unittest.TestCase):
 
     def test_ddpg_add_model(self):
         m = rlearn.DDPG()
-        m.add_model(
+        m.set_model(
             actor=keras.Sequential([
                 keras.layers.InputLayer((2,)),
                 keras.layers.Dense(10),
