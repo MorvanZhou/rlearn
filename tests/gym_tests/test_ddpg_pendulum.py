@@ -72,7 +72,7 @@ for ep in range(200):
                 print(f"{ep} {ep_reward=:.2f}, {a_loss=:.4f}, {c_loss=:.4f}")
                 if ep % 20 == 0:
                     dir_ = os.path.join(trainer.log_dir, "checkpoints", f"ep-{ep:06d}")
-                    trainer.save_model(dir_)
+                    trainer.save_model_weights(dir_)
                     trainer.load_model_weights(dir_)
                 break
 

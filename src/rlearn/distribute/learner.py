@@ -1,3 +1,40 @@
+import datetime
+import logging
+import typing as tp
+
+import grpc
+
+from rlearn.distribute import logger, actor_pb2_grpc, buffer_pb2_grpc
+from rlearn.trainer.base import BaseTrainer
+
+
+class Learner:
+    def __init__(
+            self,
+            trainer: BaseTrainer,
+            remote_buffer_address: str,
+            remote_actors_address: tp.List[str],
+            debug: bool = False,
+    ):
+        self.trainer: BaseTrainer = trainer
+        self.remote_buffer_address: str = remote_buffer_address
+        self.debug = debug
+
+        self.remote_actors_channel: tp.Dict[str, grpc.Channel] = {
+            address: grpc.insecure_channel(address) for address in remote_actors_address
+        }
+        self.remote_actors_stub: tp.Dict[str, actor_pb2_grpc.ActorStub] = {
+            address: actor_pb2_grpc.ActorStub(channel=channel) for address, channel in self.actors_channel.items()
+        }
+        self.remote_buffer_stub = buffer_pb2_grpc.ReplayBufferStub(
+            channel=grpc.insecure_channel(self.remote_buffer_address)
+        )
+
+        self.logger = logger.get_logger("learner")
+        self.logger.setLevel(logging.DEBUG if self.debug else logging.ERROR)
+
+        current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")
+
 # import datetime
 # import logging
 # import os

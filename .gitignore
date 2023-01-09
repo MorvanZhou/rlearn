@@ -3,6 +3,7 @@
 /.vscode
 /.coverage
 **/__pycache__/
+**/cacheModel/
 /src/*.egg-info
 /dist
 /.tox

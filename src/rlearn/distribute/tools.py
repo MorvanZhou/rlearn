@@ -56,8 +56,50 @@ def pack_transitions(buffer, interface: DataInterface, max_size: int = None):
     return interface
 
 
-def read_iterfile(filepath, chunk_size=1024):
-    yield actor_pb2.ReplicateModelReq(filename=os.path.basename(filepath))
+def read_pb_iterfile(
+        filepath: str,
+        model_type: str,
+        max_episode: int,
+        max_episode_step: int,
+        chunk_size=1024,
+        request_id: str = None,
+) -> actor_pb2.StartReq:
+    if request_id is None:
+        request_id = str(uuid.uuid4())
+
+    req = actor_pb2.StartReq(meta=actor_pb2.StartMeta(
+        filename=os.path.basename(filepath),
+        modelType=model_type,
+        maxEpisode=max_episode,
+        version="v0",
+        maxEpisodeStep=max_episode_step,
+        requestId=request_id
+    ))
+    # req.meta.filename = os.path.basename(filepath)
+    # req.meta.modelType = model_type
+    # req.meta.maxEpisode = max_episode
+    # req.meta.maxEpisodeStep = max_episode_step
+    # req.meta.requestId = request_id
+    yield req
+
+    with open(filepath, mode="rb") as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if chunk:
+                entry_request = actor_pb2.StartReq(chunkData=chunk)
+                yield entry_request
+            else:  # The chunk was empty, which means we're at the end of the file
+                return
+
+
+def read_weights_iterfile(filepath, version: str, chunk_size=1024, request_id: str = None):
+    if request_id is None:
+        request_id = str(uuid.uuid4())
+    yield actor_pb2.ReplicateModelReq(meta=actor_pb2.ReplicateModelMeta(
+        filename=os.path.basename(filepath),
+        version=version,
+        requestId=request_id
+    ))
     with open(filepath, mode="rb") as f:
         while True:
             chunk = f.read(chunk_size)

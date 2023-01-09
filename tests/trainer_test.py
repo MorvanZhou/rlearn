@@ -10,6 +10,25 @@ import rlearn
 from rlearn.trainer.base import BaseTrainer
 
 
+def get_default_ddpg_trainer():
+    trainer = rlearn.trainer.DDPGTrainer(learning_rates=[0.01, 0.01])
+    actor_encoder = keras.Sequential([
+        keras.layers.InputLayer(2),
+        keras.layers.Dense(32),
+        keras.layers.ReLU(),
+    ])
+    critic_encoder = keras.Sequential([
+        keras.layers.InputLayer(2),
+        keras.layers.Dense(32),
+        keras.layers.ReLU(),
+    ])
+    trainer.set_model_encoder(actor=actor_encoder, critic=critic_encoder, action_num=3)
+    trainer.set_params(
+        batch_size=32,
+    )
+    return trainer
+
+
 class TrainerTest(unittest.TestCase):
     def test_get_trainer_map(self):
         d = {}
@@ -233,22 +252,24 @@ class TrainerTest(unittest.TestCase):
             rlearn.DDPGTrainer(
                 learning_rates=[0.001]
             )
-        trainer = rlearn.trainer.DDPGTrainer(learning_rates=[0.01, 0.01])
-        actor_encoder = keras.Sequential([
-            keras.layers.InputLayer(2),
-            keras.layers.Dense(32),
-            keras.layers.ReLU(),
-        ])
-        critic_encoder = keras.Sequential([
-            keras.layers.InputLayer(2),
-            keras.layers.Dense(32),
-            keras.layers.ReLU(),
-        ])
-        trainer.set_model_encoder(actor=actor_encoder, critic=critic_encoder, action_num=3)
-        trainer.set_params(
-            batch_size=32,
-        )
+        trainer = get_default_ddpg_trainer()
         pred = trainer.predict(np.zeros([2, ]))
         self.assertIsInstance(pred, np.ndarray)
         self.assertEqual(3, len(pred))
         self.assertEqual(rlearn.DDPG.name, trainer.model.name)
+
+    def test_save_ckpt_model(self):
+        trainer = get_default_ddpg_trainer()
+        path = "tmp_model.zip"
+        trainer.save_model_weights(path)
+        self.assertTrue(os.path.isfile(path))
+        trainer.load_model_weights(path)
+        os.remove(path)
+
+    def test_save_pb_model(self):
+        trainer = get_default_ddpg_trainer()
+        path = "tmp_model.zip"
+        trainer.save_model(path)
+        self.assertTrue(os.path.isfile(path))
+        trainer.load_model(path)
+        os.remove(path)

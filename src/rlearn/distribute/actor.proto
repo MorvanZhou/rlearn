@@ -10,8 +10,8 @@ package actor;
 // The greeting service definition.
 service Actor {
   rpc ServiceReady (ServiceReadyReq) returns (ServiceReadyResp) {}
-  rpc Start (StartReq) returns (StartResp) {}
-  rpc ReplicateModel (ReplicateModelReq) returns (ReplicateModelResp) {}
+  rpc Start (stream StartReq) returns (StartResp) {}
+  rpc ReplicateModel (stream ReplicateModelReq) returns (ReplicateModelResp) {}
   rpc Terminate (TerminateReq) returns (TerminateResp) {}
 }
 
@@ -24,8 +24,20 @@ message ServiceReadyResp {
   string requestId = 2;
 }
 
+message StartMeta {
+  string filename = 1;
+  string modelType = 2;
+  int64 maxEpisode = 3;
+  int64 maxEpisodeStep = 4;
+  string version = 5;
+  string requestId = 6;
+}
+
 message StartReq {
-  string requestId = 1;
+  oneof request {
+    StartMeta meta = 1;
+    bytes chunkData = 2;
+  }
 }
 
 message StartResp {
@@ -34,14 +46,15 @@ message StartResp {
   string requestId = 3;
 }
 
-message Meta {
-  string version = 3;
-  string requestId = 4;
+message ReplicateModelMeta {
+  string filename = 1;
+  string version = 2;
+  string requestId = 3;
 }
 
 message ReplicateModelReq {
   oneof request {
-    Meta meta = 1;
+    ReplicateModelMeta meta = 1;
     bytes chunkData = 2;
   }
 }

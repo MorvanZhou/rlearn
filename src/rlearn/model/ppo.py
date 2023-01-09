@@ -59,13 +59,13 @@ class _PPO(BaseRLModel, metaclass=ABCMeta):
             action = int(action)
         return action
 
-    def save(self, path):
+    def save_weights(self, path):
         model_tmp_dir = path
         if path.endswith(".zip"):
             model_tmp_dir = path.rsplit(".zip")[0]
         self.pi_.save_weights(os.path.join(model_tmp_dir, "pi_.ckpt"))
         self.critic.save_weights(os.path.join(model_tmp_dir, "critic.ckpt"))
-        tools.zip_model(model_tmp_dir)
+        tools.zip_ckpt_model(model_tmp_dir)
         shutil.rmtree(model_tmp_dir, ignore_errors=True)
 
     def load_weights(self, path):
@@ -76,6 +76,25 @@ class _PPO(BaseRLModel, metaclass=ABCMeta):
         if self.training:
             self.pi.load_weights(os.path.join(unzipped_dir, "pi_.ckpt"))
             self.critic.load_weights(os.path.join(unzipped_dir, "critic.ckpt"))
+        shutil.rmtree(unzipped_dir, ignore_errors=True)
+
+    def save(self, path: str):
+        model_tmp_dir = path
+        if path.endswith(".zip"):
+            model_tmp_dir = path.rsplit(".zip")[0]
+        self.pi_.save(os.path.join(model_tmp_dir, "pi_"))
+        self.critic.save(os.path.join(model_tmp_dir, "critic"))
+        tools.zip_pb_model(model_tmp_dir)
+        shutil.rmtree(model_tmp_dir, ignore_errors=True)
+
+    def load(self, path: str):
+        if not path.endswith(".zip"):
+            path += ".zip"
+        unzipped_dir = tools.unzip_model(path)
+        self.pi_ = keras.models.load_model(os.path.join(unzipped_dir, "pi_"))
+        if self.training:
+            self.pi = keras.models.load_model(os.path.join(unzipped_dir, "pi_"))
+            self.critic = keras.models.load_model(os.path.join(unzipped_dir, "critic"))
         shutil.rmtree(unzipped_dir, ignore_errors=True)
 
     @staticmethod

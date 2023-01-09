@@ -136,11 +136,17 @@ class _PPOTrainer(BaseTrainer):
         res.update({"a_loss": la.numpy(), "c_loss": lc.numpy()})
         return res
 
-    def save_model(self, path: str):
-        self.model.save(path)
+    def save_model_weights(self, path: str):
+        self.model.save_weights(path)
 
     def load_model_weights(self, path: str):
         self.model.load_weights(path)
+
+    def save_model(self, path: str):
+        self.model.save(path)
+
+    def load_model(self, path: str):
+        self.model.load(path)
 
 
 class PPODiscreteTrainer(_PPOTrainer):

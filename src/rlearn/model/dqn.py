@@ -45,12 +45,12 @@ class DQN(BaseRLModel):
             return int(a_index)
         return a_index
 
-    def save(self, path):
+    def save_weights(self, path):
         model_tmp_dir = path
         if path.endswith(".zip"):
             model_tmp_dir = path.rsplit(".zip")[0]
-        self.q.save_weights(os.path.join(model_tmp_dir, "net.ckpt"))
-        tools.zip_model(model_tmp_dir)
+        self.q.save_weights(os.path.join(model_tmp_dir, "q.ckpt"))
+        tools.zip_ckpt_model(model_tmp_dir)
         shutil.rmtree(model_tmp_dir, ignore_errors=True)
 
     def load_weights(self, path):
@@ -59,7 +59,24 @@ class DQN(BaseRLModel):
         if not path.endswith(".zip"):
             path += ".zip"
         unzipped_dir = tools.unzip_model(path)
-        self.q.load_weights(os.path.join(unzipped_dir, "net.ckpt"))
+        self.q.load_weights(os.path.join(unzipped_dir, "q.ckpt"))
         if self.training:
-            self.q_.load_weights(os.path.join(unzipped_dir, "net.ckpt"))
+            self.q_.load_weights(os.path.join(unzipped_dir, "q.ckpt"))
+        shutil.rmtree(unzipped_dir, ignore_errors=True)
+
+    def save(self, path: str):
+        model_tmp_dir = path
+        if path.endswith(".zip"):
+            model_tmp_dir = path.rsplit(".zip")[0]
+        self.q.save(os.path.join(model_tmp_dir, "q"))
+        tools.zip_pb_model(model_tmp_dir)
+        shutil.rmtree(model_tmp_dir, ignore_errors=True)
+
+    def load(self, path: str):
+        if not path.endswith(".zip"):
+            path += ".zip"
+        unzipped_dir = tools.unzip_model(path)
+        self.q = keras.models.load_model(os.path.join(unzipped_dir, "q"))
+        if self.training:
+            self.q_ = keras.models.load_model(os.path.join(unzipped_dir, "q"))
         shutil.rmtree(unzipped_dir, ignore_errors=True)

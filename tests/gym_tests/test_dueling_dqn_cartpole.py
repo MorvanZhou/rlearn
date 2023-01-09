@@ -53,7 +53,7 @@ for ep in range(conf.epochs):
         if done:
             if ep % 20 == 0:
                 dir_ = os.path.join(trainer.log_dir, "checkpoints", f"ep-{ep:06d}")
-                trainer.save_model(dir_)
+                trainer.save_model_weights(dir_)
                 trainer.load_model_weights(dir_)
             trainer.trace({
                 "ep_reward": ep_r,

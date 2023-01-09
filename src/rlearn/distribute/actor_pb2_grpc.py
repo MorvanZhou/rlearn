@@ -20,12 +20,12 @@ class ActorStub(object):
             request_serializer=rlearn_dot_distribute_dot_actor__pb2.ServiceReadyReq.SerializeToString,
             response_deserializer=rlearn_dot_distribute_dot_actor__pb2.ServiceReadyResp.FromString,
         )
-        self.Start = channel.unary_unary(
+        self.Start = channel.stream_unary(
             '/actor.Actor/Start',
             request_serializer=rlearn_dot_distribute_dot_actor__pb2.StartReq.SerializeToString,
             response_deserializer=rlearn_dot_distribute_dot_actor__pb2.StartResp.FromString,
         )
-        self.ReplicateModel = channel.unary_unary(
+        self.ReplicateModel = channel.stream_unary(
             '/actor.Actor/ReplicateModel',
             request_serializer=rlearn_dot_distribute_dot_actor__pb2.ReplicateModelReq.SerializeToString,
             response_deserializer=rlearn_dot_distribute_dot_actor__pb2.ReplicateModelResp.FromString,
@@ -47,13 +47,13 @@ class ActorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def Start(self, request, context):
+    def Start(self, request_iterator, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ReplicateModel(self, request, context):
+    def ReplicateModel(self, request_iterator, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -73,12 +73,12 @@ def add_ActorServicer_to_server(servicer, server):
             request_deserializer=rlearn_dot_distribute_dot_actor__pb2.ServiceReadyReq.FromString,
             response_serializer=rlearn_dot_distribute_dot_actor__pb2.ServiceReadyResp.SerializeToString,
         ),
-        'Start': grpc.unary_unary_rpc_method_handler(
+        'Start': grpc.stream_unary_rpc_method_handler(
             servicer.Start,
             request_deserializer=rlearn_dot_distribute_dot_actor__pb2.StartReq.FromString,
             response_serializer=rlearn_dot_distribute_dot_actor__pb2.StartResp.SerializeToString,
         ),
-        'ReplicateModel': grpc.unary_unary_rpc_method_handler(
+        'ReplicateModel': grpc.stream_unary_rpc_method_handler(
             servicer.ReplicateModel,
             request_deserializer=rlearn_dot_distribute_dot_actor__pb2.ReplicateModelReq.FromString,
             response_serializer=rlearn_dot_distribute_dot_actor__pb2.ReplicateModelResp.SerializeToString,
@@ -117,7 +117,7 @@ class Actor(object):
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def Start(request,
+    def Start(request_iterator,
               target,
               options=(),
               channel_credentials=None,
@@ -127,14 +127,15 @@ class Actor(object):
               wait_for_ready=None,
               timeout=None,
               metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/actor.Actor/Start',
-                                             rlearn_dot_distribute_dot_actor__pb2.StartReq.SerializeToString,
-                                             rlearn_dot_distribute_dot_actor__pb2.StartResp.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+        return grpc.experimental.stream_unary(request_iterator, target, '/actor.Actor/Start',
+                                              rlearn_dot_distribute_dot_actor__pb2.StartReq.SerializeToString,
+                                              rlearn_dot_distribute_dot_actor__pb2.StartResp.FromString,
+                                              options, channel_credentials,
+                                              insecure, call_credentials, compression, wait_for_ready, timeout,
+                                              metadata)
 
     @staticmethod
-    def ReplicateModel(request,
+    def ReplicateModel(request_iterator,
                        target,
                        options=(),
                        channel_credentials=None,
@@ -144,11 +145,12 @@ class Actor(object):
                        wait_for_ready=None,
                        timeout=None,
                        metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/actor.Actor/ReplicateModel',
-                                             rlearn_dot_distribute_dot_actor__pb2.ReplicateModelReq.SerializeToString,
-                                             rlearn_dot_distribute_dot_actor__pb2.ReplicateModelResp.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+        return grpc.experimental.stream_unary(request_iterator, target, '/actor.Actor/ReplicateModel',
+                                              rlearn_dot_distribute_dot_actor__pb2.ReplicateModelReq.SerializeToString,
+                                              rlearn_dot_distribute_dot_actor__pb2.ReplicateModelResp.FromString,
+                                              options, channel_credentials,
+                                              insecure, call_credentials, compression, wait_for_ready, timeout,
+                                              metadata)
 
     @staticmethod
     def Terminate(request,

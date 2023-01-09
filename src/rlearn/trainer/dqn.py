@@ -81,8 +81,14 @@ class DQNTrainer(BaseTrainer):
         res.update({"loss": loss.numpy(), "q": q_wrt_a.numpy().ravel().mean()})
         return res
 
-    def save_model(self, path: str):
-        self.model.save(path)
+    def save_model_weights(self, path: str):
+        self.model.save_weights(path)
 
     def load_model_weights(self, path: str):
         self.model.load_weights(path)
+
+    def save_model(self, path: str):
+        self.model.save(path)
+
+    def load_model(self, path: str):
+        self.model.load(path)

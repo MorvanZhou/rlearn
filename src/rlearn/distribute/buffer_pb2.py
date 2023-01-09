@@ -6,7 +6,6 @@ from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from google.protobuf import reflection as _reflection
 from google.protobuf import symbol_database as _symbol_database
-
 # @@protoc_insertion_point(imports)
 
 _sym_db = _symbol_database.Default()
@@ -17,7 +16,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
     syntax='proto3',
     serialized_options=b'\n\024io.grpc.examples.envB\021ReplayBufferProtoP\001\242\002\003HLW',
     create_key=_descriptor._internal_create_key,
-    serialized_pb=b'\n\x1erlearn/distribute/buffer.proto\x12\x0creplayBuffer\"$\n\x0fServiceReadyReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"4\n\x10ServiceReadyResp\x12\r\n\x05ready\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t\"*\n\x04\x44\x61ta\x12\x0e\n\x06values\x18\x01 \x03(\x02\x12\x12\n\nattributes\x18\x02 \x01(\t\"D\n\rUploadDataReq\x12 \n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x12.replayBuffer.Data\x12\x11\n\trequestId\x18\x02 \x01(\t\">\n\x0eUploadDataResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"5\n\x0f\x44ownloadDataReq\x12\x0f\n\x07maxSize\x18\x01 \x01(\x05\x12\x11\n\trequestId\x18\x02 \x01(\t\"T\n\x10\x44ownloadDataResp\x12 \n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x12.replayBuffer.Data\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t2\xfb\x01\n\x0cReplayBuffer\x12O\n\x0cServiceReady\x12\x1d.replayBuffer.ServiceReadyReq\x1a\x1e.replayBuffer.ServiceReadyResp\"\x00\x12I\n\nUploadData\x12\x1b.replayBuffer.UploadDataReq\x1a\x1c.replayBuffer.UploadDataResp\"\x00\x12O\n\x0c\x44ownloadData\x12\x1d.replayBuffer.DownloadDataReq\x1a\x1e.replayBuffer.DownloadDataResp\"\x00\x42\x31\n\x14io.grpc.examples.envB\x11ReplayBufferProtoP\x01\xa2\x02\x03HLWb\x06proto3'
+    serialized_pb=b'\n\x1erlearn/distribute/buffer.proto\x12\x0creplayBuffer\"$\n\x0fServiceReadyReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"4\n\x10ServiceReadyResp\x12\r\n\x05ready\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t\"*\n\x04\x44\x61ta\x12\x0e\n\x06values\x18\x01 \x03(\x02\x12\x12\n\nattributes\x18\x02 \x01(\t\"U\n\rUploadDataReq\x12 \n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x12.replayBuffer.Data\x12\x0f\n\x07version\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\">\n\x0eUploadDataResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"5\n\x0f\x44ownloadDataReq\x12\x0f\n\x07maxSize\x18\x01 \x01(\x05\x12\x11\n\trequestId\x18\x02 \x01(\t\"T\n\x10\x44ownloadDataResp\x12 \n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x12.replayBuffer.Data\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t2\xfb\x01\n\x0cReplayBuffer\x12O\n\x0cServiceReady\x12\x1d.replayBuffer.ServiceReadyReq\x1a\x1e.replayBuffer.ServiceReadyResp\"\x00\x12I\n\nUploadData\x12\x1b.replayBuffer.UploadDataReq\x1a\x1c.replayBuffer.UploadDataResp\"\x00\x12O\n\x0c\x44ownloadData\x12\x1d.replayBuffer.DownloadDataReq\x1a\x1e.replayBuffer.DownloadDataResp\"\x00\x42\x31\n\x14io.grpc.examples.envB\x11ReplayBufferProtoP\x01\xa2\x02\x03HLWb\x06proto3'
 )
 
 _SERVICEREADYREQ = _descriptor.Descriptor(
@@ -50,6 +49,7 @@ _SERVICEREADYREQ = _descriptor.Descriptor(
     serialized_start=48,
     serialized_end=84,
 )
+
 
 _SERVICEREADYRESP = _descriptor.Descriptor(
     name='ServiceReadyResp',
@@ -89,6 +89,7 @@ _SERVICEREADYRESP = _descriptor.Descriptor(
     serialized_end=138,
 )
 
+
 _DATA = _descriptor.Descriptor(
     name='Data',
     full_name='replayBuffer.Data',
@@ -127,6 +128,7 @@ _DATA = _descriptor.Descriptor(
     serialized_end=182,
 )
 
+
 _UPLOADDATAREQ = _descriptor.Descriptor(
     name='UploadDataReq',
     full_name='replayBuffer.UploadDataReq',
@@ -143,8 +145,15 @@ _UPLOADDATAREQ = _descriptor.Descriptor(
             is_extension=False, extension_scope=None,
             serialized_options=None, file=DESCRIPTOR, create_key=_descriptor._internal_create_key),
         _descriptor.FieldDescriptor(
-            name='requestId', full_name='replayBuffer.UploadDataReq.requestId', index=1,
+            name='version', full_name='replayBuffer.UploadDataReq.version', index=1,
             number=2, type=9, cpp_type=9, label=1,
+            has_default_value=False, default_value=b"".decode('utf-8'),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR, create_key=_descriptor._internal_create_key),
+        _descriptor.FieldDescriptor(
+            name='requestId', full_name='replayBuffer.UploadDataReq.requestId', index=2,
+            number=3, type=9, cpp_type=9, label=1,
             has_default_value=False, default_value=b"".decode('utf-8'),
             message_type=None, enum_type=None, containing_type=None,
             is_extension=False, extension_scope=None,
@@ -162,8 +171,9 @@ _UPLOADDATAREQ = _descriptor.Descriptor(
     oneofs=[
     ],
     serialized_start=184,
-    serialized_end=252,
+    serialized_end=269,
 )
+
 
 _UPLOADDATARESP = _descriptor.Descriptor(
     name='UploadDataResp',
@@ -206,8 +216,8 @@ _UPLOADDATARESP = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=254,
-    serialized_end=316,
+    serialized_start=271,
+    serialized_end=333,
 )
 
 _DOWNLOADDATAREQ = _descriptor.Descriptor(
@@ -244,8 +254,8 @@ _DOWNLOADDATAREQ = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=318,
-    serialized_end=371,
+    serialized_start=335,
+    serialized_end=388,
 )
 
 _DOWNLOADDATARESP = _descriptor.Descriptor(
@@ -289,8 +299,8 @@ _DOWNLOADDATARESP = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=373,
-    serialized_end=457,
+    serialized_start=390,
+    serialized_end=474,
 )
 
 _UPLOADDATAREQ.fields_by_name['data'].message_type = _DATA
@@ -362,8 +372,8 @@ _REPLAYBUFFER = _descriptor.ServiceDescriptor(
     index=0,
     serialized_options=None,
     create_key=_descriptor._internal_create_key,
-    serialized_start=460,
-    serialized_end=711,
+    serialized_start=477,
+    serialized_end=728,
     methods=[
         _descriptor.MethodDescriptor(
             name='ServiceReady',

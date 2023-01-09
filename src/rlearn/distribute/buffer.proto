@@ -30,7 +30,8 @@ message Data {
 
 message UploadDataReq {
   Data data = 1;
-  string requestId = 2;
+  string version = 2;
+  string requestId = 3;
 }
 
 message UploadDataResp {

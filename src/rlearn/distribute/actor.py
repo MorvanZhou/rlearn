@@ -6,6 +6,7 @@ import time
 import typing as tp
 import uuid
 from abc import ABC, abstractmethod
+from concurrent import futures
 
 import grpc
 import numpy as np
@@ -13,6 +14,8 @@ import numpy as np
 from rlearn.distribute import actor_pb2, actor_pb2_grpc, buffer_pb2_grpc, buffer_pb2, tools
 from rlearn.distribute.logger import get_logger
 from rlearn.model.base import BaseRLModel
+from rlearn.model.tools import get_model_by_name
+from rlearn.replaybuf import RandomReplayBuffer
 from rlearn.replaybuf.base import BaseReplayBuffer
 from rlearn.transformer import BaseTransformer
 
@@ -31,39 +34,73 @@ class RLEnv(ABC):
 class ActorProcess(mp.Process):
     def __init__(
             self,
-            model: BaseRLModel,
             buffer: BaseReplayBuffer,
             env: RLEnv,
             remote_buffer_address: str,
             action_transformer: tp.Optional[BaseTransformer] = None,
-            max_episode: tp.Optional[int] = None,
-            max_episode_step: tp.Optional[int] = None,
             debug: bool = False,
     ):
         super().__init__()
         self.debug = debug
         self.logger = None
-        self.model: BaseRLModel = model
+        self.model_type = ""
+        self.init_model_pb_path = ""
+        self.model: tp.Optional[BaseRLModel] = None
         self.buffer: BaseReplayBuffer = buffer
         self.env: RLEnv = env
         self.action_transformer = action_transformer
-        self.max_episode = 0 if max_episode is None else max_episode
-        self.max_episode_step = 0 if max_episode_step is None else max_episode_step
+        self.max_episode = 0
+        self.max_episode_step = 0
         self.remote_buffer_address = remote_buffer_address
+        self.training_request_id = ""
 
         mgr = mp.Manager()
         self.ns = mgr.Namespace()
+
         self.ns.new_model_path = ""
         self.ns.episode_num = 0
         self.ns.episode_step_num = 0
         self.ns.version = ""
         self.lock = mgr.Lock()
+        self.model_loaded = mgr.Event()
+        self.model_loaded.clear()
+
+    def init_params(
+            self,
+            model_type: str,
+            model_pb_path: str,
+            init_version: str,
+            request_id: str,
+            max_episode: int = 0,
+            max_episode_step: int = 0,
+    ):
+        self.model_type = model_type
+        self.init_model_pb_path = model_pb_path
+        self.training_request_id = request_id
+        self.ns.version = init_version
+        self.max_episode = 0 if max_episode is None else max_episode
+        self.max_episode_step = 0 if max_episode_step is None else max_episode_step
+
+    def set_model(self):
+        self.model = get_model_by_name(self.model_type, training=False)
+        self.model.load(self.init_model_pb_path)
+        self.logger.debug("init model is set from %s", self.init_model_pb_path)
+        os.remove(self.init_model_pb_path)
+        self.model_loaded.set()
+
+    def set_model_replicate(self, version: str, weights_path: str):
+        with self.lock:
+            self.ns.new_model_path = weights_path
+            self.ns.version = version
+            self.model_loaded.clear()
 
     def try_replicate_model(self):
         with self.lock:
             if self.ns.new_model_path != "":
                 self.model.load_weights(self.ns.new_model_path)
+                os.remove(self.ns.new_model_path)
                 self.ns.new_model_path = ""
+                self.model_loaded.set()
                 self.logger.debug("model parameters replaced")
 
     @staticmethod
@@ -85,7 +122,7 @@ class ActorProcess(mp.Process):
         return g
 
     def send_data_to_remote_buffer(self, buf_stub):
-        req = buffer_pb2.UploadDataReq()
+        req = buffer_pb2.UploadDataReq(version=self.ns.version, requestId=self.training_request_id)
         tools.pack_transitions(self.buffer, req)
         resp = buf_stub.UploadData(req)
         if not resp.done:
@@ -93,22 +130,30 @@ class ActorProcess(mp.Process):
         self.buffer.clear()
 
     def run(self):
-        episode_generator = self.get_count_generator(self.max_episode)
         self.logger = get_logger("ap")
         self.logger.setLevel(logging.DEBUG if self.debug else logging.ERROR)
+
+        episode_generator = self.get_count_generator(self.max_episode)
+
         channel = grpc.insecure_channel(self.remote_buffer_address)
         buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
 
-        self.ns.episode_num = 0
+        self.set_model()
+
+        with self.lock:
+            self.ns.episode_num = 0
+
         for ep in episode_generator:
             self.logger.debug("ep %d", ep)
-            self.ns.episode_num = ep
+            with self.lock:
+                self.ns.episode_num = ep
             s = self.env.reset()
 
             episode_step_generator = self.get_count_generator(self.max_episode_step)
             for step in episode_step_generator:
                 self.logger.debug("step %d", step)
-                self.ns.episode_step_num = step
+                with self.lock:
+                    self.ns.episode_step_num = step
 
                 self.try_replicate_model()
 
@@ -126,68 +171,148 @@ class ActorProcess(mp.Process):
 
 
 class ActorService(actor_pb2_grpc.ActorServicer):
-    def __init__(self, actor: ActorProcess, buffer_address: str, debug=False):
+    def __init__(self, actor: ActorProcess, debug=False):
         self.actor = actor
         self.logger = get_logger("actor")
         self.logger.setLevel(logging.DEBUG if debug else logging.ERROR)
 
-        channel = grpc.insecure_channel(buffer_address)
-        self.buffer_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
+        channel = grpc.insecure_channel(self.actor.remote_buffer_address)
+        buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
+
         trail_count = 0
         while True:
             if trail_count > 60:
                 raise TimeoutError("remote replay buffer connection timeout")
-            resp = self.buffer_stub.ServiceReady(buffer_pb2.ServiceReadyReq(requestId=str(uuid.uuid4())))
+            resp = buf_stub.ServiceReady(buffer_pb2.ServiceReadyReq(requestId=str(uuid.uuid4())))
             if resp.ready:
                 break
             self.logger.info("waiting for remote replay buffer connection")
             time.sleep(1)
             trail_count += 1
 
+        channel.close()
+
     def ServiceReady(self, request, context):
         self.logger.debug("""ServiceReady | {"reqId": "%s"}""", request.requestId)
         return actor_pb2.ServiceReadyResp(ready=True, requestId=request.requestId)
 
-    def Start(self, request, context):
-        self.logger.debug("""Start | {"reqId": "%s"}""", request.requestId)
-        self.actor.start()
-        return actor_pb2.StartResp(done=True, err="", requestId=request.requestId)
-
-    def ReplicateModel(self, request, context):
+    def Start(self, request_iterator, context):
         data = bytearray()
         filepath = ""
+        request_id = ""
         tmp_dir = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
         os.makedirs(tmp_dir)
-        for req in request:
-            if req.meta:
-                filepath = os.path.join(tmp_dir, req.meta.filename)
-                with self.actor.lock:
-                    self.actor.ns.version = req.meta.version
+        for req in request_iterator:
+            if req.meta.filename != "":
+                filepath = os.path.normpath(os.path.join(tmp_dir, req.meta.filename))
+                request_id = req.meta.requestId
+                self.actor.init_params(
+                    model_type=req.meta.modelType,
+                    model_pb_path=filepath,
+                    init_version=req.meta.version,
+                    request_id=request_id,
+                    max_episode=req.meta.maxEpisode,
+                    max_episode_step=req.meta.maxEpisodeStep,
+                )
                 self.logger.debug(
-                    """ReplicateModel | {"reqId": "%s", "version": "%s"}""",
-                    req.meta.requestId, req.meta.version)
+                    'Start | '
+                    '{"reqId": "%s", "modelType": "%s","filename": "%s", "version": %s'
+                    '"maxEpisode": %d, "maxEpisodeStep": %d}',
+                    req.meta.requestId,
+                    req.meta.modelType,
+                    req.meta.filename,
+                    req.meta.version,
+                    req.meta.maxEpisode,
+                    req.meta.maxEpisodeStep)
                 continue
             data.extend(req.chunkData)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, 'wb') as f:
             f.write(data)
 
-        done = True
-        err = ""
-        try:
-            self.actor.model.load_weights(filepath)
-        except FileNotFoundError as e:
+        self.actor.start()
+        if self.actor.model_loaded.wait(5):
+            done = True
+            err = ""
+        else:
             done = False
-            err = str(e)
-        finally:
-            resp = actor_pb2.ReplicateModelResp(done=done, err=err, requestId=request.requestId)
-            os.remove(filepath)
+            err = "model load timeout"
+        return actor_pb2.StartResp(done=done, err=err, requestId=request_id)
+
+    def ReplicateModel(self, request_iterator, context):
+        data = bytearray()
+        filepath = ""
+        version = ""
+        request_id = ""
+        tmp_dir = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
+        for req in request_iterator:
+            if req.meta.filename != "":
+                filepath = os.path.join(tmp_dir, req.meta.filename)
+                version = req.meta.version
+                request_id = req.meta.requestId
+                self.logger.debug(
+                    """ReplicateModel | {"reqId": "%s", "version": "%s", "filename": "%s"}""",
+                    req.meta.requestId, req.meta.version, req.meta.filename)
+                continue
+            data.extend(req.chunkData)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, 'wb') as f:
+            f.write(data)
+
+        self.actor.set_model_replicate(version, filepath)
+        if self.actor.model_loaded.wait(5):
+            done = True
+            err = ""
+        else:
+            done = False
+            err = "model replicating timeout"
+            try:
+                os.remove(filepath)
+            except FileNotFoundError:
+                pass
+
+        resp = actor_pb2.ReplicateModelResp(done=done, err=err, requestId=request_id)
         return resp
 
     def Terminate(self, request, context):
         self.logger.debug("""Terminate | {"reqId": "%s"}""", request.requestId)
         self.actor.terminate()
         return actor_pb2.TerminateResp(done=True, err="", requestId=request.requestId)
+
+
+def start_actor_server(
+        port,
+        remote_buffer_address: str,
+        max_local_buf_size: int,
+        env: RLEnv,
+        action_transformer: tp.Optional[BaseTransformer] = None,
+        debug: bool = False
+) -> grpc.Server:
+    server = grpc.server(
+        futures.ThreadPoolExecutor(
+            max_workers=1,  # one for update, one for replicate
+            thread_name_prefix="s"
+        ), options=[
+            ('grpc.max_send_message_length', 1024 * 1024 * 20),
+        ]
+    )
+
+    actor_p = ActorProcess(
+        buffer=RandomReplayBuffer(max_size=max_local_buf_size),
+        env=env,
+        remote_buffer_address=remote_buffer_address,
+        action_transformer=action_transformer,
+        debug=debug,
+    )
+    service = ActorService(
+        actor=actor_p,
+        debug=debug
+    )
+    actor_pb2_grpc.add_ActorServicer_to_server(service, server)
+    server.add_insecure_port(f'[::]:{port}')
+    server.start()
+    service.logger.info("python grpc has started at http://127.0.0.1:%s", port)
+    return server
 
 # def start_actor_server(
 #         port,

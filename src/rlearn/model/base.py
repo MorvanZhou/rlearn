@@ -28,13 +28,23 @@ class BaseRLModel(ABC):
         pass
 
     @abstractmethod
-    def save(self, path: str):
+    def save_weights(self, path: str):
         """Save to zip file"""
         pass
 
     @abstractmethod
     def load_weights(self, path: str):
         """Load from zip file"""
+        pass
+
+    @abstractmethod
+    def save(self, path: str):
+        """Save entire models to zip file"""
+        pass
+
+    @abstractmethod
+    def load(self, path: str):
+        """Load entire models from zip file"""
         pass
 
     @staticmethod

@@ -45,11 +45,19 @@ class BaseTrainer(ABC):
         pass
 
     @abstractmethod
-    def save_model(self, path: str):
+    def save_model_weights(self, path: str):
         pass
 
     @abstractmethod
     def load_model_weights(self, path: str):
+        pass
+
+    @abstractmethod
+    def save_model(self, path: str):
+        pass
+
+    @abstractmethod
+    def load_model(self, path: str):
         pass
 
     @abstractmethod

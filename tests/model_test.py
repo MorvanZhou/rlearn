@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import numpy as np
@@ -136,3 +137,41 @@ class ModelTest(unittest.TestCase):
         )
         a = m.predict(np.random.random((2,)))
         self.assertEqual(2, len(a))
+
+    def test_save_ckpt_model(self):
+        m = rlearn.DDPG()
+        m.set_encoder(
+            actor=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(3),
+            ]),
+            critic=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(3),
+            ]),
+            action_num=3
+        )
+        path = "tmp_model.zip"
+        m.save_weights(path)
+        self.assertTrue(os.path.isfile(path))
+        m.load_weights(path)
+        os.remove(path)
+
+    def test_save_pb_model(self):
+        m = rlearn.DDPG()
+        m.set_encoder(
+            actor=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(3),
+            ]),
+            critic=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(3),
+            ]),
+            action_num=3
+        )
+        path = "tmp_model.zip"
+        m.save(path)
+        self.assertTrue(os.path.isfile(path))
+        m.load(path)
+        os.remove(path)

@@ -72,7 +72,7 @@ for ep in range(conf.epochs):
 
     if ep % 20 == 0:
         dir_ = os.path.join(trainer.log_dir, "checkpoints", f"ep-{ep:06d}")
-        trainer.save_model(dir_)
+        trainer.save_model_weights(dir_)
         trainer.load_model_weights(dir_)
 
     print(f"{ep} r={ep_r:.2f}, a={a_loss:.4f} c={c_loss:.4f}")

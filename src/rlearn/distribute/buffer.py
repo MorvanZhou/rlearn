@@ -35,7 +35,7 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
         return buffer_pb2.ServiceReadyResp(ready=True, requestId=request.requestId)
 
     def UploadData(self, request, context):
-        self.logger.debug("""UploadData | {"reqId": "%s"}""", request.requestId)
+        self.logger.debug("""UploadData | {"reqId": "%s", "version": "%s"}""", request.requestId, request.version)
         s, a, r, s_ = tools.unpack_transitions(request)
         try:
             self.is_uploading = True
@@ -50,7 +50,7 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
         return resp
 
     def DownloadData(self, request, context):
-        self.logger.debug("""DownloadData | {"reqId": "%s"}""", request.requestId)
+        self.logger.debug("""DownloadData | {"reqId": "%s", "maxSize": %d}""", request.requestId, request.maxSize)
         while True:
             if not self.is_uploading:
                 break
