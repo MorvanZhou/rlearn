@@ -10,6 +10,7 @@ package replayBuffer;
 // The greeting service definition.
 service ReplayBuffer {
   rpc ServiceReady (ServiceReadyReq) returns (ServiceReadyResp) {}
+  rpc LearnerSetVersion (LearnerSetVersionReq) returns (LearnerSetVersionResp) {}
   rpc UploadData (UploadDataReq) returns (UploadDataResp) {}
   rpc DownloadData (DownloadDataReq) returns (DownloadDataResp) {}
 }
@@ -21,6 +22,17 @@ message ServiceReadyReq {
 message ServiceReadyResp {
   bool ready = 1;
   string requestId = 2;
+}
+
+message LearnerSetVersionReq {
+  string version = 1;
+  string requestId = 2;
+}
+
+message LearnerSetVersionResp {
+  bool done = 1;
+  string err = 2;
+  string requestId = 3;
 }
 
 message Data {

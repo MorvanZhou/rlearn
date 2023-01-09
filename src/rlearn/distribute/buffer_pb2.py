@@ -16,8 +16,11 @@ DESCRIPTOR = _descriptor.FileDescriptor(
     syntax='proto3',
     serialized_options=b'\n\024io.grpc.examples.envB\021ReplayBufferProtoP\001\242\002\003HLW',
     create_key=_descriptor._internal_create_key,
-    serialized_pb=b'\n\x1erlearn/distribute/buffer.proto\x12\x0creplayBuffer\"$\n\x0fServiceReadyReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"4\n\x10ServiceReadyResp\x12\r\n\x05ready\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t\"*\n\x04\x44\x61ta\x12\x0e\n\x06values\x18\x01 \x03(\x02\x12\x12\n\nattributes\x18\x02 \x01(\t\"U\n\rUploadDataReq\x12 \n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x12.replayBuffer.Data\x12\x0f\n\x07version\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\">\n\x0eUploadDataResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"5\n\x0f\x44ownloadDataReq\x12\x0f\n\x07maxSize\x18\x01 \x01(\x05\x12\x11\n\trequestId\x18\x02 \x01(\t\"T\n\x10\x44ownloadDataResp\x12 \n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x12.replayBuffer.Data\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t2\xfb\x01\n\x0cReplayBuffer\x12O\n\x0cServiceReady\x12\x1d.replayBuffer.ServiceReadyReq\x1a\x1e.replayBuffer.ServiceReadyResp\"\x00\x12I\n\nUploadData\x12\x1b.replayBuffer.UploadDataReq\x1a\x1c.replayBuffer.UploadDataResp\"\x00\x12O\n\x0c\x44ownloadData\x12\x1d.replayBuffer.DownloadDataReq\x1a\x1e.replayBuffer.DownloadDataResp\"\x00\x42\x31\n\x14io.grpc.examples.envB\x11ReplayBufferProtoP\x01\xa2\x02\x03HLWb\x06proto3'
+    serialized_pb=b'\n\x1erlearn/distribute/buffer.proto\x12\x0creplayBuffer\"$\n\x0fServiceReadyReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"4\n\x10ServiceReadyResp\x12\r\n\x05ready\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t\":\n\x14LearnerSetVersionReq\x12\x0f\n\x07version\x18\x01 \x01(\t\x12\x11\n\trequestId\x18\x02 \x01(\t\"E\n\x15LearnerSetVersionResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"*\n\x04\x44\x61ta\x12\x0e\n\x06values\x18\x01 \x03(\x02\x12\x12\n\nattributes\x18\x02 \x01(\t\"U\n\rUploadDataReq\x12 \n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x12.replayBuffer.Data\x12\x0f\n\x07version\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\">\n\x0eUploadDataResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"5\n\x0f\x44ownloadDataReq\x12\x0f\n\x07maxSize\x18\x01 \x01(\x05\x12\x11\n\trequestId\x18\x02 \x01(\t\"T\n\x10\x44ownloadDataResp\x12 \n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x12.replayBuffer.Data\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t2\xdb\x02\n\x0cReplayBuffer\x12O\n\x0cServiceReady\x12\x1d.replayBuffer.ServiceReadyReq\x1a\x1e.replayBuffer.ServiceReadyResp\"\x00\x12^\n\x11LearnerSetVersion\x12\".replayBuffer.LearnerSetVersionReq\x1a#.replayBuffer.LearnerSetVersionResp\"\x00\x12I\n\nUploadData\x12\x1b.replayBuffer.UploadDataReq\x1a\x1c.replayBuffer.UploadDataResp\"\x00\x12O\n\x0c\x44ownloadData\x12\x1d.replayBuffer.DownloadDataReq\x1a\x1e.replayBuffer.DownloadDataResp\"\x00\x42\x31\n\x14io.grpc.examples.envB\x11ReplayBufferProtoP\x01\xa2\x02\x03HLWb\x06proto3'
 )
+
+
+
 
 _SERVICEREADYREQ = _descriptor.Descriptor(
     name='ServiceReadyReq',
@@ -89,6 +92,88 @@ _SERVICEREADYRESP = _descriptor.Descriptor(
     serialized_end=138,
 )
 
+_LEARNERSETVERSIONREQ = _descriptor.Descriptor(
+    name='LearnerSetVersionReq',
+    full_name='replayBuffer.LearnerSetVersionReq',
+    filename=None,
+    file=DESCRIPTOR,
+    containing_type=None,
+    create_key=_descriptor._internal_create_key,
+    fields=[
+        _descriptor.FieldDescriptor(
+            name='version', full_name='replayBuffer.LearnerSetVersionReq.version', index=0,
+            number=1, type=9, cpp_type=9, label=1,
+            has_default_value=False, default_value=b"".decode('utf-8'),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR, create_key=_descriptor._internal_create_key),
+        _descriptor.FieldDescriptor(
+            name='requestId', full_name='replayBuffer.LearnerSetVersionReq.requestId', index=1,
+            number=2, type=9, cpp_type=9, label=1,
+            has_default_value=False, default_value=b"".decode('utf-8'),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR, create_key=_descriptor._internal_create_key),
+    ],
+    extensions=[
+    ],
+    nested_types=[],
+    enum_types=[
+    ],
+    serialized_options=None,
+    is_extendable=False,
+    syntax='proto3',
+    extension_ranges=[],
+    oneofs=[
+    ],
+    serialized_start=140,
+    serialized_end=198,
+)
+
+_LEARNERSETVERSIONRESP = _descriptor.Descriptor(
+    name='LearnerSetVersionResp',
+    full_name='replayBuffer.LearnerSetVersionResp',
+    filename=None,
+    file=DESCRIPTOR,
+    containing_type=None,
+    create_key=_descriptor._internal_create_key,
+    fields=[
+        _descriptor.FieldDescriptor(
+            name='done', full_name='replayBuffer.LearnerSetVersionResp.done', index=0,
+            number=1, type=8, cpp_type=7, label=1,
+            has_default_value=False, default_value=False,
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR, create_key=_descriptor._internal_create_key),
+        _descriptor.FieldDescriptor(
+            name='err', full_name='replayBuffer.LearnerSetVersionResp.err', index=1,
+            number=2, type=9, cpp_type=9, label=1,
+            has_default_value=False, default_value=b"".decode('utf-8'),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR, create_key=_descriptor._internal_create_key),
+        _descriptor.FieldDescriptor(
+            name='requestId', full_name='replayBuffer.LearnerSetVersionResp.requestId', index=2,
+            number=3, type=9, cpp_type=9, label=1,
+            has_default_value=False, default_value=b"".decode('utf-8'),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR, create_key=_descriptor._internal_create_key),
+    ],
+    extensions=[
+    ],
+    nested_types=[],
+    enum_types=[
+    ],
+    serialized_options=None,
+    is_extendable=False,
+    syntax='proto3',
+    extension_ranges=[],
+    oneofs=[
+    ],
+    serialized_start=200,
+    serialized_end=269,
+)
 
 _DATA = _descriptor.Descriptor(
     name='Data',
@@ -124,8 +209,8 @@ _DATA = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=140,
-    serialized_end=182,
+    serialized_start=271,
+    serialized_end=313,
 )
 
 
@@ -170,8 +255,8 @@ _UPLOADDATAREQ = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=184,
-    serialized_end=269,
+    serialized_start=315,
+    serialized_end=400,
 )
 
 
@@ -216,9 +301,10 @@ _UPLOADDATARESP = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=271,
-    serialized_end=333,
+    serialized_start=402,
+    serialized_end=464,
 )
+
 
 _DOWNLOADDATAREQ = _descriptor.Descriptor(
     name='DownloadDataReq',
@@ -254,9 +340,10 @@ _DOWNLOADDATAREQ = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=335,
-    serialized_end=388,
+    serialized_start=466,
+    serialized_end=519,
 )
+
 
 _DOWNLOADDATARESP = _descriptor.Descriptor(
     name='DownloadDataResp',
@@ -299,14 +386,16 @@ _DOWNLOADDATARESP = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=390,
-    serialized_end=474,
+    serialized_start=521,
+    serialized_end=605,
 )
 
 _UPLOADDATAREQ.fields_by_name['data'].message_type = _DATA
 _DOWNLOADDATARESP.fields_by_name['data'].message_type = _DATA
 DESCRIPTOR.message_types_by_name['ServiceReadyReq'] = _SERVICEREADYREQ
 DESCRIPTOR.message_types_by_name['ServiceReadyResp'] = _SERVICEREADYRESP
+DESCRIPTOR.message_types_by_name['LearnerSetVersionReq'] = _LEARNERSETVERSIONREQ
+DESCRIPTOR.message_types_by_name['LearnerSetVersionResp'] = _LEARNERSETVERSIONRESP
 DESCRIPTOR.message_types_by_name['Data'] = _DATA
 DESCRIPTOR.message_types_by_name['UploadDataReq'] = _UPLOADDATAREQ
 DESCRIPTOR.message_types_by_name['UploadDataResp'] = _UPLOADDATARESP
@@ -327,6 +416,20 @@ ServiceReadyResp = _reflection.GeneratedProtocolMessageType('ServiceReadyResp', 
     # @@protoc_insertion_point(class_scope:replayBuffer.ServiceReadyResp)
 })
 _sym_db.RegisterMessage(ServiceReadyResp)
+
+LearnerSetVersionReq = _reflection.GeneratedProtocolMessageType('LearnerSetVersionReq', (_message.Message,), {
+    'DESCRIPTOR': _LEARNERSETVERSIONREQ,
+    '__module__': 'rlearn.distribute.buffer_pb2'
+    # @@protoc_insertion_point(class_scope:replayBuffer.LearnerSetVersionReq)
+})
+_sym_db.RegisterMessage(LearnerSetVersionReq)
+
+LearnerSetVersionResp = _reflection.GeneratedProtocolMessageType('LearnerSetVersionResp', (_message.Message,), {
+    'DESCRIPTOR': _LEARNERSETVERSIONRESP,
+    '__module__': 'rlearn.distribute.buffer_pb2'
+    # @@protoc_insertion_point(class_scope:replayBuffer.LearnerSetVersionResp)
+})
+_sym_db.RegisterMessage(LearnerSetVersionResp)
 
 Data = _reflection.GeneratedProtocolMessageType('Data', (_message.Message,), {
     'DESCRIPTOR': _DATA,
@@ -372,8 +475,8 @@ _REPLAYBUFFER = _descriptor.ServiceDescriptor(
     index=0,
     serialized_options=None,
     create_key=_descriptor._internal_create_key,
-    serialized_start=477,
-    serialized_end=728,
+    serialized_start=608,
+    serialized_end=955,
     methods=[
         _descriptor.MethodDescriptor(
             name='ServiceReady',
@@ -386,9 +489,19 @@ _REPLAYBUFFER = _descriptor.ServiceDescriptor(
             create_key=_descriptor._internal_create_key,
         ),
         _descriptor.MethodDescriptor(
+            name='LearnerSetVersion',
+            full_name='replayBuffer.ReplayBuffer.LearnerSetVersion',
+            index=1,
+            containing_service=None,
+            input_type=_LEARNERSETVERSIONREQ,
+            output_type=_LEARNERSETVERSIONRESP,
+            serialized_options=None,
+            create_key=_descriptor._internal_create_key,
+        ),
+        _descriptor.MethodDescriptor(
             name='UploadData',
             full_name='replayBuffer.ReplayBuffer.UploadData',
-            index=1,
+            index=2,
             containing_service=None,
             input_type=_UPLOADDATAREQ,
             output_type=_UPLOADDATARESP,
@@ -398,7 +511,7 @@ _REPLAYBUFFER = _descriptor.ServiceDescriptor(
         _descriptor.MethodDescriptor(
             name='DownloadData',
             full_name='replayBuffer.ReplayBuffer.DownloadData',
-            index=2,
+            index=3,
             containing_service=None,
             input_type=_DOWNLOADDATAREQ,
             output_type=_DOWNLOADDATARESP,

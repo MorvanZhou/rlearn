@@ -154,6 +154,12 @@ class ActorProcessTest(unittest.TestCase):
         channel = grpc.insecure_channel(buf_address)
         buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
 
+        init_version = "v0"
+        resp = buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=init_version, requestId="bl"))
+        self.assertEqual("bl", resp.requestId)
+        self.assertTrue(resp.done)
+        self.assertEqual("", resp.err)
+
         buffer = rlearn.RandomReplayBuffer(10)
         env = CartPole()
         actor_p = distribute.actor.ActorProcess(
@@ -163,7 +169,12 @@ class ActorProcessTest(unittest.TestCase):
             action_transformer=None,
         )
         actor_p.init_params(
-            "DQN", self.model_pb_path, init_version="v0", request_id="dqn_train", max_episode=2, max_episode_step=20)
+            "DQN",
+            self.model_pb_path,
+            init_version=init_version,
+            request_id="dqn_train",
+            max_episode=2,
+            max_episode_step=20)
         actor_p.start()
         actor_p.ns.new_model_path = self.model_ckpt_path
         actor_p.join()
@@ -234,6 +245,11 @@ class ActorServiceTest(unittest.TestCase):
         self.assertEqual("xx", resp.requestId)
 
     def test_train(self):
+        resp = self.buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version="v0", requestId="bl"))
+        self.assertEqual("bl", resp.requestId)
+        self.assertTrue(resp.done)
+        self.assertEqual("", resp.err)
+
         resp = self.actor_stub.Start(tools.read_pb_iterfile(
             self.model_pb_path,
             model_type="DQN",
@@ -246,9 +262,11 @@ class ActorServiceTest(unittest.TestCase):
         self.assertEqual("", resp.err)
 
         time.sleep(0.3)
+        next_version = "v1"
+        self.buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=next_version, requestId="bl"))
         resp = self.actor_stub.ReplicateModel(tools.read_weights_iterfile(
             self.model_ckpt_path,
-            version="v1",
+            version=next_version,
             request_id="replicate"
         ))
         self.assertEqual("replicate", resp.requestId)

@@ -27,6 +27,7 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
         self.logger = get_logger("buf")
         self.logger.setLevel(logging.DEBUG if debug else logging.ERROR)
 
+        self.version = ""
         self.replay_buffer = replaybuf.get_buffer_by_name(name=name, max_size=max_size)
         self.is_uploading = False
 
@@ -34,8 +35,23 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
         self.logger.debug("""ServiceReady | {"reqId": "%s"}""", request.requestId)
         return buffer_pb2.ServiceReadyResp(ready=True, requestId=request.requestId)
 
+    def LearnerSetVersion(self, request, context):
+        self.logger.debug(
+            """LearnerSetVersion | {"reqId": "%s", "version": "%s"}""", request.requestId, request.version)
+        self.version = request.version
+        return buffer_pb2.LearnerSetVersionResp(done=True, err="", requestId=request.requestId)
+
     def UploadData(self, request, context):
         self.logger.debug("""UploadData | {"reqId": "%s", "version": "%s"}""", request.requestId, request.version)
+
+        # reject invalided version
+        if request.version != self.version:
+            return buffer_pb2.UploadDataResp(
+                done=False,
+                err=f"version='{request.version}' is not in line with learner's '{self.version}'",
+                requestId=request.requestId,
+            )
+
         s, a, r, s_ = tools.unpack_transitions(request)
         try:
             self.is_uploading = True

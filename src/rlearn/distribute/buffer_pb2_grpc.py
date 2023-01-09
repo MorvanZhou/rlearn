@@ -20,6 +20,11 @@ class ReplayBufferStub(object):
             request_serializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.SerializeToString,
             response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.FromString,
         )
+        self.LearnerSetVersion = channel.unary_unary(
+            '/replayBuffer.ReplayBuffer/LearnerSetVersion',
+            request_serializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionReq.SerializeToString,
+            response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionResp.FromString,
+        )
         self.UploadData = channel.unary_unary(
             '/replayBuffer.ReplayBuffer/UploadData',
             request_serializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataReq.SerializeToString,
@@ -37,6 +42,12 @@ class ReplayBufferServicer(object):
     """
 
     def ServiceReady(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def LearnerSetVersion(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -61,6 +72,11 @@ def add_ReplayBufferServicer_to_server(servicer, server):
             servicer.ServiceReady,
             request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.FromString,
             response_serializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.SerializeToString,
+        ),
+        'LearnerSetVersion': grpc.unary_unary_rpc_method_handler(
+            servicer.LearnerSetVersion,
+            request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionReq.FromString,
+            response_serializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionResp.SerializeToString,
         ),
         'UploadData': grpc.unary_unary_rpc_method_handler(
             servicer.UploadData,
@@ -97,6 +113,23 @@ class ReplayBuffer(object):
         return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/ServiceReady',
                                              rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.SerializeToString,
                                              rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def LearnerSetVersion(request,
+                          target,
+                          options=(),
+                          channel_credentials=None,
+                          call_credentials=None,
+                          insecure=False,
+                          compression=None,
+                          wait_for_ready=None,
+                          timeout=None,
+                          metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/LearnerSetVersion',
+                                             rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionReq.SerializeToString,
+                                             rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionResp.FromString,
                                              options, channel_credentials,
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
