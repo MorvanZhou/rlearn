@@ -12,6 +12,7 @@ def set_config_to_trainer(
         trainer: BaseTrainer,
 ):
     trainer.set_params(
+        learning_rate=config.learning_rates,
         batch_size=config.batch_size,
         gamma=config.gamma,
         replace_ratio=config.replace_ratio,
@@ -39,7 +40,6 @@ def _set_trainer_map(cls, m: dict):
 
 def get_trainer_by_name(
         name: str,
-        learning_rates: tp.Sequence[float],
         log_dir: tp.Optional[str] = None,
         seed: tp.Optional[int] = None
 ) -> BaseTrainer:
@@ -48,7 +48,7 @@ def get_trainer_by_name(
         tf.random.set_seed(seed)
     if len(__TRAINER_MAP) == 0:
         _set_trainer_map(BaseTrainer, __TRAINER_MAP)
-    trainer = __TRAINER_MAP[name](learning_rates=learning_rates, log_dir=log_dir)
+    trainer = __TRAINER_MAP[name](log_dir=log_dir)
     return trainer
 
 

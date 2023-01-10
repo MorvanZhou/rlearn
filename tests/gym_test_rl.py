@@ -36,7 +36,7 @@ class GymTest(unittest.TestCase):
             args={}
         )
         trainer = rlearn.get_trainer_by_name(
-            conf.trainer, conf.learning_rates, log_dir=os.path.join(tempfile.tempdir, "test_dqn"),
+            conf.trainer, log_dir=os.path.join(tempfile.tempdir, "test_dqn"),
             seed=2
         )
         rlearn.set_config_to_trainer(conf, trainer)
@@ -90,7 +90,7 @@ class GymTest(unittest.TestCase):
             )],
             gamma=0.9,
             learning_rates=(0.01,),
-            memory_capacity=500,
+            replay_buffer=rlearn.ReplayBufferConfig(500),
             replace_step=100,
             not_learn_epochs=2,
             epsilon_decay=0.05,
@@ -98,7 +98,7 @@ class GymTest(unittest.TestCase):
             args={}
         )
         trainer = rlearn.get_trainer_by_name(
-            conf.trainer, conf.learning_rates, log_dir=os.path.join(tempfile.tempdir, "test_dueling_dqn"),
+            conf.trainer, log_dir=os.path.join(tempfile.tempdir, "test_dueling_dqn"),
             seed=4
         )
         rlearn.set_config_to_trainer(conf, trainer)
@@ -147,7 +147,7 @@ class GymTest(unittest.TestCase):
             batch_size=16,
             epochs=10,
             action_transform=[[-2, 2]],
-            memory_capacity=1000,
+            replay_buffer=rlearn.ReplayBufferConfig(1000),
             replace_step=100,
             nets=[
                 rlearn.NetConfig(
@@ -170,7 +170,7 @@ class GymTest(unittest.TestCase):
             args={}
         )
         trainer: rlearn.PPOContinueTrainer = rlearn.get_trainer_by_name(
-            conf.trainer, conf.learning_rates, log_dir=os.path.join(tempfile.tempdir, "test_ppo"),
+            conf.trainer, log_dir=os.path.join(tempfile.tempdir, "test_ppo"),
             seed=4
         )
         rlearn.set_config_to_trainer(conf, trainer)
@@ -197,8 +197,6 @@ class GymTest(unittest.TestCase):
                 res = trainer.train_batch()
                 learn_step += 1
                 a_loss, c_loss = res["a_loss"], res["c_loss"]
-                if learn_step % 50 == 0:
-                    trainer.update_policy()
 
             if ep % 20 == 0:
                 dir_ = os.path.join(trainer.log_dir, "checkpoints", f"ep-{ep:06d}")
@@ -237,7 +235,7 @@ class GymTest(unittest.TestCase):
         )
 
         trainer = rlearn.get_trainer_by_name(
-            conf.trainer, conf.learning_rates, log_dir=os.path.join(tempfile.tempdir, "test_p_dqn"),
+            conf.trainer, log_dir=os.path.join(tempfile.tempdir, "test_p_dqn"),
             seed=4
         )
         rlearn.set_config_to_trainer(conf, trainer)

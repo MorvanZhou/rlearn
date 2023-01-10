@@ -61,26 +61,21 @@ def read_pb_iterfile(
         model_type: str,
         max_episode: int,
         max_episode_step: int,
+        version: str,
         chunk_size=1024,
-        request_id: str = None,
+        request_id: tp.Optional[str] = None,
 ) -> actor_pb2.StartReq:
     if request_id is None:
         request_id = str(uuid.uuid4())
 
-    req = actor_pb2.StartReq(meta=actor_pb2.StartMeta(
+    yield actor_pb2.StartReq(meta=actor_pb2.StartMeta(
         filename=os.path.basename(filepath),
         modelType=model_type,
         maxEpisode=max_episode,
-        version="v0",
+        version=version,
         maxEpisodeStep=max_episode_step,
         requestId=request_id
     ))
-    # req.meta.filename = os.path.basename(filepath)
-    # req.meta.modelType = model_type
-    # req.meta.maxEpisode = max_episode
-    # req.meta.maxEpisodeStep = max_episode_step
-    # req.meta.requestId = request_id
-    yield req
 
     with open(filepath, mode="rb") as f:
         while True:
@@ -116,3 +111,21 @@ def get_available_port():
     port = sock.getsockname()[1]
     sock.close()
     return port
+
+
+def get_count_generator(max_count):
+    def unlimited_count_generator():
+        c = 0
+        while True:
+            yield c
+            c += 1
+
+    def fix_count_generator(max_step: int):
+        for c in range(max_step):
+            yield c
+
+    if max_count <= 0:
+        g = unlimited_count_generator()
+    else:
+        g = fix_count_generator(max_count)
+    return g

@@ -1,11 +1,14 @@
 import json
+import multiprocessing
 import os
+import shutil
 import time
 import unittest
 
 import grpc
 import gym
 import numpy as np
+from tensorflow import keras
 
 import rlearn
 from rlearn import distribute
@@ -20,7 +23,7 @@ class BufferTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.server = distribute.start_replay_buffer_server(
+        cls.server = distribute.buffer._start_server(
             port=cls.port,
             max_size=100,
             buf="RandomReplayBuffer",
@@ -110,12 +113,12 @@ class ActorProcessTest(unittest.TestCase):
         )
         actor_p.init_params(
             "DQN", self.model_pb_path, init_version="v0", request_id="dqn_train", max_episode=2, max_episode_step=20)
-        g = actor_p.get_count_generator(-1)
+        g = tools.get_count_generator(-1)
         for i in range(10):
             step = next(g)
             self.assertEqual(i, step)
 
-        g = actor_p.get_count_generator(3)
+        g = tools.get_count_generator(3)
         for i in range(10):
             if i < 3:
                 step = next(g)
@@ -144,7 +147,7 @@ class ActorProcessTest(unittest.TestCase):
 
     def test_actor_process_in_process(self):
         buf_port = tools.get_available_port()
-        buf_server = distribute.start_replay_buffer_server(
+        buf_server = distribute.buffer._start_server(
             port=buf_port,
             max_size=100,
             buf="RandomReplayBuffer",
@@ -201,12 +204,13 @@ class ActorServiceTest(unittest.TestCase):
     actor_stub = None
     model_pb_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn_pb.zip")
     model_ckpt_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn.zip")
+    ps = []
 
     @classmethod
     def setUpClass(cls) -> None:
         buf_port = tools.get_available_port()
         buf_address = f'127.0.0.1:{buf_port}'
-        cls.buf_server = distribute.start_replay_buffer_server(
+        cls.buf_server = distribute.buffer._start_server(
             port=buf_port,
             max_size=100,
             buf="RandomReplayBuffer",
@@ -216,7 +220,7 @@ class ActorServiceTest(unittest.TestCase):
         cls.buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=buf_channel)
 
         actor_port = tools.get_available_port()
-        cls.actor_server = distribute.start_actor_server(
+        cls.actor_server = distribute.actor._start_server(
             port=actor_port,
             remote_buffer_address=buf_address,
             max_local_buf_size=3,
@@ -245,7 +249,8 @@ class ActorServiceTest(unittest.TestCase):
         self.assertEqual("xx", resp.requestId)
 
     def test_train(self):
-        resp = self.buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version="v0", requestId="bl"))
+        version = "v0"
+        resp = self.buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=version, requestId="bl"))
         self.assertEqual("bl", resp.requestId)
         self.assertTrue(resp.done)
         self.assertEqual("", resp.err)
@@ -255,6 +260,7 @@ class ActorServiceTest(unittest.TestCase):
             model_type="DQN",
             max_episode=0,
             max_episode_step=0,
+            version=version,
             request_id="start"
         ))
         self.assertEqual("start", resp.requestId)
@@ -285,3 +291,67 @@ class ActorServiceTest(unittest.TestCase):
         self.assertEqual("bufDownload", resp.requestId)
         for data in tools.unpack_transitions(resp):
             self.assertEqual(3, len(data))
+
+
+class LearnerTest(unittest.TestCase):
+    buf_address = None
+    actors_address = []
+    ps = []
+    result_dir = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "dist_learner_test")
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        buf_port = tools.get_available_port()
+        cls.buf_address = buf_address = f'127.0.0.1:{buf_port}'
+        p = multiprocessing.Process(target=distribute.start_replay_buffer_server, kwargs=dict(
+            port=buf_port,
+            max_size=1000,
+            buf="RandomReplayBuffer",
+            # debug=True,
+        ))
+        p.start()
+        cls.ps.append(p)
+
+        for _ in range(2):
+            actor_port = tools.get_available_port()
+            p = multiprocessing.Process(target=distribute.start_actor_server, kwargs=dict(
+                port=actor_port,
+                remote_buffer_address=buf_address,
+                max_local_buf_size=10,
+                env=CartPole(),
+                action_transformer=None,
+                # debug=True,
+            ))
+            p.start()
+            cls.ps.append(p)
+            actor_address = f'127.0.0.1:{actor_port}'
+            cls.actors_address.append(actor_address)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        [p.terminate() for p in cls.ps]
+        shutil.rmtree(cls.result_dir, ignore_errors=True)
+
+    def test_run(self):
+        trainer = rlearn.trainer.DQNTrainer()
+        trainer.set_replay_buffer()
+        trainer.set_model_encoder(
+            q=keras.Sequential([
+                keras.layers.InputLayer(4),
+                keras.layers.Dense(10),
+            ]),
+            action_num=2
+        )
+        trainer.set_params(
+            learning_rate=0.01,
+            batch_size=32,
+            replace_step=15,
+        )
+        learner = distribute.Learner(
+            trainer=trainer,
+            remote_buffer_address=self.buf_address,
+            remote_actors_address=self.actors_address,
+            result_dir=self.result_dir,
+            debug=True,
+        )
+        learner.run(epoch=3, epoch_step=None)

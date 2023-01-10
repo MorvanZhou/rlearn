@@ -1,10 +1,14 @@
 import datetime
 import logging
+import os
+import threading
+import time
 import typing as tp
+from uuid import uuid4
 
 import grpc
 
-from rlearn.distribute import logger, actor_pb2_grpc, buffer_pb2_grpc
+from rlearn.distribute import logger, actor_pb2_grpc, buffer_pb2_grpc, actor_pb2, buffer_pb2, tools
 from rlearn.trainer.base import BaseTrainer
 
 
@@ -13,27 +17,211 @@ class Learner:
             self,
             trainer: BaseTrainer,
             remote_buffer_address: str,
-            remote_actors_address: tp.List[str],
+            remote_actors_address: tp.Sequence[str],
+            result_dir: str = None,
             debug: bool = False,
     ):
-        self.trainer: BaseTrainer = trainer
-        self.remote_buffer_address: str = remote_buffer_address
         self.debug = debug
-
-        self.remote_actors_channel: tp.Dict[str, grpc.Channel] = {
-            address: grpc.insecure_channel(address) for address in remote_actors_address
-        }
-        self.remote_actors_stub: tp.Dict[str, actor_pb2_grpc.ActorStub] = {
-            address: actor_pb2_grpc.ActorStub(channel=channel) for address, channel in self.actors_channel.items()
-        }
-        self.remote_buffer_stub = buffer_pb2_grpc.ReplayBufferStub(
-            channel=grpc.insecure_channel(self.remote_buffer_address)
-        )
-
         self.logger = logger.get_logger("learner")
         self.logger.setLevel(logging.DEBUG if self.debug else logging.ERROR)
 
-        current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")
+        self.trainer: BaseTrainer = trainer
+        self.buffer_address: str = remote_buffer_address
+
+        self.actors_channel: tp.Dict[str, grpc.Channel] = {
+            address: grpc.insecure_channel(address) for address in remote_actors_address
+        }
+        self.actors_stub: tp.Dict[str, actor_pb2_grpc.ActorStub] = {
+            address: actor_pb2_grpc.ActorStub(channel=channel)
+            for address, channel in self.actors_channel.items()
+        }
+        self.buffer_stub = buffer_pb2_grpc.ReplayBufferStub(
+            channel=grpc.insecure_channel(self.buffer_address)
+        )
+        self.version_count = 0
+        self.keep_download_data = True
+
+        if result_dir is None:
+            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")
+            result_dir = os.path.join("training_results", current_time)
+        self.result_dir = os.path.normpath(result_dir)
+
+    def check_actors_buffer_ready(self):
+        req_id = str(uuid4())
+        for _ in range(10):
+            try:
+                resp = self.buffer_stub.ServiceReady(buffer_pb2.ServiceReadyReq(requestId=req_id))
+                if not resp.ready:
+                    raise ValueError(f"replay buffer at {self.buffer_address}"
+                                     f" not ready: {resp.err}, requestId='{resp.requestId}'")
+            except grpc.RpcError:
+                self.logger.debug("waiting for buffer (%s)", self.buffer_address)
+                time.sleep(1)
+        self.logger.debug("connected to buffer %s", self.buffer_address)
+
+        for addr, stub in self.actors_stub.items():
+            for _ in range(10):
+                try:
+                    resp = stub.ServiceReady(actor_pb2.ServiceReadyReq(requestId=req_id))
+                    if not resp.ready:
+                        raise ValueError(f"actor at {addr} not ready: {resp.err}, requestId='{resp.requestId}'")
+                    self.logger.debug("connected to actor %s", addr)
+                    break
+                except grpc.RpcError:
+                    self.logger.debug("waiting for actor (%s)", addr)
+                    time.sleep(1)
+
+        self.logger.debug("actors server ready, reqId='%s'", req_id)
+
+    def send_init_data(self):
+        version = "init_version"
+        req_id = str(uuid4())
+        resp = self.buffer_stub.LearnerSetVersion(
+            buffer_pb2.LearnerSetVersionReq(
+                version=version,
+                requestId=req_id
+            ))
+        if not resp.done:
+            raise ValueError(f"buffer set init version err: {resp.err}, requestId='{resp.requestId}'")
+        self.logger.debug("init buffer with version='%s', reqId='%s'", version, req_id)
+
+        path = os.path.join(self.result_dir, version + ".zip")
+        self.trainer.save_model(path)
+        futures = {}
+        for addr, stub in self.actors_stub.items():
+            try:
+                resp_future = stub.Start.future(
+                    tools.read_pb_iterfile(
+                        filepath=path,
+                        model_type=self.trainer.model.name,
+                        max_episode=0,
+                        max_episode_step=0,
+                        version=version,
+                        request_id=req_id,
+                    )
+                )
+                futures[addr] = resp_future
+            except grpc.RpcError as e:
+                self.logger.error("actor start err: %e, addr='%s', requestId='%s'", str(e), addr, resp.requestId)
+
+        for addr, resp_future in futures.items():
+            resp = resp_future.result()
+            if not resp.done:
+                raise ValueError(f"actor start err: {resp.err}, addr='{addr}', requestId='{resp.requestId}'")
+
+        self.logger.debug("init actors with version='%s', reqId='%s'", version, req_id)
+
+    def download_data(self, max_size=1000):
+        while self.keep_download_data:
+            time.sleep(1)
+            req_id = str(uuid4())
+            t0 = time.process_time()
+            resp = self.buffer_stub.DownloadData(buffer_pb2.DownloadDataReq(
+                maxSize=max_size,
+                requestId=req_id,
+            ))
+            t1 = time.process_time()
+            s, a, r, s_ = tools.unpack_transitions(resp)
+            if len(s) == 0:
+                self.logger.debug("download empty data, retry")
+                continue
+            self.trainer.replay_buffer.put_batch(s, a, r, s_)
+            t2 = time.process_time()
+            self.logger.debug("downloaded size=%d, request=%.3fs, unpack=%.3fs, reqId='%s'",
+                              len(s), t1 - t0, t2 - t1, req_id)
+
+    def replicate_actor_model(self):
+        version = f"v{self.version_count}"
+        self.version_count += 1
+
+        t0 = time.process_time()
+
+        weights_path = os.path.join(self.result_dir, f"params_{version}.zip")
+        self.trainer.model.save_weights(weights_path)
+
+        req_id = str(uuid4())
+
+        resp = self.buffer_stub.LearnerSetVersion(
+            buffer_pb2.LearnerSetVersionReq(
+                version=version,
+                requestId=req_id
+            ))
+        if not resp.done:
+            raise ValueError(f"buffer set version err: {resp.err}, version='{version}', requestId='{req_id}'")
+
+        futures = {}
+        for addr, stub in self.actors_stub.items():
+            try:
+                resp_future = stub.ReplicateModel.future(
+                    tools.read_weights_iterfile(
+                        weights_path,
+                        version=version,
+                        request_id=req_id
+                    ))
+                futures[addr] = resp_future
+            except grpc.RpcError as e:
+                self.logger.error(
+                    "actor replicate params err: %e, addr='%s', "
+                    "version='%s', requestId='%s'", str(e), addr, version, req_id)
+
+        for addr, resp_future in futures.items():
+            resp = resp_future.result()
+            if not resp.done:
+                raise ValueError(
+                    f"actor replicate params err: {resp.err}, "
+                    f"addr='{addr}', version='{version}', requestId='{req_id}'")
+        t1 = time.process_time()
+        self.logger.debug(
+            "set buffer and replicate actors params, version='%s', spend=%.3fs, reqId='%s'", version, t1 - t0, req_id)
+
+    def run(
+            self,
+            epoch: tp.Optional[int] = None,
+            epoch_step: tp.Optional[int] = None,
+            download_max_size: int = 1000,
+    ):
+        self.check_actors_buffer_ready()
+        self.send_init_data()
+        if epoch is None:
+            epoch = -1
+
+        td = threading.Thread(target=self.download_data, kwargs=dict(max_size=download_max_size))
+        td.start()
+
+        count = 0
+        epoch_generator = tools.get_count_generator(epoch)
+        for ep in epoch_generator:
+            while self.trainer.replay_buffer.current_loading_point < 500:
+                time.sleep(0.5)
+                continue
+            if epoch_step is None:
+                _ep_step = self.trainer.replay_buffer.current_loading_point // self.trainer.batch_size
+            else:
+                _ep_step = epoch_step
+            t0 = time.process_time()
+            for _ in range(_ep_step):
+                res = self.trainer.train_batch()
+                if "replaced" in res:
+                    if res["replaced"]:
+                        self.replicate_actor_model()
+                else:
+                    if self.trainer.replace_step > 0:
+                        if count % self.trainer.replace_step == 0:
+                            self.replicate_actor_model()
+                        count += 1
+            t1 = time.process_time()
+            self.logger.debug("trained %d times in ep=%d, spend=%.2fs", _ep_step, ep, t1 - t0)
+
+        # stop downloading data
+        self.keep_download_data = False
+        td.join()
+
+        req_id = str(uuid4())
+        for addr, stub in self.actors_stub.items():
+            resp = stub.Terminate(actor_pb2.TerminateReq(requestId=req_id))
+            if not resp.done:
+                self.logger.error(
+                    "actor not terminated, err: %s, addr='%s', reqId='%s'", resp.err, addr, resp.requestId)
 
 # import datetime
 # import logging

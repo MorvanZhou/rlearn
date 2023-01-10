@@ -8,6 +8,7 @@ from tensorflow import keras
 
 from rlearn import replaybuf, board
 from rlearn.config import TrainConfig
+from rlearn.model.base import BaseRLModel
 from rlearn.replaybuf.base import BaseReplayBuffer
 
 
@@ -16,15 +17,12 @@ class BaseTrainer(ABC):
 
     def __init__(
             self,
-            learning_rates: tp.Sequence[float],
             log_dir: tp.Optional[str] = None,
     ):
         super().__init__()
-        if not isinstance(learning_rates, (tuple, list)):
-            raise TypeError("learning rates must be tuple or list")
 
-        self.model = None
-        self.learning_rates: tp.Sequence[float] = learning_rates
+        self.model: tp.Optional[BaseRLModel] = None
+        self.learning_rate: tp.Union[tp.Sequence[float], float] = 0.001
         self.batch_size: int = 32
 
         self.replay_buffer: tp.Optional[BaseReplayBuffer] = None
@@ -39,6 +37,10 @@ class BaseTrainer(ABC):
         self._replace_counter = 0
         self.log_dir = log_dir
         self.board = None
+
+    @abstractmethod
+    def set_default_optimizer(self):
+        pass
 
     @abstractmethod
     def train_batch(self):
@@ -103,6 +105,7 @@ class BaseTrainer(ABC):
 
     def set_params(
             self,
+            learning_rate: tp.Union[tp.Sequence[float], float],
             batch_size: int = 32,
             gamma: float = 0.9,
             replace_ratio: float = 1.,
@@ -110,6 +113,7 @@ class BaseTrainer(ABC):
             min_epsilon: float = 0.1,
             epsilon_decay: float = 1e-3,
     ):
+        self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.replace_ratio = replace_ratio
         self.replace_step = replace_step
@@ -159,7 +163,11 @@ class BaseTrainer(ABC):
         replaced = False
         self._replace_counter += 1
         if self.replace_step <= 0 or self._replace_counter % self.replace_step == 0:
-            self.replace_target_net(src, target, ratio)
+            if isinstance(src, (tuple, list)) and isinstance(target, (tuple, list)):
+                for s, t in zip(src, target):
+                    self.replace_target_net(s, t, ratio)
+            else:
+                self.replace_target_net(src, target, ratio)
             self._replace_counter = 0
             replaced = True
         return replaced

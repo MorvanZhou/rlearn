@@ -17,17 +17,28 @@ class DQNTrainer(BaseTrainer):
 
     def __init__(
             self,
-            learning_rates: tp.Sequence[float],
             log_dir: str = None
     ):
-        super().__init__(learning_rates, log_dir)
+        super().__init__(log_dir)
 
         self.model = DQN(training=True)
-        self.opt = keras.optimizers.RMSprop(
-            learning_rate=self.learning_rates[0],
+        self.opt = None
+        self.loss = keras.losses.MeanSquaredError()
+
+    def set_default_optimizer(self):
+        if isinstance(self.learning_rate, (tuple, list)) and len(self.learning_rate) <= 1:
+            l_len = len(self.learning_rate)
+            if l_len == 1:
+                l1 = self.learning_rate[0]
+            else:
+                raise ValueError("learning rate must be 1")
+        else:
+            l1 = self.learning_rate
+
+        self.opt = keras.optimizers.Adam(
+            learning_rate=l1,
             # global_clipnorm=2.,  # stable training
         )
-        self.loss = keras.losses.MeanSquaredError()
 
     def set_model_encoder(self, q: keras.Model, action_num: int):
         self.model.set_encoder(q, action_num)
@@ -51,6 +62,9 @@ class DQNTrainer(BaseTrainer):
         self.replay_buffer.put_one(s, a, r, s_)
 
     def train_batch(self) -> tp.Dict[str, tp.Any]:
+        if self.opt is None:
+            self.set_default_optimizer()
+
         res = {"loss": 0, "q": 0}
         if self.replay_buffer.empty():
             return res
@@ -58,7 +72,7 @@ class DQNTrainer(BaseTrainer):
         bs, ba, br, bs_ = self.replay_buffer.sample(self.batch_size)
         ba = ba.ravel().astype(np.int32)
 
-        self.try_replace_params(src=self.model.q, target=self.model.q_)
+        replaced = self.try_replace_params(src=self.model.q, target=self.model.q_)
         self.decay_epsilon()
 
         q_ = self.model.q_.predict(bs_, verbose=0)
@@ -78,7 +92,7 @@ class DQNTrainer(BaseTrainer):
         grads = tape.gradient(loss, self.model.q.trainable_variables)
         self.opt.apply_gradients(zip(grads, self.model.q.trainable_variables))
 
-        res.update({"loss": loss.numpy(), "q": q_wrt_a.numpy().ravel().mean()})
+        res.update({"loss": loss.numpy(), "q": q_wrt_a.numpy().ravel().mean(), "replaced": replaced})
         return res
 
     def save_model_weights(self, path: str):

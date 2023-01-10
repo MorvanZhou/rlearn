@@ -16,25 +16,16 @@ class _PPOTrainer(BaseTrainer):
     def __init__(
             self,
             model: keras.Model,
-            learning_rates: tp.Sequence[float],
             log_dir: str = None,
             clip_epsilon: float = 0.2,
             entropy_coef: float = 0.,
             update_time: int = 1,
     ):
-        super().__init__(learning_rates, log_dir)
-        if len(learning_rates) != 2:
-            raise ValueError("length of learning rate for ddpg must be 2, (actor's and critic's)")
+        super().__init__(log_dir)
 
         self.model: keras.Model = model
-        self.opt_a = keras.optimizers.Adam(
-            learning_rate=self.learning_rates[0],
-            global_clipnorm=2.,  # stable training
-        )
-        self.opt_c = keras.optimizers.Adam(
-            learning_rate=self.learning_rates[1],
-            global_clipnorm=2.,  # stable training
-        )
+        self.opt_a = None
+        self.opt_c = None
         self.loss = keras.losses.MeanSquaredError()
 
         self.clip_epsilon = clip_epsilon
@@ -44,6 +35,27 @@ class _PPOTrainer(BaseTrainer):
         self.buffer_s = []
         self.buffer_a = []
         self.buffer_r = []
+
+    def set_default_optimizer(self):
+        if isinstance(self.learning_rate, (tuple, list)) and len(self.learning_rate) <= 2:
+            l_len = len(self.learning_rate)
+            if l_len == 1:
+                l1, l2 = self.learning_rate[0]
+            elif l_len == 2:
+                l1, l2 = self.learning_rate[0], self.learning_rate[1]
+            else:
+                raise ValueError("learning rate must greater then 1")
+        else:
+            l1, l2 = self.learning_rate, self.learning_rate
+
+        self.opt_a = keras.optimizers.Adam(
+            learning_rate=l1,
+            global_clipnorm=2.,  # stable training
+        )
+        self.opt_c = keras.optimizers.Adam(
+            learning_rate=l2,
+            global_clipnorm=2.,  # stable training
+        )
 
     def set_model_encoder(self, pi: keras.Model, critic: keras.Model, action_num: int):
         self.model.set_encoder(pi, critic, action_num)
@@ -97,6 +109,9 @@ class _PPOTrainer(BaseTrainer):
         self.buffer_r.clear()
 
     def train_batch(self) -> tp.Dict[str, tp.Any]:
+        if self.opt_a is None or self.opt_c is None:
+            self.set_default_optimizer()
+
         res = {"a_loss": 0, "c_loss": 0}
         if self.replay_buffer.empty():
             return res
@@ -133,7 +148,7 @@ class _PPOTrainer(BaseTrainer):
         if replaced:
             self.replay_buffer.clear()
 
-        res.update({"a_loss": la.numpy(), "c_loss": lc.numpy()})
+        res.update({"a_loss": la.numpy(), "c_loss": lc.numpy(), "replaced": replaced})
         return res
 
     def save_model_weights(self, path: str):
@@ -154,13 +169,12 @@ class PPODiscreteTrainer(_PPOTrainer):
 
     def __init__(
             self,
-            learning_rates: tp.Sequence[float],
             log_dir: str = None,
             clip_epsilon: float = 0.2,
             entropy_coef: float = 0.,
             update_time: int = 1,
     ):
-        super().__init__(PPODiscrete(training=True), learning_rates, log_dir, clip_epsilon, entropy_coef, update_time)
+        super().__init__(PPODiscrete(training=True), log_dir, clip_epsilon, entropy_coef, update_time)
 
     def set_model_encoder_from_config(self, config: TrainConfig):
         action_num = len(config.action_transform)
@@ -175,13 +189,12 @@ class PPOContinueTrainer(_PPOTrainer):
 
     def __init__(
             self,
-            learning_rates: tp.Sequence[float],
             log_dir: str = None,
             clip_epsilon: float = 0.2,
             entropy_coef: float = 0.,
             update_time: int = 1,
     ):
-        super().__init__(PPOContinue(training=True), learning_rates, log_dir, clip_epsilon, entropy_coef, update_time)
+        super().__init__(PPOContinue(training=True), log_dir, clip_epsilon, entropy_coef, update_time)
 
     def set_model_encoder_from_config(self, config: TrainConfig):
         action_num = len(config.action_transform)

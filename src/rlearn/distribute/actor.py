@@ -51,7 +51,7 @@ class ActorProcess(mp.Process):
         self.action_transformer = action_transformer
         self.max_episode = 0
         self.max_episode_step = 0
-        self.remote_buffer_address = remote_buffer_address
+        self.buffer_address = remote_buffer_address
         self.training_request_id = ""
 
         mgr = mp.Manager()
@@ -84,7 +84,7 @@ class ActorProcess(mp.Process):
     def set_model(self):
         self.model = get_model_by_name(self.model_type, training=False)
         self.model.load(self.init_model_pb_path)
-        self.logger.debug("init model is set from %s", self.init_model_pb_path)
+        self.logger.debug("initial model is set from path='%s'", self.init_model_pb_path)
         os.remove(self.init_model_pb_path)
         self.model_loaded.set()
 
@@ -103,24 +103,6 @@ class ActorProcess(mp.Process):
                 self.model_loaded.set()
                 self.logger.debug("model parameters replaced")
 
-    @staticmethod
-    def get_count_generator(max_count):
-        def unlimited_count_generator():
-            c = 0
-            while True:
-                yield c
-                c += 1
-
-        def fix_count_generator(max_step: int):
-            for c in range(max_step):
-                yield c
-
-        if max_count <= 0:
-            g = unlimited_count_generator()
-        else:
-            g = fix_count_generator(max_count)
-        return g
-
     def send_data_to_remote_buffer(self, buf_stub):
         req = buffer_pb2.UploadDataReq(version=self.ns.version, requestId=self.training_request_id)
         tools.pack_transitions(self.buffer, req)
@@ -133,9 +115,9 @@ class ActorProcess(mp.Process):
         self.logger = get_logger("ap")
         self.logger.setLevel(logging.DEBUG if self.debug else logging.ERROR)
 
-        episode_generator = self.get_count_generator(self.max_episode)
+        episode_generator = tools.get_count_generator(self.max_episode)
 
-        channel = grpc.insecure_channel(self.remote_buffer_address)
+        channel = grpc.insecure_channel(self.buffer_address)
         buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
 
         self.set_model()
@@ -149,7 +131,7 @@ class ActorProcess(mp.Process):
                 self.ns.episode_num = ep
             s = self.env.reset()
 
-            episode_step_generator = self.get_count_generator(self.max_episode_step)
+            episode_step_generator = tools.get_count_generator(self.max_episode_step)
             for step in episode_step_generator:
                 self.logger.debug("step %d", step)
                 with self.lock:
@@ -176,20 +158,23 @@ class ActorService(actor_pb2_grpc.ActorServicer):
         self.logger = get_logger("actor")
         self.logger.setLevel(logging.DEBUG if debug else logging.ERROR)
 
-        channel = grpc.insecure_channel(self.actor.remote_buffer_address)
-        buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
-
         trail_count = 0
+        err = ""
         while True:
-            if trail_count > 60:
-                raise TimeoutError("remote replay buffer connection timeout")
-            resp = buf_stub.ServiceReady(buffer_pb2.ServiceReadyReq(requestId=str(uuid.uuid4())))
-            if resp.ready:
-                break
-            self.logger.info("waiting for remote replay buffer connection")
-            time.sleep(1)
-            trail_count += 1
-
+            if trail_count > 10:
+                raise TimeoutError(f"remote replay buffer connection timeout: {err}")
+            try:
+                channel = grpc.insecure_channel(self.actor.buffer_address)
+                buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
+                resp = buf_stub.ServiceReady(buffer_pb2.ServiceReadyReq(requestId=str(uuid.uuid4())))
+                if resp.ready:
+                    break
+            except grpc.RpcError as e:
+                err = str(e)
+                self.logger.info("waiting for remote replay buffer (%s)", self.actor.buffer_address)
+                time.sleep(1)
+                trail_count += 1
+        self.logger.debug("connected to buffer %s", self.actor.buffer_address)
         channel.close()
 
     def ServiceReady(self, request, context):
@@ -216,7 +201,7 @@ class ActorService(actor_pb2_grpc.ActorServicer):
                 )
                 self.logger.debug(
                     'Start | '
-                    '{"reqId": "%s", "modelType": "%s","filename": "%s", "version": %s'
+                    '{"reqId": "%s", "modelType": "%s","filename": "%s", "version": "%s", '
                     '"maxEpisode": %d, "maxEpisodeStep": %d}',
                     req.meta.requestId,
                     req.meta.modelType,
@@ -280,7 +265,7 @@ class ActorService(actor_pb2_grpc.ActorServicer):
         return actor_pb2.TerminateResp(done=True, err="", requestId=request.requestId)
 
 
-def start_actor_server(
+def _start_server(
         port,
         remote_buffer_address: str,
         max_local_buf_size: int,
@@ -291,7 +276,7 @@ def start_actor_server(
     server = grpc.server(
         futures.ThreadPoolExecutor(
             max_workers=1,  # one for update, one for replicate
-            thread_name_prefix="s"
+            thread_name_prefix="distActor"
         ), options=[
             ('grpc.max_send_message_length', 1024 * 1024 * 20),
         ]
@@ -311,7 +296,20 @@ def start_actor_server(
     actor_pb2_grpc.add_ActorServicer_to_server(service, server)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
-    service.logger.info("python grpc has started at http://127.0.0.1:%s", port)
+    service.logger.info("actor has started at http://127.0.0.1:%s", port)
+    return server
+
+
+def start_actor_server(
+        port,
+        remote_buffer_address: str,
+        max_local_buf_size: int,
+        env: RLEnv,
+        action_transformer: tp.Optional[BaseTransformer] = None,
+        debug: bool = False
+) -> grpc.Server:
+    server = _start_server(port, remote_buffer_address, max_local_buf_size, env, action_transformer, debug)
+    server.wait_for_termination()
     return server
 
 # def start_actor_server(

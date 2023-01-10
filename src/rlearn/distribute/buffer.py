@@ -47,8 +47,8 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
         # reject invalided version
         if request.version != self.version:
             return buffer_pb2.UploadDataResp(
-                done=False,
-                err=f"version='{request.version}' is not in line with learner's '{self.version}'",
+                done=True,
+                err=f"version='{request.version}' is not aline with learner's '{self.version}'",
                 requestId=request.requestId,
             )
 
@@ -77,19 +77,20 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
             max_size = None
         resp = buffer_pb2.DownloadDataResp(err="", requestId=request.requestId)
         tools.pack_transitions(buffer=self.replay_buffer, interface=resp, max_size=max_size)
+        self.replay_buffer.clear()
         return resp
 
 
-def start_replay_buffer_server(
+def _start_server(
         port,
         max_size: int,
         buf: tp.Union[str, tp.Type[BaseReplayBuffer]] = "RandomReplayBuffer",
-        debug: bool = False
+        debug: bool = False,
 ) -> grpc.Server:
     server = grpc.server(
         futures.ThreadPoolExecutor(
             max_workers=1,  # one for update, one for replicate
-            thread_name_prefix="s"
+            thread_name_prefix="distBuffer"
         ), options=[
             ('grpc.max_send_message_length', 1024 * 1024 * 20),
         ]
@@ -98,5 +99,16 @@ def start_replay_buffer_server(
     buffer_pb2_grpc.add_ReplayBufferServicer_to_server(service, server)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
-    service.logger.info("python grpc has started at http://127.0.0.1:%s", port)
+    service.logger.info("replay buffer has started at http://127.0.0.1:%s", port)
+    return server
+
+
+def start_replay_buffer_server(
+        port,
+        max_size: int,
+        buf: tp.Union[str, tp.Type[BaseReplayBuffer]] = "RandomReplayBuffer",
+        debug: bool = False,
+) -> grpc.Server:
+    server = _start_server(port, max_size, buf, debug)
+    server.wait_for_termination()
     return server

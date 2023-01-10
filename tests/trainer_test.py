@@ -11,7 +11,7 @@ from rlearn.trainer.base import BaseTrainer
 
 
 def get_default_ddpg_trainer():
-    trainer = rlearn.trainer.DDPGTrainer(learning_rates=[0.01, 0.01])
+    trainer = rlearn.trainer.DDPGTrainer()
     actor_encoder = keras.Sequential([
         keras.layers.InputLayer(2),
         keras.layers.Dense(32),
@@ -24,6 +24,7 @@ def get_default_ddpg_trainer():
     ])
     trainer.set_model_encoder(actor=actor_encoder, critic=critic_encoder, action_num=3)
     trainer.set_params(
+        learning_rate=0.01,
         batch_size=32,
     )
     return trainer
@@ -59,7 +60,6 @@ class TrainerTest(unittest.TestCase):
         )
         trainer = rlearn.trainer.get_trainer_by_name(
             conf.trainer,
-            conf.learning_rates,
             log_dir=os.path.join(tempfile.tempdir, "test_dqn")
         )
         rlearn.trainer.set_config_to_trainer(conf, trainer)
@@ -72,7 +72,6 @@ class TrainerTest(unittest.TestCase):
 
     def test_ddpg_add_encoder_manually(self):
         trainer = rlearn.trainer.DDPGTrainer(
-            learning_rates=[0.01, 0.01],
             log_dir=os.path.join(tempfile.tempdir, "test_ddpg"))
         trainer.set_model_encoder(
             actor=keras.Sequential([
@@ -85,12 +84,12 @@ class TrainerTest(unittest.TestCase):
             ]),
             action_num=1
         )
+        trainer.set_params(learning_rate=0.01)
         self.assertEqual((None, 2), trainer.model.actor.input_shape)
         self.assertEqual((None, 1), trainer.model.actor.output_shape)
 
     def test_ddpg_add_model(self):
-        trainer = rlearn.trainer.DDPGTrainer(
-            learning_rates=[0.01, 0.01])
+        trainer = rlearn.trainer.DDPGTrainer()
         a = keras.Sequential([
             keras.layers.InputLayer(2),
             keras.layers.Dense(16),
@@ -113,18 +112,18 @@ class TrainerTest(unittest.TestCase):
             actor=a,
             critic=C(),
         )
+
         self.assertEqual((None, 2), trainer.model.actor.input_shape)
         self.assertEqual((None, 2), trainer.model.actor.output_shape)
 
         trainer.set_replay_buffer(8)
-        trainer.set_params(batch_size=8)
+        trainer.set_params(learning_rate=0.01, batch_size=8)
         for _ in range(8):
             trainer.store_transition(np.random.random(2), np.random.random(2), np.random.random(), np.random.random(2))
         trainer.train_batch()
 
     def test_dqn_add_model(self):
         trainer = rlearn.trainer.DQNTrainer(
-            learning_rates=[0.01, 0.01],
             log_dir=os.path.join(tempfile.tempdir, "test_dqn"))
         trainer.set_model(
             q=keras.Sequential([
@@ -140,7 +139,6 @@ class TrainerTest(unittest.TestCase):
 
     def test_dqn(self):
         trainer = rlearn.trainer.DQNTrainer(
-            learning_rates=[0.01],
             log_dir=os.path.join(tempfile.tempdir, "test_dqn"))
         net = keras.Sequential([
             keras.layers.InputLayer(2),
@@ -153,6 +151,7 @@ class TrainerTest(unittest.TestCase):
         trainer.set_replay_buffer(100)
         replace_ratio = 0.1
         trainer.set_params(
+            learning_rate=[0.01, ],
             batch_size=32,
             replace_ratio=replace_ratio
         )
@@ -168,9 +167,7 @@ class TrainerTest(unittest.TestCase):
         self.assertIsInstance(trainer.predict(np.zeros([2, ])), int)
 
     def test_ppo_continuous(self):
-        trainer = rlearn.PPOContinueTrainer(
-            learning_rates=[0.01, 0.01],
-        )
+        trainer = rlearn.PPOContinueTrainer()
         trainer.set_model_encoder(
             pi=keras.Sequential([
                 keras.layers.InputLayer((2,)),
@@ -183,6 +180,7 @@ class TrainerTest(unittest.TestCase):
             action_num=1
         )
         trainer.set_params(
+            learning_rate=[0.01, 0.01],
             batch_size=32,
             min_epsilon=0.1,
             epsilon_decay=5e-5,
@@ -198,13 +196,7 @@ class TrainerTest(unittest.TestCase):
             self.assertTrue(0 <= a <= 360, msg=f"{a}")
 
     def test_ppo_discrete(self):
-        with self.assertRaises(ValueError):
-            rlearn.PPODiscreteTrainer(
-                learning_rates=[0.001]
-            )
-        trainer = rlearn.PPODiscreteTrainer(
-            learning_rates=[0.001, 0.001]
-        )
+        trainer = rlearn.PPODiscreteTrainer()
         trainer.set_model_encoder(
             pi=keras.Sequential([
                 keras.layers.InputLayer((2,)),
@@ -218,6 +210,7 @@ class TrainerTest(unittest.TestCase):
         )
         trainer.set_replay_buffer(1000)
         trainer.set_params(
+            learning_rate=[0.001, 0.001],
             batch_size=32,
             min_epsilon=0.1,
             epsilon_decay=5e-5,
@@ -230,7 +223,7 @@ class TrainerTest(unittest.TestCase):
             self.assertIsInstance(a, int, msg=f"{a}")
 
     def test_dueling_dqn(self):
-        trainer = rlearn.trainer.DuelingDQNTrainer(learning_rates=[0.01])
+        trainer = rlearn.trainer.DuelingDQNTrainer()
         net = keras.Sequential([
             keras.layers.InputLayer(2),
             keras.layers.Dense(32),
@@ -241,6 +234,7 @@ class TrainerTest(unittest.TestCase):
         trainer.set_model_encoder(net, 3)
         replace_ratio = 0.1
         trainer.set_params(
+            learning_rate=0.01,
             batch_size=32,
             replace_ratio=replace_ratio
         )
@@ -248,10 +242,6 @@ class TrainerTest(unittest.TestCase):
         self.assertEqual(rlearn.DuelingDQN.name, trainer.model.name)
 
     def test_ddpg(self):
-        with self.assertRaises(ValueError):
-            rlearn.DDPGTrainer(
-                learning_rates=[0.001]
-            )
         trainer = get_default_ddpg_trainer()
         pred = trainer.predict(np.zeros([2, ]))
         self.assertIsInstance(pred, np.ndarray)
