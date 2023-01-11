@@ -35,7 +35,6 @@ conf = rlearn.TrainConfig(
 )
 
 trainer = rlearn.DDPGTrainer(
-    learning_rates=conf.learning_rates,
     log_dir=os.path.join(os.pardir, os.pardir, "tmp", "test_ddpg")
 )
 rlearn.set_config_to_trainer(conf, trainer)
@@ -54,7 +53,7 @@ for ep in range(200):
         s_, r, _, _, _ = env.step(real_a)
 
         # 将当前的状态,行为,回报,下一个状态存储到记忆库中
-        trainer.store_transition(s, raw_a, r / 10, s_)
+        trainer.store_transition(s, raw_a, (r + 8) / 8, s_)
 
         s = s_
         ep_reward += r

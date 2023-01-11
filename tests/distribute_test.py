@@ -6,7 +6,6 @@ import time
 import unittest
 
 import grpc
-import gym
 import numpy as np
 from tensorflow import keras
 
@@ -14,6 +13,7 @@ import rlearn
 from rlearn import distribute
 from rlearn.distribute import buffer_pb2, buffer_pb2_grpc, actor_pb2_grpc, actor_pb2
 from rlearn.distribute import tools
+from tests.gym_wrapper import CartPoleSmoothReward
 
 
 class BufferTest(unittest.TestCase):
@@ -63,25 +63,6 @@ class BufferTest(unittest.TestCase):
         self.assertIsNone(s_)
 
 
-class CartPole(distribute.actor.RLEnv):
-    def __init__(self, seed=None):
-        self.env = gym.make('CartPole-v1', new_step_api=True)
-        if seed is not None:
-            self.env.reset(seed=seed)
-
-    def reset(self):
-        s = self.env.reset(return_info=False)
-        return s
-
-    def step(self, a):
-        s_, _, done, _, _ = self.env.step(a)
-        x, _, theta, _ = s_
-        r1 = (self.env.x_threshold - abs(x)) / self.env.x_threshold - 0.8
-        r2 = (self.env.theta_threshold_radians - abs(theta)) / self.env.theta_threshold_radians - 0.5
-        r = r1 + r2
-        return s_, r, done
-
-
 class ActorProcessTest(unittest.TestCase):
     model_pb_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn_pb.zip")
     model_ckpt_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn.zip")
@@ -92,7 +73,7 @@ class ActorProcessTest(unittest.TestCase):
         model.save_weights(self.model_ckpt_path)
 
     def test_rl_env(self):
-        env = CartPole(seed=1)
+        env = CartPoleSmoothReward(seed=1)
         s = env.reset()
         self.assertIsInstance(s, np.ndarray)
         self.assertEqual((4,), s.shape)
@@ -104,7 +85,7 @@ class ActorProcessTest(unittest.TestCase):
 
     def test_ep_step_generator(self):
         buffer = rlearn.RandomReplayBuffer(500)
-        env = CartPole()
+        env = CartPoleSmoothReward()
         actor_p = distribute.actor.ActorProcess(
             buffer=buffer,
             env=env,
@@ -112,7 +93,7 @@ class ActorProcessTest(unittest.TestCase):
             action_transformer=None,
         )
         actor_p.init_params(
-            "DQN", self.model_pb_path, init_version="v0", request_id="dqn_train", max_episode=2, max_episode_step=20)
+            "DQN", self.model_pb_path, init_version=0, request_id="dqn_train", max_episode=2, max_episode_step=20)
         g = tools.get_count_generator(-1)
         for i in range(10):
             step = next(g)
@@ -130,7 +111,7 @@ class ActorProcessTest(unittest.TestCase):
 
     def test_actor_process(self):
         buffer = rlearn.RandomReplayBuffer(500)
-        env = CartPole()
+        env = CartPoleSmoothReward()
         actor = distribute.actor.ActorProcess(
             buffer=buffer,
             env=env,
@@ -138,7 +119,7 @@ class ActorProcessTest(unittest.TestCase):
             action_transformer=None,
         )
         actor.init_params(
-            "DQN", self.model_pb_path, init_version="v0", request_id="dqn_train", max_episode=2, max_episode_step=5)
+            "DQN", self.model_pb_path, init_version=0, request_id="dqn_train", max_episode=2, max_episode_step=5)
         actor.start()
         actor.join()
         self.assertEqual(1, actor.ns.episode_num)
@@ -157,14 +138,14 @@ class ActorProcessTest(unittest.TestCase):
         channel = grpc.insecure_channel(buf_address)
         buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
 
-        init_version = "v0"
+        init_version = 0
         resp = buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=init_version, requestId="bl"))
         self.assertEqual("bl", resp.requestId)
         self.assertTrue(resp.done)
         self.assertEqual("", resp.err)
 
         buffer = rlearn.RandomReplayBuffer(10)
-        env = CartPole()
+        env = CartPoleSmoothReward()
         actor_p = distribute.actor.ActorProcess(
             buffer=buffer,
             env=env,
@@ -223,8 +204,8 @@ class ActorServiceTest(unittest.TestCase):
         cls.actor_server = distribute.actor._start_server(
             port=actor_port,
             remote_buffer_address=buf_address,
-            max_local_buf_size=3,
-            env=CartPole(),
+            local_buffer_size=3,
+            env=CartPoleSmoothReward(),
             action_transformer=None,
             debug=True,
         )
@@ -249,7 +230,8 @@ class ActorServiceTest(unittest.TestCase):
         self.assertEqual("xx", resp.requestId)
 
     def test_train(self):
-        version = "v0"
+        version = 0
+        self.buf_stub.LearnerSetModelType(buffer_pb2.LearnerSetModelTypeReq(isOnPolicy=False))
         resp = self.buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=version, requestId="bl"))
         self.assertEqual("bl", resp.requestId)
         self.assertTrue(resp.done)
@@ -267,8 +249,8 @@ class ActorServiceTest(unittest.TestCase):
         self.assertTrue(resp.done)
         self.assertEqual("", resp.err)
 
-        time.sleep(0.3)
-        next_version = "v1"
+        time.sleep(0.8)
+        next_version = 1
         self.buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=next_version, requestId="bl"))
         resp = self.actor_stub.ReplicateModel(tools.read_weights_iterfile(
             self.model_ckpt_path,
@@ -317,8 +299,8 @@ class LearnerTest(unittest.TestCase):
             p = multiprocessing.Process(target=distribute.start_actor_server, kwargs=dict(
                 port=actor_port,
                 remote_buffer_address=buf_address,
-                max_local_buf_size=10,
-                env=CartPole(),
+                local_buffer_size=10,
+                env=CartPoleSmoothReward(),
                 action_transformer=None,
                 # debug=True,
             ))

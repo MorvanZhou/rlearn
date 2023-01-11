@@ -61,7 +61,7 @@ def read_pb_iterfile(
         model_type: str,
         max_episode: int,
         max_episode_step: int,
-        version: str,
+        version: int,
         chunk_size=1024,
         request_id: tp.Optional[str] = None,
 ) -> actor_pb2.StartReq:
@@ -87,7 +87,7 @@ def read_pb_iterfile(
                 return
 
 
-def read_weights_iterfile(filepath, version: str, chunk_size=1024, request_id: str = None):
+def read_weights_iterfile(filepath, version: int, chunk_size=1024, request_id: str = None):
     if request_id is None:
         request_id = str(uuid.uuid4())
     yield actor_pb2.ReplicateModelReq(meta=actor_pb2.ReplicateModelMeta(

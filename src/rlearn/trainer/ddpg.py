@@ -71,7 +71,7 @@ class DDPGTrainer(BaseTrainer):
 
         bs, ba, br, bs_ = self.replay_buffer.sample(self.batch_size)
 
-        replaced = self.try_replace_params(
+        self.try_replace_params(
             [self.model.actor, self.model.critic], [self.model.actor_, self.model.critic_])
         self.decay_epsilon()
 
@@ -95,7 +95,6 @@ class DDPGTrainer(BaseTrainer):
         res.update({
             "a_loss": la.numpy(),
             "c_loss": lc.numpy(),
-            "replaced": replaced,
         })
         return res
 

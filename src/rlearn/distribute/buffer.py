@@ -27,7 +27,8 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
         self.logger = get_logger("buf")
         self.logger.setLevel(logging.DEBUG if debug else logging.ERROR)
 
-        self.version = ""
+        self.version = 0
+        self.is_on_policy = False
         self.replay_buffer = replaybuf.get_buffer_by_name(name=name, max_size=max_size)
         self.is_uploading = False
 
@@ -35,17 +36,26 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
         self.logger.debug("""ServiceReady | {"reqId": "%s"}""", request.requestId)
         return buffer_pb2.ServiceReadyResp(ready=True, requestId=request.requestId)
 
+    def LearnerSetModelType(self, request, context):
+        self.logger.debug(
+            """LearnerSetModelType | {"reqId": "%s", "isOnPolicy": "%s"}""", request.requestId, request.isOnPolicy)
+        self.is_on_policy = request.isOnPolicy
+        return buffer_pb2.LearnerSetVersionResp(done=True, err="", requestId=request.requestId)
+
     def LearnerSetVersion(self, request, context):
         self.logger.debug(
-            """LearnerSetVersion | {"reqId": "%s", "version": "%s"}""", request.requestId, request.version)
+            """LearnerSetVersion | {"reqId": "%s", "version": %d}""", request.requestId, request.version)
         self.version = request.version
         return buffer_pb2.LearnerSetVersionResp(done=True, err="", requestId=request.requestId)
 
     def UploadData(self, request, context):
-        self.logger.debug("""UploadData | {"reqId": "%s", "version": "%s"}""", request.requestId, request.version)
+        self.logger.debug("""UploadData | {"reqId": "%s", "version": %d}""", request.requestId, request.version)
 
         # reject invalided version
-        if request.version != self.version:
+        if self.is_on_policy and request.version < self.version:
+            self.logger.debug(
+                "model isOnPolicy, request version=%d is not equal to last version=%d",
+                request.version, self.version)
             return buffer_pb2.UploadDataResp(
                 done=True,
                 err=f"version='{request.version}' is not aline with learner's '{self.version}'",

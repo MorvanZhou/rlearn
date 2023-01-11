@@ -29,7 +29,7 @@ message StartMeta {
   string modelType = 2;
   int64 maxEpisode = 3;
   int64 maxEpisodeStep = 4;
-  string version = 5;
+  uint64 version = 5;
   string requestId = 6;
 }
 
@@ -48,7 +48,7 @@ message StartResp {
 
 message ReplicateModelMeta {
   string filename = 1;
-  string version = 2;
+  uint64 version = 2;
   string requestId = 3;
 }
 

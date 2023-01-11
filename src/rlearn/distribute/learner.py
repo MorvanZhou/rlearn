@@ -74,18 +74,28 @@ class Learner:
         self.logger.debug("actors server ready, reqId='%s'", req_id)
 
     def send_init_data(self):
-        version = "init_version"
         req_id = str(uuid4())
+
+        resp = self.buffer_stub.LearnerSetModelType(
+            buffer_pb2.LearnerSetModelTypeReq(
+                isOnPolicy=self.trainer.is_on_policy,
+                requestId=req_id
+            ))
+        if not resp.done:
+            raise ValueError(f"buffer set modelType err: {resp.err}, requestId='{resp.requestId}'")
+
         resp = self.buffer_stub.LearnerSetVersion(
             buffer_pb2.LearnerSetVersionReq(
-                version=version,
+                version=self.version_count,
                 requestId=req_id
             ))
         if not resp.done:
             raise ValueError(f"buffer set init version err: {resp.err}, requestId='{resp.requestId}'")
-        self.logger.debug("init buffer with version='%s', reqId='%s'", version, req_id)
+        self.logger.debug(
+            "init buffer with version=%d, modelTypeOnPolicy=%s, reqId='%s'",
+            self.version_count, self.trainer.is_on_policy, req_id)
 
-        path = os.path.join(self.result_dir, version + ".zip")
+        path = os.path.join(self.result_dir, f"params_v{self.version_count}.zip")
         self.trainer.save_model(path)
         futures = {}
         for addr, stub in self.actors_stub.items():
@@ -96,7 +106,7 @@ class Learner:
                         model_type=self.trainer.model.name,
                         max_episode=0,
                         max_episode_step=0,
-                        version=version,
+                        version=self.version_count,
                         request_id=req_id,
                     )
                 )
@@ -109,9 +119,10 @@ class Learner:
             if not resp.done:
                 raise ValueError(f"actor start err: {resp.err}, addr='{addr}', requestId='{resp.requestId}'")
 
-        self.logger.debug("init actors with version='%s', reqId='%s'", version, req_id)
+        self.logger.debug("init actors with version=%d, reqId='%s'", self.version_count, req_id)
+        self.version_count += 1
 
-    def download_data(self, max_size=1000):
+    def download_data(self, lock, max_size=1000):
         while self.keep_download_data:
             time.sleep(1)
             req_id = str(uuid4())
@@ -125,29 +136,28 @@ class Learner:
             if len(s) == 0:
                 self.logger.debug("download empty data, retry")
                 continue
-            self.trainer.replay_buffer.put_batch(s, a, r, s_)
+            with lock:
+                self.trainer.replay_buffer.put_batch(s, a, r, s_)
             t2 = time.process_time()
             self.logger.debug("downloaded size=%d, request=%.3fs, unpack=%.3fs, reqId='%s'",
                               len(s), t1 - t0, t2 - t1, req_id)
 
     def replicate_actor_model(self):
-        version = f"v{self.version_count}"
-        self.version_count += 1
-
         t0 = time.process_time()
 
-        weights_path = os.path.join(self.result_dir, f"params_{version}.zip")
+        weights_path = os.path.join(self.result_dir, f"params_v{self.version_count}.zip")
         self.trainer.model.save_weights(weights_path)
 
         req_id = str(uuid4())
 
         resp = self.buffer_stub.LearnerSetVersion(
             buffer_pb2.LearnerSetVersionReq(
-                version=version,
+                version=self.version_count,
                 requestId=req_id
             ))
         if not resp.done:
-            raise ValueError(f"buffer set version err: {resp.err}, version='{version}', requestId='{req_id}'")
+            raise ValueError(
+                f"buffer set version err: {resp.err}, version={self.version_count}, requestId='{req_id}'")
 
         futures = {}
         for addr, stub in self.actors_stub.items():
@@ -155,60 +165,69 @@ class Learner:
                 resp_future = stub.ReplicateModel.future(
                     tools.read_weights_iterfile(
                         weights_path,
-                        version=version,
+                        version=self.version_count,
                         request_id=req_id
                     ))
                 futures[addr] = resp_future
             except grpc.RpcError as e:
                 self.logger.error(
                     "actor replicate params err: %e, addr='%s', "
-                    "version='%s', requestId='%s'", str(e), addr, version, req_id)
+                    "version=%d, requestId='%s'", str(e), addr, self.version_count, req_id)
 
         for addr, resp_future in futures.items():
             resp = resp_future.result()
             if not resp.done:
                 raise ValueError(
                     f"actor replicate params err: {resp.err}, "
-                    f"addr='{addr}', version='{version}', requestId='{req_id}'")
+                    f"addr='{addr}', version={self.version_count}, requestId='{req_id}'")
         t1 = time.process_time()
         self.logger.debug(
-            "set buffer and replicate actors params, version='%s', spend=%.3fs, reqId='%s'", version, t1 - t0, req_id)
+            "set buffer and replicate actors params, version=%d, spend=%.3fs, reqId='%s'",
+            self.version_count, t1 - t0, req_id)
+
+        self.version_count += 1
 
     def run(
             self,
             epoch: tp.Optional[int] = None,
             epoch_step: tp.Optional[int] = None,
             download_max_size: int = 1000,
+            replicate_step: tp.Optional[int] = None,
     ):
         self.check_actors_buffer_ready()
         self.send_init_data()
         if epoch is None:
             epoch = -1
 
-        td = threading.Thread(target=self.download_data, kwargs=dict(max_size=download_max_size))
+        lock = threading.Lock()
+        td = threading.Thread(target=self.download_data, kwargs=dict(lock=lock, max_size=download_max_size))
         td.start()
 
+        if replicate_step is None and not self.trainer.is_on_policy:
+            replicate_step = 100
         count = 0
         epoch_generator = tools.get_count_generator(epoch)
         for ep in epoch_generator:
-            while self.trainer.replay_buffer.current_loading_point < 500:
+            while self.trainer.replay_buffer.current_loading_point < 100:
                 time.sleep(0.5)
                 continue
             if epoch_step is None:
-                _ep_step = self.trainer.replay_buffer.current_loading_point // self.trainer.batch_size
+                if self.trainer.replay_buffer.is_full():
+                    _ep_step = self.trainer.replay_buffer.max_size // self.trainer.batch_size
+                else:
+                    _ep_step = self.trainer.replay_buffer.current_loading_point // self.trainer.batch_size
             else:
                 _ep_step = epoch_step
             t0 = time.process_time()
             for _ in range(_ep_step):
-                res = self.trainer.train_batch()
-                if "replaced" in res:
-                    if res["replaced"]:
+                self.trainer.train_batch()
+                if self.trainer.is_on_policy:
+                    if self.trainer.model_replaced:
                         self.replicate_actor_model()
                 else:
-                    if self.trainer.replace_step > 0:
-                        if count % self.trainer.replace_step == 0:
-                            self.replicate_actor_model()
-                        count += 1
+                    if count % replicate_step == 0:
+                        self.replicate_actor_model()
+                    count += 1
             t1 = time.process_time()
             self.logger.debug("trained %d times in ep=%d, spend=%.2fs", _ep_step, ep, t1 - t0)
 

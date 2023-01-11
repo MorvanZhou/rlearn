@@ -144,11 +144,11 @@ class _PPOTrainer(BaseTrainer):
                 grads = tape.gradient(la, self.model.pi.trainable_variables)
                 self.opt_a.apply_gradients(zip(grads, self.model.pi.trainable_variables))
 
-        replaced = self.try_replace_params(src=self.model.pi, target=self.model.pi_, ratio=1.)
-        if replaced:
+        self.model_replaced = self.try_replace_params(src=self.model.pi, target=self.model.pi_, ratio=1.)
+        if self.model_replaced:
             self.replay_buffer.clear()
 
-        res.update({"a_loss": la.numpy(), "c_loss": lc.numpy(), "replaced": replaced})
+        res.update({"a_loss": la.numpy(), "c_loss": lc.numpy()})
         return res
 
     def save_model_weights(self, path: str):

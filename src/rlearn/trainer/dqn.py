@@ -72,7 +72,7 @@ class DQNTrainer(BaseTrainer):
         bs, ba, br, bs_ = self.replay_buffer.sample(self.batch_size)
         ba = ba.ravel().astype(np.int32)
 
-        replaced = self.try_replace_params(src=self.model.q, target=self.model.q_)
+        self.try_replace_params(src=self.model.q, target=self.model.q_)
         self.decay_epsilon()
 
         q_ = self.model.q_.predict(bs_, verbose=0)
@@ -92,7 +92,7 @@ class DQNTrainer(BaseTrainer):
         grads = tape.gradient(loss, self.model.q.trainable_variables)
         self.opt.apply_gradients(zip(grads, self.model.q.trainable_variables))
 
-        res.update({"loss": loss.numpy(), "q": q_wrt_a.numpy().ravel().mean(), "replaced": replaced})
+        res.update({"loss": loss.numpy(), "q": q_wrt_a.numpy().ravel().mean()})
         return res
 
     def save_model_weights(self, path: str):

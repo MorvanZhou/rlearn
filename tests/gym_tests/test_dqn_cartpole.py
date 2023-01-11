@@ -26,7 +26,6 @@ conf = rlearn.TrainConfig(
 )
 
 trainer = rlearn.DQNTrainer(
-    learning_rates=conf.learning_rates,
     log_dir=os.path.join(os.pardir, os.pardir, "tmp", "test_dqn"))
 rlearn.set_config_to_trainer(conf, trainer)
 

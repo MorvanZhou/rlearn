@@ -2,6 +2,7 @@ from rlearn import distribute
 from rlearn import transformer
 from rlearn import zoo
 from rlearn.config import TrainConfig, NetConfig, LayerConfig, ReplayBufferConfig
+from rlearn.env_wrapper import EnvWrapper
 from rlearn.model import *
 from rlearn.replaybuf import *
 from rlearn.trainer import *

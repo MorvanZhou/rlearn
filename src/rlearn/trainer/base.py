@@ -34,6 +34,8 @@ class BaseTrainer(ABC):
         self.epsilon = 1.
         self.gamma = 0.9
 
+        self.model_replaced = False
+
         self._replace_counter = 0
         self.log_dir = log_dir
         self.board = None
