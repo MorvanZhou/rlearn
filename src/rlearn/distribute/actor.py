@@ -20,13 +20,16 @@ from rlearn.replaybuf import RandomReplayBuffer
 from rlearn.replaybuf.base import BaseReplayBuffer
 from rlearn.transformer import BaseTransformer
 
+# linus default is fork, force set to spawn
+mp = mp.get_context('spawn')
+
 
 class ActorProcess(mp.Process):
     def __init__(
             self,
             buffer: BaseReplayBuffer,
             env: EnvWrapper,
-            remote_buffer_address: str,
+            remote_buffer_address: tp.Optional[str] = None,
             action_transformer: tp.Optional[BaseTransformer] = None,
             debug: bool = False,
     ):
@@ -107,8 +110,11 @@ class ActorProcess(mp.Process):
 
         episode_generator = tools.get_count_generator(self.max_episode)
 
-        channel = grpc.insecure_channel(self.buffer_address)
-        buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
+        if self.buffer_address is None or self.buffer_address.strip() == "":
+            buf_stub = None
+        else:
+            channel = grpc.insecure_channel(self.buffer_address)
+            buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
 
         self.set_model()
 
@@ -136,7 +142,7 @@ class ActorProcess(mp.Process):
                 s_, r, done = self.env.step(a)
                 self.buffer.put(s, _a, r, s_)
                 s = s_
-                if self.buffer.is_full():
+                if self.buffer.is_full() and buf_stub is not None:
                     self.send_data_to_remote_buffer(buf_stub)
                     self.buffer.clear()
                 if done:
@@ -261,7 +267,7 @@ class ActorService(actor_pb2_grpc.ActorServicer):
 
 
 def _start_server(
-        port,
+        port: int,
         remote_buffer_address: str,
         local_buffer_size: int,
         env: EnvWrapper,
@@ -291,12 +297,12 @@ def _start_server(
     actor_pb2_grpc.add_ActorServicer_to_server(service, server)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
-    service.logger.info("actor has started at http://127.0.0.1:%s", port)
+    service.logger.info("actor has started at http://localhost:%d", port)
     return server
 
 
 def start_actor_server(
-        port,
+        port: int,
         remote_buffer_address: str,
         local_buffer_size: int,
         env: EnvWrapper,

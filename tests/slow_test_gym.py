@@ -173,7 +173,7 @@ class GymTest(unittest.TestCase):
             learning_rates=(0.01, 0.01),
             args={}
         )
-        trainer: rlearn.PPOContinueTrainer = rlearn.get_trainer_by_name(
+        trainer = rlearn.get_trainer_by_name(
             conf.trainer, log_dir=os.path.join(tempfile.tempdir, "test_ppo"),
             seed=4
         )

@@ -92,7 +92,7 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
 
 
 def _start_server(
-        port,
+        port: int,
         max_size: int,
         buf: tp.Union[str, tp.Type[BaseReplayBuffer]] = "RandomReplayBuffer",
         debug: bool = False,
@@ -109,12 +109,12 @@ def _start_server(
     buffer_pb2_grpc.add_ReplayBufferServicer_to_server(service, server)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
-    service.logger.info("replay buffer has started at http://127.0.0.1:%s", port)
+    service.logger.info("replay buffer has started at http://localhost:%d", port)
     return server
 
 
 def start_replay_buffer_server(
-        port,
+        port: int,
         max_size: int,
         buf: tp.Union[str, tp.Type[BaseReplayBuffer]] = "RandomReplayBuffer",
         debug: bool = False,

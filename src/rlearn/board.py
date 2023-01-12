@@ -1,6 +1,6 @@
 import os
 import shutil
-from typing import Optional, Union, Sequence
+import typing as tp
 
 import numpy as np
 import tensorflow as tf
@@ -11,7 +11,7 @@ class Tensorboard:
     def __init__(
             self,
             logdir: str,
-            models: Union[Sequence[keras.Model], keras.Model],
+            models: tp.Union[tp.Sequence[keras.Model], keras.Model],
             trace_weights: bool = True
     ):
         self.logdir = logdir
@@ -65,7 +65,7 @@ class Tensorboard:
         else:
             raise ValueError(f"shape of data not right, {data.shape}")
 
-    def trace(self, dict_data: dict, step: Optional[int] = None):
+    def trace(self, dict_data: dict, step: tp.Optional[int] = None):
         if step is None:
             self.step += 1
         else:
