@@ -1,6 +1,7 @@
 gym[classic_control]==0.25.0
 grpcio-tools==1.45.0
 tox==3.24.3
+tox-conda
 build
 twine
 pylint
