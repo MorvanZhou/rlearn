@@ -13,7 +13,7 @@ import rlearn
 from rlearn import distribute
 from rlearn.distribute import buffer_pb2, buffer_pb2_grpc, actor_pb2_grpc, actor_pb2
 from rlearn.distribute import tools
-from tests.gym_wrapper import CartPoleSmoothReward
+from tests.gym_wrapper_test import CartPoleSmoothReward
 
 
 class BufferTest(unittest.TestCase):
@@ -63,119 +63,119 @@ class BufferTest(unittest.TestCase):
         self.assertIsNone(s_)
 
 
-# class ActorProcessTest(unittest.TestCase):
-#     model_pb_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn_pb.zip")
-#     model_ckpt_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn.zip")
-#
-#     def setUp(self) -> None:
-#         model = rlearn.zoo.DQNSmall(4, 2)
-#         model.save(self.model_pb_path)
-#         model.save_weights(self.model_ckpt_path)
-#
-#     def test_rl_env(self):
-#         env = CartPoleSmoothReward(seed=1)
-#         s = env.reset()
-#         self.assertIsInstance(s, np.ndarray)
-#         self.assertEqual((4,), s.shape)
-#         s_, r, done = env.step(0)
-#         self.assertIsInstance(s_, np.ndarray)
-#         self.assertEqual((4,), s_.shape)
-#         self.assertIsInstance(r, float)
-#         self.assertIsInstance(done, bool)
-#
-#     def test_ep_step_generator(self):
-#         buffer = rlearn.RandomReplayBuffer(500)
-#         env = CartPoleSmoothReward()
-#         actor_p = distribute.actor.ActorProcess(
-#             buffer=buffer,
-#             env=env,
-#             remote_buffer_address=None,
-#             action_transformer=None,
-#         )
-#         actor_p.init_params(
-#             "DQN", self.model_pb_path, init_version=0, request_id="dqn_train", max_episode=2, max_episode_step=20)
-#         g = tools.get_count_generator(-1)
-#         for i in range(10):
-#             step = next(g)
-#             self.assertEqual(i, step)
-#
-#         g = tools.get_count_generator(3)
-#         for i in range(10):
-#             if i < 3:
-#                 step = next(g)
-#                 self.assertEqual(i, step)
-#             else:
-#                 with self.assertRaises(StopIteration):
-#                     next(g)
-#                 break
-#
-#     def test_actor_process(self):
-#         buffer = rlearn.RandomReplayBuffer(500)
-#         env = CartPoleSmoothReward()
-#         actor = distribute.actor.ActorProcess(
-#             buffer=buffer,
-#             env=env,
-#             remote_buffer_address=None,
-#             action_transformer=None,
-#         )
-#         actor.init_params(
-#             "DQN", self.model_pb_path, init_version=0, request_id="dqn_train", max_episode=2, max_episode_step=5)
-#         actor.start()
-#         actor.join()
-#         self.assertEqual(1, actor.ns.episode_num)
-#         self.assertLess(actor.ns.episode_step_num, 5)
-#         self.assertLess(buffer.current_loading_point, 5 * 2)
-#
-#     def test_actor_process_in_process(self):
-#         buf_port = tools.get_available_port()
-#         buf_server = distribute.buffer._start_server(
-#             port=buf_port,
-#             max_size=100,
-#             buf="RandomReplayBuffer",
-#             debug=True,
-#         )
-#         buf_address = f'localhost:{buf_port}'
-#         channel = grpc.insecure_channel(buf_address)
-#         buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
-#
-#         init_version = 0
-#         resp = buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=init_version, requestId="bl"))
-#         self.assertEqual("bl", resp.requestId)
-#         self.assertTrue(resp.done)
-#         self.assertEqual("", resp.err)
-#
-#         buffer = rlearn.RandomReplayBuffer(10)
-#         env = CartPoleSmoothReward()
-#         actor_p = distribute.actor.ActorProcess(
-#             buffer=buffer,
-#             env=env,
-#             remote_buffer_address=buf_address,
-#             action_transformer=None,
-#         )
-#         actor_p.init_params(
-#             "DQN",
-#             self.model_pb_path,
-#             init_version=init_version,
-#             request_id="dqn_train",
-#             max_episode=2,
-#             max_episode_step=20)
-#         actor_p.start()
-#         actor_p.ns.new_model_path = self.model_ckpt_path
-#         actor_p.join()
-#
-#         self.assertEqual(1, actor_p.ns.episode_num)
-#         self.assertLess(actor_p.ns.episode_step_num, 20)
-#         resp = buf_stub.DownloadData(buffer_pb2.DownloadDataReq(maxSize=10, requestId="xx"))
-#         self.assertEqual("xx", resp.requestId)
-#         s, a, r, s_ = tools.unpack_transitions(resp)
-#         buf_server.stop(None)
-#
-#         self.assertEqual(4, s.shape[1])
-#         self.assertEqual(1, a.shape[1])
-#         self.assertEqual(1, r.shape[1])
-#         self.assertEqual(4, s_.shape[1])
-#         for i in [s, a, r, s_]:
-#             self.assertGreaterEqual(i.shape[0], buffer.max_size)
+class ActorProcessTest(unittest.TestCase):
+    model_pb_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn_pb.zip")
+    model_ckpt_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn.zip")
+
+    def setUp(self) -> None:
+        model = rlearn.zoo.DQNSmall(4, 2)
+        model.save(self.model_pb_path)
+        model.save_weights(self.model_ckpt_path)
+
+    def test_rl_env(self):
+        env = CartPoleSmoothReward(seed=1)
+        s = env.reset()
+        self.assertIsInstance(s, np.ndarray)
+        self.assertEqual((4,), s.shape)
+        s_, r, done = env.step(0)
+        self.assertIsInstance(s_, np.ndarray)
+        self.assertEqual((4,), s_.shape)
+        self.assertIsInstance(r, float)
+        self.assertIsInstance(done, bool)
+
+    def test_ep_step_generator(self):
+        buffer = rlearn.RandomReplayBuffer(500)
+        env = CartPoleSmoothReward()
+        actor_p = distribute.actor.ActorProcess(
+            buffer=buffer,
+            env=env,
+            remote_buffer_address=None,
+            action_transformer=None,
+        )
+        actor_p.init_params(
+            "DQN", self.model_pb_path, init_version=0, request_id="dqn_train", max_episode=2, max_episode_step=20)
+        g = tools.get_count_generator(-1)
+        for i in range(10):
+            step = next(g)
+            self.assertEqual(i, step)
+
+        g = tools.get_count_generator(3)
+        for i in range(10):
+            if i < 3:
+                step = next(g)
+                self.assertEqual(i, step)
+            else:
+                with self.assertRaises(StopIteration):
+                    next(g)
+                break
+
+    def test_actor_process(self):
+        buffer = rlearn.RandomReplayBuffer(500)
+        env = CartPoleSmoothReward()
+        actor = distribute.actor.ActorProcess(
+            buffer=buffer,
+            env=env,
+            remote_buffer_address=None,
+            action_transformer=None,
+        )
+        actor.init_params(
+            "DQN", self.model_pb_path, init_version=0, request_id="dqn_train", max_episode=2, max_episode_step=5)
+        actor.start()
+        actor.join()
+        self.assertEqual(1, actor.ns.episode_num)
+        self.assertLess(actor.ns.episode_step_num, 5)
+        self.assertLess(buffer.current_loading_point, 5 * 2)
+
+    def test_actor_process_in_process(self):
+        buf_port = tools.get_available_port()
+        buf_server = distribute.buffer._start_server(
+            port=buf_port,
+            max_size=100,
+            buf="RandomReplayBuffer",
+            debug=True,
+        )
+        buf_address = f'localhost:{buf_port}'
+        channel = grpc.insecure_channel(buf_address)
+        buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
+
+        init_version = 0
+        resp = buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=init_version, requestId="bl"))
+        self.assertEqual("bl", resp.requestId)
+        self.assertTrue(resp.done)
+        self.assertEqual("", resp.err)
+
+        buffer = rlearn.RandomReplayBuffer(10)
+        env = CartPoleSmoothReward()
+        actor_p = distribute.actor.ActorProcess(
+            buffer=buffer,
+            env=env,
+            remote_buffer_address=buf_address,
+            action_transformer=None,
+        )
+        actor_p.init_params(
+            "DQN",
+            self.model_pb_path,
+            init_version=init_version,
+            request_id="dqn_train",
+            max_episode=2,
+            max_episode_step=20)
+        actor_p.start()
+        actor_p.ns.new_model_path = self.model_ckpt_path
+        actor_p.join()
+
+        self.assertEqual(1, actor_p.ns.episode_num)
+        self.assertLess(actor_p.ns.episode_step_num, 20)
+        resp = buf_stub.DownloadData(buffer_pb2.DownloadDataReq(maxSize=10, requestId="xx"))
+        self.assertEqual("xx", resp.requestId)
+        s, a, r, s_ = tools.unpack_transitions(resp)
+        buf_server.stop(None)
+
+        self.assertEqual(4, s.shape[1])
+        self.assertEqual(1, a.shape[1])
+        self.assertEqual(1, r.shape[1])
+        self.assertEqual(4, s_.shape[1])
+        for i in [s, a, r, s_]:
+            self.assertGreaterEqual(i.shape[0], buffer.max_size)
 
 
 class ActorServiceTest(unittest.TestCase):

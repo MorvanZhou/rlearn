@@ -1,5 +1,8 @@
+import unittest
+
 import gym
 import numpy as np
+from tensorflow import keras
 
 import rlearn
 
@@ -58,3 +61,30 @@ class Pendulum(rlearn.EnvWrapper):
 
     def render(self):
         self.env.render()
+
+
+class GameWrapperTest(unittest.TestCase):
+    def test_cartpole_dqn(self):
+        trainer = rlearn.trainer.DQNTrainer()
+        trainer.set_model_encoder(
+            q=keras.Sequential([
+                keras.layers.InputLayer(4),
+                keras.layers.Dense(16),
+            ]),
+            action_num=2
+        )
+        trainer.set_replay_buffer(100)
+        trainer.set_params(learning_rate=0.01)
+
+        game = CartPoleSmoothReward()
+        for _ in range(2):
+            s = game.reset()
+            self.assertIsInstance(s, np.ndarray)
+            for _ in range(10):
+                a = trainer.predict(s)
+                s, r, done = game.step(a)
+                self.assertIsInstance(s, np.ndarray)
+                self.assertIsInstance(r, float)
+                self.assertIsInstance(done, bool)
+                if done:
+                    break

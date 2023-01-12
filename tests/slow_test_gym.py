@@ -9,7 +9,6 @@ from tensorflow import keras
 
 import rlearn
 from rlearn.distribute import tools
-from tests import gym_wrapper
 
 
 class GymTest(unittest.TestCase):
@@ -40,7 +39,7 @@ class GymTest(unittest.TestCase):
             args={}
         )
         trainer = rlearn.get_trainer_by_name(
-            conf.trainer, log_dir=os.path.join(tempfile.tempdir, "test_dqn"),
+            conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), "test_dqn"),
             seed=2
         )
         rlearn.set_config_to_trainer(conf, trainer)
@@ -102,7 +101,7 @@ class GymTest(unittest.TestCase):
             args={}
         )
         trainer = rlearn.get_trainer_by_name(
-            conf.trainer, log_dir=os.path.join(tempfile.tempdir, "test_dueling_dqn"),
+            conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), "test_dueling_dqn"),
             seed=4
         )
         rlearn.set_config_to_trainer(conf, trainer)
@@ -174,7 +173,7 @@ class GymTest(unittest.TestCase):
             args={}
         )
         trainer = rlearn.get_trainer_by_name(
-            conf.trainer, log_dir=os.path.join(tempfile.tempdir, "test_ppo"),
+            conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), "test_ppo"),
             seed=4
         )
         rlearn.set_config_to_trainer(conf, trainer)
@@ -239,7 +238,7 @@ class GymTest(unittest.TestCase):
         )
 
         trainer = rlearn.get_trainer_by_name(
-            conf.trainer, log_dir=os.path.join(tempfile.tempdir, "test_p_dqn"),
+            conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), "test_p_dqn"),
             seed=4
         )
         rlearn.set_config_to_trainer(conf, trainer)

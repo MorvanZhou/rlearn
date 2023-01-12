@@ -107,7 +107,7 @@ class BaseTrainer(ABC):
 
     def set_params(
             self,
-            learning_rate: tp.Union[tp.Sequence[float], float],
+            learning_rate: tp.Union[tp.Sequence[float], float] = 0.001,
             batch_size: int = 32,
             gamma: float = 0.9,
             replace_ratio: float = 1.,

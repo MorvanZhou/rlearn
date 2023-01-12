@@ -60,7 +60,7 @@ class TrainerTest(unittest.TestCase):
         )
         trainer = rlearn.trainer.get_trainer_by_name(
             conf.trainer,
-            log_dir=os.path.join(tempfile.tempdir, "test_dqn")
+            log_dir=os.path.join(tempfile.gettempdir(), "test_dqn")
         )
         rlearn.trainer.set_config_to_trainer(conf, trainer)
         self.assertIsNotNone(trainer.model.q_)
@@ -72,7 +72,7 @@ class TrainerTest(unittest.TestCase):
 
     def test_ddpg_add_encoder_manually(self):
         trainer = rlearn.trainer.DDPGTrainer(
-            log_dir=os.path.join(tempfile.tempdir, "test_ddpg"))
+            log_dir=os.path.join(tempfile.gettempdir(), "test_ddpg"))
         trainer.set_model_encoder(
             actor=keras.Sequential([
                 keras.layers.InputLayer(2),
@@ -124,7 +124,7 @@ class TrainerTest(unittest.TestCase):
 
     def test_dqn_add_model(self):
         trainer = rlearn.trainer.DQNTrainer(
-            log_dir=os.path.join(tempfile.tempdir, "test_dqn"))
+            log_dir=os.path.join(tempfile.gettempdir(), "test_dqn"))
         trainer.set_model(
             q=keras.Sequential([
                 keras.layers.InputLayer(2),
@@ -139,7 +139,7 @@ class TrainerTest(unittest.TestCase):
 
     def test_dqn(self):
         trainer = rlearn.trainer.DQNTrainer(
-            log_dir=os.path.join(tempfile.tempdir, "test_dqn"))
+            log_dir=os.path.join(tempfile.gettempdir(), "test_dqn"))
         net = keras.Sequential([
             keras.layers.InputLayer(2),
             keras.layers.Dense(32),
