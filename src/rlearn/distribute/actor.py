@@ -10,7 +10,6 @@ import uuid
 from concurrent import futures
 
 import grpc
-
 from rlearn.distribute import actor_pb2, actor_pb2_grpc, buffer_pb2_grpc, buffer_pb2, tools
 from rlearn.distribute.logger import get_logger
 from rlearn.env_wrapper import EnvWrapper
@@ -217,12 +216,13 @@ class ActorService(actor_pb2_grpc.ActorServicer):
             f.write(data)
 
         self.actor.start()
-        if self.actor.model_loaded.wait(5):
+        timeout = 15
+        if self.actor.model_loaded.wait(timeout):
             done = True
             err = ""
         else:
             done = False
-            err = "model load timeout"
+            err = f"model load timeout ({timeout}s)"
         return actor_pb2.StartResp(done=done, err=err, requestId=request_id)
 
     def ReplicateModel(self, request_iterator, context):
