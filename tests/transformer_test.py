@@ -17,3 +17,10 @@ class TransformerTest(unittest.TestCase):
         self.assertEqual(1.75, t(0.5))
         self.assertEqual(2, t(3))
         self.assertEqual(1, t(-3))
+
+    def test_string(self):
+        t = rlearn.transformer.DiscreteAction(actions=["s", "d"])
+        self.assertEqual("s", t.transform(0))
+        self.assertEqual("d", t.transform(1))
+        with self.assertRaises(IndexError):
+            t.transform(3)

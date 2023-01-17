@@ -49,10 +49,13 @@ class ContinuousAction(BaseTransformer):
 
 
 class DiscreteAction(BaseTransformer):
-    def __init__(self, actions: tp.Sequence[float]):
+    def __init__(self, actions: tp.Sequence[tp.Union[float, str]]):
         self.actions = actions
 
-    def transform(self, action: tp.Union[float, int, tf.Tensor, np.ndarray]) -> tp.Union[float, tf.Tensor, np.ndarray]:
+    def transform(
+            self,
+            action: tp.Union[float, int, tf.Tensor, np.ndarray],
+    ) -> tp.Union[float, str, tf.Tensor, np.ndarray]:
         if isinstance(action, (np.ndarray, float, int, np.floating, np.integer)):
             index = int(action)
         elif isinstance(action, tf.Tensor):
