@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from rlearn.distribute.experience import buffer_pb2 as rlearn_dot_distribute_dot_experience_dot_buffer__pb2
+from rlearn.distributed.experience import buffer_pb2 as rlearn_dot_distribute_dot_experience_dot_buffer__pb2
 
 
 class ReplayBufferStub(object):

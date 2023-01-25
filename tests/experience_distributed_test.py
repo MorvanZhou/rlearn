@@ -10,9 +10,9 @@ import numpy as np
 from tensorflow import keras
 
 import rlearn
-from rlearn import distribute
-from rlearn.distribute import tools
-from rlearn.distribute.experience import buffer_pb2, buffer_pb2_grpc, actor_pb2_grpc, actor_pb2
+from rlearn import distributed
+from rlearn.distributed import tools
+from rlearn.distributed.experience import buffer_pb2, buffer_pb2_grpc, actor_pb2_grpc, actor_pb2
 from tests.gym_wrapper_test import CartPoleSmoothReward
 
 
@@ -23,7 +23,7 @@ class BufferTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.server = distribute.experience.buffer._start_server(
+        cls.server = distributed.experience.buffer._start_server(
             port=cls.port,
             max_size=100,
             buf="RandomReplayBuffer",
@@ -84,7 +84,7 @@ class ActorProcessTest(unittest.TestCase):
 
     def test_ep_step_generator(self):
         env = CartPoleSmoothReward()
-        actor_p = distribute.experience.actor.ActorProcess(
+        actor_p = distributed.experience.actor.ActorProcess(
             local_buffer_size=500,
             env=env,
             remote_buffer_address=None,
@@ -109,7 +109,7 @@ class ActorProcessTest(unittest.TestCase):
 
     def test_actor_process(self):
         env = CartPoleSmoothReward()
-        actor = distribute.experience.actor.ActorProcess(
+        actor = distributed.experience.actor.ActorProcess(
             local_buffer_size=500,
             env=env,
             remote_buffer_address=None,
@@ -125,7 +125,7 @@ class ActorProcessTest(unittest.TestCase):
 
     def test_actor_process_in_process(self):
         buf_port = tools.get_available_port()
-        buf_server = distribute.experience.buffer._start_server(
+        buf_server = distributed.experience.buffer._start_server(
             port=buf_port,
             max_size=100,
             buf="RandomReplayBuffer",
@@ -142,7 +142,7 @@ class ActorProcessTest(unittest.TestCase):
         self.assertEqual("", resp.err)
 
         env = CartPoleSmoothReward()
-        actor_p = distribute.experience.actor.ActorProcess(
+        actor_p = distributed.experience.actor.ActorProcess(
             local_buffer_size=10,
             env=env,
             remote_buffer_address=buf_address,
@@ -188,7 +188,7 @@ class ActorServiceTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         buf_port = tools.get_available_port()
         buf_address = f'localhost:{buf_port}'
-        cls.buf_server = distribute.experience.buffer._start_server(
+        cls.buf_server = distributed.experience.buffer._start_server(
             port=buf_port,
             max_size=100,
             buf="RandomReplayBuffer",
@@ -198,7 +198,7 @@ class ActorServiceTest(unittest.TestCase):
         cls.buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=buf_channel)
 
         actor_port = tools.get_available_port()
-        cls.actor_server = distribute.experience.actor._start_server(
+        cls.actor_server = distributed.experience.actor._start_server(
             port=actor_port,
             remote_buffer_address=buf_address,
             local_buffer_size=3,
@@ -281,7 +281,7 @@ class LearnerTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         buf_port = tools.get_available_port()
         cls.buf_address = buf_address = f'localhost:{buf_port}'
-        p = multiprocessing.Process(target=distribute.experience.start_replay_buffer_server, kwargs=dict(
+        p = multiprocessing.Process(target=distributed.experience.start_replay_buffer_server, kwargs=dict(
             port=buf_port,
             max_size=1000,
             buf="RandomReplayBuffer",
@@ -292,7 +292,7 @@ class LearnerTest(unittest.TestCase):
 
         for _ in range(2):
             actor_port = tools.get_available_port()
-            p = multiprocessing.Process(target=distribute.experience.start_actor_server, kwargs=dict(
+            p = multiprocessing.Process(target=distributed.experience.start_actor_server, kwargs=dict(
                 port=actor_port,
                 remote_buffer_address=buf_address,
                 local_buffer_size=10,
@@ -325,7 +325,7 @@ class LearnerTest(unittest.TestCase):
             batch_size=32,
             replace_step=15,
         )
-        learner = distribute.experience.Learner(
+        learner = distributed.experience.Learner(
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=self.actors_address,

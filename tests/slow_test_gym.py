@@ -9,7 +9,7 @@ from tensorflow import keras
 
 import gym_wrapper_test
 import rlearn
-from rlearn.distribute import tools
+from rlearn.distributed import tools
 
 
 def cartpole_reward(s_, env):
@@ -302,13 +302,13 @@ class GymTest(unittest.TestCase):
         self.assertLess(ep, 90)
 
 
-class DistributedGym(unittest.TestCase):
+class ExperienceDistributedGym(unittest.TestCase):
     def setUp(self) -> None:
         self.result_dir = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "dist_gym_test")
         self.ps = []
         buf_port = tools.get_available_port()
         self.buf_address = f'127.0.0.1:{buf_port}'
-        p = multiprocessing.Process(target=rlearn.distribute.start_replay_buffer_server, kwargs=dict(
+        p = multiprocessing.Process(target=rlearn.distributed.experience.start_replay_buffer_server, kwargs=dict(
             port=buf_port,
             max_size=10000,
             buf="RandomReplayBuffer",
@@ -325,7 +325,7 @@ class DistributedGym(unittest.TestCase):
         actors_address = []
         for _ in range(n_actors):
             actor_port = tools.get_available_port()
-            p = multiprocessing.Process(target=rlearn.distribute.start_actor_server, kwargs=dict(
+            p = multiprocessing.Process(target=rlearn.distributed.experience.start_actor_server, kwargs=dict(
                 port=actor_port,
                 remote_buffer_address=self.buf_address,
                 local_buffer_size=local_buffer_size,
@@ -358,7 +358,7 @@ class DistributedGym(unittest.TestCase):
             batch_size=32,
             replace_step=100,
         )
-        learner = rlearn.distribute.Learner(
+        learner = rlearn.distributed.experience.Learner(
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,
@@ -392,7 +392,7 @@ class DistributedGym(unittest.TestCase):
             batch_size=32,
             replace_step=100,
         )
-        learner = rlearn.distribute.Learner(
+        learner = rlearn.distributed.experience.Learner(
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,
@@ -425,7 +425,7 @@ class DistributedGym(unittest.TestCase):
             batch_size=32,
             replace_step=100,
         )
-        learner = rlearn.distribute.Learner(
+        learner = rlearn.distributed.experience.Learner(
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,
@@ -460,7 +460,7 @@ class DistributedGym(unittest.TestCase):
             batch_size=32,
             replace_step=100,
         )
-        learner = rlearn.distribute.Learner(
+        learner = rlearn.distributed.experience.Learner(
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,

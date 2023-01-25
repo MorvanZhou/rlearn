@@ -6,7 +6,7 @@ import uuid
 
 import numpy as np
 
-from rlearn.distribute.experience import actor_pb2 as exp_actor_pb2
+from rlearn.distributed.experience import actor_pb2 as exp_actor_pb2
 
 
 class PackedData(tp.Protocol):

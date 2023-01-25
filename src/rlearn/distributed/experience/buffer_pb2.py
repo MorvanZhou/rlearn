@@ -495,77 +495,77 @@ _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 ServiceReadyReq = _reflection.GeneratedProtocolMessageType('ServiceReadyReq', (_message.Message,), {
     'DESCRIPTOR': _SERVICEREADYREQ,
-    '__module__': 'rlearn.distribute.experience.buffer_pb2'
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
     # @@protoc_insertion_point(class_scope:replayBuffer.ServiceReadyReq)
 })
 _sym_db.RegisterMessage(ServiceReadyReq)
 
 ServiceReadyResp = _reflection.GeneratedProtocolMessageType('ServiceReadyResp', (_message.Message,), {
     'DESCRIPTOR': _SERVICEREADYRESP,
-    '__module__': 'rlearn.distribute.experience.buffer_pb2'
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
     # @@protoc_insertion_point(class_scope:replayBuffer.ServiceReadyResp)
 })
 _sym_db.RegisterMessage(ServiceReadyResp)
 
 LearnerSetModelTypeReq = _reflection.GeneratedProtocolMessageType('LearnerSetModelTypeReq', (_message.Message,), {
     'DESCRIPTOR': _LEARNERSETMODELTYPEREQ,
-    '__module__': 'rlearn.distribute.experience.buffer_pb2'
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
     # @@protoc_insertion_point(class_scope:replayBuffer.LearnerSetModelTypeReq)
 })
 _sym_db.RegisterMessage(LearnerSetModelTypeReq)
 
 LearnerSetModelTypeResp = _reflection.GeneratedProtocolMessageType('LearnerSetModelTypeResp', (_message.Message,), {
     'DESCRIPTOR': _LEARNERSETMODELTYPERESP,
-    '__module__': 'rlearn.distribute.experience.buffer_pb2'
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
     # @@protoc_insertion_point(class_scope:replayBuffer.LearnerSetModelTypeResp)
 })
 _sym_db.RegisterMessage(LearnerSetModelTypeResp)
 
 LearnerSetVersionReq = _reflection.GeneratedProtocolMessageType('LearnerSetVersionReq', (_message.Message,), {
     'DESCRIPTOR': _LEARNERSETVERSIONREQ,
-    '__module__': 'rlearn.distribute.experience.buffer_pb2'
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
     # @@protoc_insertion_point(class_scope:replayBuffer.LearnerSetVersionReq)
 })
 _sym_db.RegisterMessage(LearnerSetVersionReq)
 
 LearnerSetVersionResp = _reflection.GeneratedProtocolMessageType('LearnerSetVersionResp', (_message.Message,), {
     'DESCRIPTOR': _LEARNERSETVERSIONRESP,
-    '__module__': 'rlearn.distribute.experience.buffer_pb2'
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
     # @@protoc_insertion_point(class_scope:replayBuffer.LearnerSetVersionResp)
 })
 _sym_db.RegisterMessage(LearnerSetVersionResp)
 
 Data = _reflection.GeneratedProtocolMessageType('Data', (_message.Message,), {
     'DESCRIPTOR': _DATA,
-    '__module__': 'rlearn.distribute.experience.buffer_pb2'
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
     # @@protoc_insertion_point(class_scope:replayBuffer.Data)
 })
 _sym_db.RegisterMessage(Data)
 
 UploadDataReq = _reflection.GeneratedProtocolMessageType('UploadDataReq', (_message.Message,), {
     'DESCRIPTOR': _UPLOADDATAREQ,
-    '__module__': 'rlearn.distribute.experience.buffer_pb2'
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
     # @@protoc_insertion_point(class_scope:replayBuffer.UploadDataReq)
 })
 _sym_db.RegisterMessage(UploadDataReq)
 
 UploadDataResp = _reflection.GeneratedProtocolMessageType('UploadDataResp', (_message.Message,), {
     'DESCRIPTOR': _UPLOADDATARESP,
-    '__module__': 'rlearn.distribute.experience.buffer_pb2'
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
     # @@protoc_insertion_point(class_scope:replayBuffer.UploadDataResp)
 })
 _sym_db.RegisterMessage(UploadDataResp)
 
 DownloadDataReq = _reflection.GeneratedProtocolMessageType('DownloadDataReq', (_message.Message,), {
     'DESCRIPTOR': _DOWNLOADDATAREQ,
-    '__module__': 'rlearn.distribute.experience.buffer_pb2'
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
     # @@protoc_insertion_point(class_scope:replayBuffer.DownloadDataReq)
 })
 _sym_db.RegisterMessage(DownloadDataReq)
 
 DownloadDataResp = _reflection.GeneratedProtocolMessageType('DownloadDataResp', (_message.Message,), {
     'DESCRIPTOR': _DOWNLOADDATARESP,
-    '__module__': 'rlearn.distribute.experience.buffer_pb2'
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
     # @@protoc_insertion_point(class_scope:replayBuffer.DownloadDataResp)
 })
 _sym_db.RegisterMessage(DownloadDataResp)

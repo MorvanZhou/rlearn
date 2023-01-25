@@ -491,70 +491,70 @@ _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 ServiceReadyReq = _reflection.GeneratedProtocolMessageType('ServiceReadyReq', (_message.Message,), {
     'DESCRIPTOR': _SERVICEREADYREQ,
-    '__module__': 'rlearn.distribute.experience.actor_pb2'
+    '__module__': 'rlearn.distributed.experience.actor_pb2'
     # @@protoc_insertion_point(class_scope:actor.ServiceReadyReq)
 })
 _sym_db.RegisterMessage(ServiceReadyReq)
 
 ServiceReadyResp = _reflection.GeneratedProtocolMessageType('ServiceReadyResp', (_message.Message,), {
     'DESCRIPTOR': _SERVICEREADYRESP,
-    '__module__': 'rlearn.distribute.experience.actor_pb2'
+    '__module__': 'rlearn.distributed.experience.actor_pb2'
     # @@protoc_insertion_point(class_scope:actor.ServiceReadyResp)
 })
 _sym_db.RegisterMessage(ServiceReadyResp)
 
 StartMeta = _reflection.GeneratedProtocolMessageType('StartMeta', (_message.Message,), {
     'DESCRIPTOR': _STARTMETA,
-    '__module__': 'rlearn.distribute.experience.actor_pb2'
+    '__module__': 'rlearn.distributed.experience.actor_pb2'
     # @@protoc_insertion_point(class_scope:actor.StartMeta)
 })
 _sym_db.RegisterMessage(StartMeta)
 
 StartReq = _reflection.GeneratedProtocolMessageType('StartReq', (_message.Message,), {
     'DESCRIPTOR': _STARTREQ,
-    '__module__': 'rlearn.distribute.experience.actor_pb2'
+    '__module__': 'rlearn.distributed.experience.actor_pb2'
     # @@protoc_insertion_point(class_scope:actor.StartReq)
 })
 _sym_db.RegisterMessage(StartReq)
 
 StartResp = _reflection.GeneratedProtocolMessageType('StartResp', (_message.Message,), {
     'DESCRIPTOR': _STARTRESP,
-    '__module__': 'rlearn.distribute.experience.actor_pb2'
+    '__module__': 'rlearn.distributed.experience.actor_pb2'
     # @@protoc_insertion_point(class_scope:actor.StartResp)
 })
 _sym_db.RegisterMessage(StartResp)
 
 ReplicateModelMeta = _reflection.GeneratedProtocolMessageType('ReplicateModelMeta', (_message.Message,), {
     'DESCRIPTOR': _REPLICATEMODELMETA,
-    '__module__': 'rlearn.distribute.experience.actor_pb2'
+    '__module__': 'rlearn.distributed.experience.actor_pb2'
     # @@protoc_insertion_point(class_scope:actor.ReplicateModelMeta)
 })
 _sym_db.RegisterMessage(ReplicateModelMeta)
 
 ReplicateModelReq = _reflection.GeneratedProtocolMessageType('ReplicateModelReq', (_message.Message,), {
     'DESCRIPTOR': _REPLICATEMODELREQ,
-    '__module__': 'rlearn.distribute.experience.actor_pb2'
+    '__module__': 'rlearn.distributed.experience.actor_pb2'
     # @@protoc_insertion_point(class_scope:actor.ReplicateModelReq)
 })
 _sym_db.RegisterMessage(ReplicateModelReq)
 
 ReplicateModelResp = _reflection.GeneratedProtocolMessageType('ReplicateModelResp', (_message.Message,), {
     'DESCRIPTOR': _REPLICATEMODELRESP,
-    '__module__': 'rlearn.distribute.experience.actor_pb2'
+    '__module__': 'rlearn.distributed.experience.actor_pb2'
     # @@protoc_insertion_point(class_scope:actor.ReplicateModelResp)
 })
 _sym_db.RegisterMessage(ReplicateModelResp)
 
 TerminateReq = _reflection.GeneratedProtocolMessageType('TerminateReq', (_message.Message,), {
     'DESCRIPTOR': _TERMINATEREQ,
-    '__module__': 'rlearn.distribute.experience.actor_pb2'
+    '__module__': 'rlearn.distributed.experience.actor_pb2'
     # @@protoc_insertion_point(class_scope:actor.TerminateReq)
 })
 _sym_db.RegisterMessage(TerminateReq)
 
 TerminateResp = _reflection.GeneratedProtocolMessageType('TerminateResp', (_message.Message,), {
     'DESCRIPTOR': _TERMINATERESP,
-    '__module__': 'rlearn.distribute.experience.actor_pb2'
+    '__module__': 'rlearn.distributed.experience.actor_pb2'
     # @@protoc_insertion_point(class_scope:actor.TerminateResp)
 })
 _sym_db.RegisterMessage(TerminateResp)

@@ -1,4 +1,4 @@
-from rlearn import distribute
+from rlearn import distributed
 from rlearn import transformer
 from rlearn import zoo
 from rlearn.config import TrainConfig, NetConfig, LayerConfig, ReplayBufferConfig

@@ -7,9 +7,9 @@ from concurrent import futures
 import grpc
 
 from rlearn import replaybuf
-from rlearn.distribute import tools
-from rlearn.distribute.experience import buffer_pb2, buffer_pb2_grpc
-from rlearn.distribute.logger import get_logger
+from rlearn.distributed import tools
+from rlearn.distributed.experience import buffer_pb2, buffer_pb2_grpc
+from rlearn.distributed.logger import get_logger
 from rlearn.replaybuf.base import BaseReplayBuffer
 
 
