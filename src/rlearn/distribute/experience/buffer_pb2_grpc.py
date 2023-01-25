@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from rlearn.distribute import buffer_pb2 as rlearn_dot_distribute_dot_buffer__pb2
+from rlearn.distribute.experience import buffer_pb2 as rlearn_dot_distribute_dot_experience_dot_buffer__pb2
 
 
 class ReplayBufferStub(object):
@@ -17,28 +17,28 @@ class ReplayBufferStub(object):
         """
         self.ServiceReady = channel.unary_unary(
             '/replayBuffer.ReplayBuffer/ServiceReady',
-            request_serializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.SerializeToString,
-            response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.FromString,
+            request_serializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.ServiceReadyReq.SerializeToString,
+            response_deserializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.ServiceReadyResp.FromString,
         )
         self.LearnerSetModelType = channel.unary_unary(
             '/replayBuffer.ReplayBuffer/LearnerSetModelType',
-            request_serializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetModelTypeReq.SerializeToString,
-            response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetModelTypeResp.FromString,
+            request_serializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetModelTypeReq.SerializeToString,
+            response_deserializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetModelTypeResp.FromString,
         )
         self.LearnerSetVersion = channel.unary_unary(
             '/replayBuffer.ReplayBuffer/LearnerSetVersion',
-            request_serializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionReq.SerializeToString,
-            response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionResp.FromString,
+            request_serializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetVersionReq.SerializeToString,
+            response_deserializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetVersionResp.FromString,
         )
         self.UploadData = channel.unary_unary(
             '/replayBuffer.ReplayBuffer/UploadData',
-            request_serializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataReq.SerializeToString,
-            response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataResp.FromString,
+            request_serializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.UploadDataReq.SerializeToString,
+            response_deserializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.UploadDataResp.FromString,
         )
         self.DownloadData = channel.unary_unary(
             '/replayBuffer.ReplayBuffer/DownloadData',
-            request_serializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataReq.SerializeToString,
-            response_deserializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataResp.FromString,
+            request_serializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.DownloadDataReq.SerializeToString,
+            response_deserializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.DownloadDataResp.FromString,
         )
 
 
@@ -81,28 +81,28 @@ def add_ReplayBufferServicer_to_server(servicer, server):
     rpc_method_handlers = {
         'ServiceReady': grpc.unary_unary_rpc_method_handler(
             servicer.ServiceReady,
-            request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.FromString,
-            response_serializer=rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.SerializeToString,
+            request_deserializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.ServiceReadyReq.FromString,
+            response_serializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.ServiceReadyResp.SerializeToString,
         ),
         'LearnerSetModelType': grpc.unary_unary_rpc_method_handler(
             servicer.LearnerSetModelType,
-            request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetModelTypeReq.FromString,
-            response_serializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetModelTypeResp.SerializeToString,
+            request_deserializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetModelTypeReq.FromString,
+            response_serializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetModelTypeResp.SerializeToString,
         ),
         'LearnerSetVersion': grpc.unary_unary_rpc_method_handler(
             servicer.LearnerSetVersion,
-            request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionReq.FromString,
-            response_serializer=rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionResp.SerializeToString,
+            request_deserializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetVersionReq.FromString,
+            response_serializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetVersionResp.SerializeToString,
         ),
         'UploadData': grpc.unary_unary_rpc_method_handler(
             servicer.UploadData,
-            request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataReq.FromString,
-            response_serializer=rlearn_dot_distribute_dot_buffer__pb2.UploadDataResp.SerializeToString,
+            request_deserializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.UploadDataReq.FromString,
+            response_serializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.UploadDataResp.SerializeToString,
         ),
         'DownloadData': grpc.unary_unary_rpc_method_handler(
             servicer.DownloadData,
-            request_deserializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataReq.FromString,
-            response_serializer=rlearn_dot_distribute_dot_buffer__pb2.DownloadDataResp.SerializeToString,
+            request_deserializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.DownloadDataReq.FromString,
+            response_serializer=rlearn_dot_distribute_dot_experience_dot_buffer__pb2.DownloadDataResp.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -127,8 +127,8 @@ class ReplayBuffer(object):
                      timeout=None,
                      metadata=None):
         return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/ServiceReady',
-                                             rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyReq.SerializeToString,
-                                             rlearn_dot_distribute_dot_buffer__pb2.ServiceReadyResp.FromString,
+                                             rlearn_dot_distribute_dot_experience_dot_buffer__pb2.ServiceReadyReq.SerializeToString,
+                                             rlearn_dot_distribute_dot_experience_dot_buffer__pb2.ServiceReadyResp.FromString,
                                              options, channel_credentials,
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -144,8 +144,8 @@ class ReplayBuffer(object):
                             timeout=None,
                             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/LearnerSetModelType',
-                                             rlearn_dot_distribute_dot_buffer__pb2.LearnerSetModelTypeReq.SerializeToString,
-                                             rlearn_dot_distribute_dot_buffer__pb2.LearnerSetModelTypeResp.FromString,
+                                             rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetModelTypeReq.SerializeToString,
+                                             rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetModelTypeResp.FromString,
                                              options, channel_credentials,
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -161,8 +161,8 @@ class ReplayBuffer(object):
                           timeout=None,
                           metadata=None):
         return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/LearnerSetVersion',
-                                             rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionReq.SerializeToString,
-                                             rlearn_dot_distribute_dot_buffer__pb2.LearnerSetVersionResp.FromString,
+                                             rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetVersionReq.SerializeToString,
+                                             rlearn_dot_distribute_dot_experience_dot_buffer__pb2.LearnerSetVersionResp.FromString,
                                              options, channel_credentials,
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -178,8 +178,8 @@ class ReplayBuffer(object):
                    timeout=None,
                    metadata=None):
         return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/UploadData',
-                                             rlearn_dot_distribute_dot_buffer__pb2.UploadDataReq.SerializeToString,
-                                             rlearn_dot_distribute_dot_buffer__pb2.UploadDataResp.FromString,
+                                             rlearn_dot_distribute_dot_experience_dot_buffer__pb2.UploadDataReq.SerializeToString,
+                                             rlearn_dot_distribute_dot_experience_dot_buffer__pb2.UploadDataResp.FromString,
                                              options, channel_credentials,
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -195,7 +195,7 @@ class ReplayBuffer(object):
                      timeout=None,
                      metadata=None):
         return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/DownloadData',
-                                             rlearn_dot_distribute_dot_buffer__pb2.DownloadDataReq.SerializeToString,
-                                             rlearn_dot_distribute_dot_buffer__pb2.DownloadDataResp.FromString,
+                                             rlearn_dot_distribute_dot_experience_dot_buffer__pb2.DownloadDataReq.SerializeToString,
+                                             rlearn_dot_distribute_dot_experience_dot_buffer__pb2.DownloadDataResp.FromString,
                                              options, channel_credentials,
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

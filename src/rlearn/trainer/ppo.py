@@ -59,7 +59,7 @@ class _PPOTrainer(BaseTrainer):
 
     def set_model(self, pi: keras.Model, critic: keras.Model):
         self.model.set_model(pi=pi, critic=critic)
-        self._set_tensorboard([self.model.actor, self.model.critic])
+        self._set_tensorboard([self.model.pi, self.model.critic])
 
     def predict(self, s: np.ndarray) -> np.ndarray:
         self.decay_epsilon()

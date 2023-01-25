@@ -295,6 +295,12 @@ class GymTest(unittest.TestCase):
         ep = train_mountain_car(self.mountain_car_conf, self.render_mode)
         self.assertLess(ep, 20)
 
+    def test_actor_critic(self):
+        self.cartpole_conf.trainer = rlearn.ActorCriticDiscreteTrainer.name
+        self.cartpole_conf.learning_rates = (0.01, 0.01)
+        ep = train_cartpole(self.cartpole_conf, self.render_mode)
+        self.assertLess(ep, 90)
+
 
 class DistributedGym(unittest.TestCase):
     def setUp(self) -> None:

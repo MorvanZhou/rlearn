@@ -8,7 +8,8 @@ from uuid import uuid4
 
 import grpc
 
-from rlearn.distribute import logger, actor_pb2_grpc, buffer_pb2_grpc, actor_pb2, buffer_pb2, tools
+from rlearn.distribute import logger, tools
+from rlearn.distribute.experience import actor_pb2_grpc, buffer_pb2_grpc, actor_pb2, buffer_pb2
 from rlearn.trainer.base import BaseTrainer
 
 

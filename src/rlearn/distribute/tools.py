@@ -6,7 +6,7 @@ import uuid
 
 import numpy as np
 
-from rlearn.distribute import actor_pb2
+from rlearn.distribute.experience import actor_pb2 as exp_actor_pb2
 
 
 class PackedData(tp.Protocol):
@@ -68,11 +68,11 @@ def read_pb_iterfile(
         version: int,
         chunk_size=1024,
         request_id: tp.Optional[str] = None,
-) -> actor_pb2.StartReq:
+) -> exp_actor_pb2.StartReq:
     if request_id is None:
         request_id = str(uuid.uuid4())
 
-    yield actor_pb2.StartReq(meta=actor_pb2.StartMeta(
+    yield exp_actor_pb2.StartReq(meta=exp_actor_pb2.StartMeta(
         filename=os.path.basename(filepath),
         trainerType=trainer_type,
         maxEpisode=max_episode,
@@ -85,7 +85,7 @@ def read_pb_iterfile(
         while True:
             chunk = f.read(chunk_size)
             if chunk:
-                entry_request = actor_pb2.StartReq(chunkData=chunk)
+                entry_request = exp_actor_pb2.StartReq(chunkData=chunk)
                 yield entry_request
             else:  # The chunk was empty, which means we're at the end of the file
                 return
@@ -94,7 +94,7 @@ def read_pb_iterfile(
 def read_weights_iterfile(filepath, version: int, chunk_size=1024, request_id: str = None):
     if request_id is None:
         request_id = str(uuid.uuid4())
-    yield actor_pb2.ReplicateModelReq(meta=actor_pb2.ReplicateModelMeta(
+    yield exp_actor_pb2.ReplicateModelReq(meta=exp_actor_pb2.ReplicateModelMeta(
         filename=os.path.basename(filepath),
         version=version,
         requestId=request_id
@@ -103,7 +103,7 @@ def read_weights_iterfile(filepath, version: int, chunk_size=1024, request_id: s
         while True:
             chunk = f.read(chunk_size)
             if chunk:
-                entry_request = actor_pb2.ReplicateModelReq(chunkData=chunk)
+                entry_request = exp_actor_pb2.ReplicateModelReq(chunkData=chunk)
                 yield entry_request
             else:  # The chunk was empty, which means we're at the end of the file
                 return

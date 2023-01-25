@@ -1,3 +1,4 @@
+from rlearn.trainer.ac import ActorCriticDiscreteTrainer, ActorCriticContinueTrainer
 from rlearn.trainer.ddpg import DDPGTrainer
 from rlearn.trainer.dqn import DQNTrainer
 from rlearn.trainer.dueling_dqn import DuelingDQNTrainer
