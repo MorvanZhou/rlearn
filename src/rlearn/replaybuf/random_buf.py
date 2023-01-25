@@ -1,4 +1,3 @@
-
 import typing as tp
 
 import numpy as np
@@ -15,7 +14,7 @@ class RandomReplayBuffer(BaseReplayBuffer):
         self.__pointer = 0
         self.__all_indices = None
 
-    def sample(self, batch_size: int) -> tp.Tuple:
+    def sample(self, batch_size: int) -> tp.Dict[str, np.ndarray]:
         if self.pointer == 0 and not self.is_full():
             raise ValueError("replay buffer is empty")
         if self.__all_indices is None:
@@ -30,30 +29,14 @@ class RandomReplayBuffer(BaseReplayBuffer):
                 replace = False
             indices = np.random.choice(self.__all_indices[:self.__pointer], size=batch_size, replace=replace)
 
-        ba = self.a[indices]
-        br = self.r[indices]
-        bs = self.s[indices]
-
-        # next state
-        if self.has_next_state:
-            bs_ = bs[:, 1]
-            bs = bs[:, 0]
-            batch = (bs, ba, br, bs_)
-        else:
-            # no next state
-            batch = (bs, ba, br, None)
+        batch = {}
+        for k, v in self.data.items():
+            batch[k] = v[indices]
         return batch
 
-    def put_batch(
-            self,
-            s: np.ndarray,
-            a: np.ndarray,
-            r: np.ndarray,
-            s_: tp.Optional[np.ndarray] = None
-    ):
-        states, a, r = self.preprocess_batch_data(s, a, r, s_)
+    def put_batch(self, **kwargs: np.ndarray):
+        batch_size, data = self.preprocess_batch_data(**kwargs)
 
-        batch_size = a.shape[0]
         start = self.__pointer
         end = self.__pointer + batch_size
 
@@ -63,17 +46,15 @@ class RandomReplayBuffer(BaseReplayBuffer):
         restart = False
         if end >= self.max_size:
             sub_batch_size = self.max_size - start
-            self.s[start:, :] = states[-sub_batch_size:]
-            self.a[start:] = a[-sub_batch_size:]
-            self.r[start:] = r[-sub_batch_size:]
+            for k, v in data.items():
+                self.data[k][start:] = v[-sub_batch_size:]
             start = 0
             end = (batch_size - sub_batch_size) % self.max_size
             batch_size = end
             restart = True
 
-        self.s[start:end, :] = states[:batch_size]
-        self.a[start:end] = a[:batch_size]
-        self.r[start:end] = r[:batch_size]
+        for k, v in data.items():
+            self.data[k][start:end] = v[:batch_size]
 
         if restart:
             self.__pointer = batch_size
@@ -85,6 +66,7 @@ class RandomReplayBuffer(BaseReplayBuffer):
         self.__pointer = 0
         self._is_full = False
         self._is_empty = True
+        self.data.clear()
 
     @property
     def current_loading_point(self):

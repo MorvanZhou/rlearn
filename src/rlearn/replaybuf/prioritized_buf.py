@@ -133,7 +133,7 @@ class PrioritizedReplayBuffer(BaseReplayBuffer):
         self._cache_sample_indices = []
         self._cache_sample_importance_sampling_weights = []
 
-    def sample(self, batch_size: int):
+    def sample(self, batch_size: int) -> tp.Dict[str, np.ndarray]:
         if self.tree.pointer == 0 and not self.is_full():
             raise ValueError("replay buffer is empty")
         segment_value = self.tree.sum / batch_size
@@ -151,35 +151,18 @@ class PrioritizedReplayBuffer(BaseReplayBuffer):
             self._cache_sample_importance_sampling_weights.append(np.power(prob_j / min_prob, -self.beta))
             self._cache_sample_indices.append(idx)
 
-        ba = self.a[self._cache_sample_indices]
-        br = self.r[self._cache_sample_indices]
-        bs = self.s[self._cache_sample_indices]
-
-        # next state
-        if self.has_next_state:
-            bs_ = bs[:, 1]
-            bs = bs[:, 0]
-            batch = (bs, ba, br, bs_)
-        else:
-            # no next state
-            batch = (bs, ba, br, None)
+        batch = {}
+        for k, v in self.data.items():
+            batch[k] = v[self._cache_sample_indices]
         return batch
 
-    def put_batch(
-            self,
-            s: np.ndarray,
-            a: np.ndarray,
-            r: np.ndarray,
-            s_: tp.Optional[np.ndarray] = None
-    ):
-        states, a, r = self.preprocess_batch_data(s, a, r, s_)
+    def put_batch(self, **kwargs: np.ndarray):
+        batch_size, data = self.preprocess_batch_data(**kwargs)
 
-        batch_size = a.shape[0]
         for i in range(batch_size):
             pointer = self.tree.add()
-            self.s[pointer] = states[i]
-            self.a[pointer] = a[i]
-            self.r[pointer] = r[i]
+            for k, v in data.items():
+                self.data[k][pointer] = v[i]
 
         if self._is_empty and batch_size > 0:
             self._is_empty = False
@@ -191,6 +174,7 @@ class PrioritizedReplayBuffer(BaseReplayBuffer):
         self._is_full = False
         self._is_empty = True
         self.tree = SumTree(max_size=self.max_size)
+        self.data.clear()
 
     def batch_update(self, abs_errors: np.ndarray):
         abs_errors += self.epsilon  # convert to abs and avoid 0

@@ -40,10 +40,18 @@ class DQN(BaseRLModel):
         """
         s = np.expand_dims(s, axis=0)
         q = self.q.predict(s, verbose=0).ravel()
+        if np.isnan(q).any():
+            raise ValueError("action contains NaN")
         a_index = q.argmax()
         if a_index.ndim == 0 and np.issubdtype(a_index, np.integer):
             return int(a_index)
         return a_index
+
+    def disturbed_action(self, x, epsilon: float):
+        if np.random.random() < epsilon:
+            a_size = self.q.outputs[0].shape[1]
+            return np.random.randint(0, a_size)
+        return self.predict(x)
 
     def save_weights(self, path):
         model_tmp_dir = path

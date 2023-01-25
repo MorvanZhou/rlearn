@@ -10,13 +10,12 @@ import uuid
 from concurrent import futures
 
 import grpc
+
 from rlearn.distribute import actor_pb2, actor_pb2_grpc, buffer_pb2_grpc, buffer_pb2, tools
 from rlearn.distribute.logger import get_logger
 from rlearn.env_wrapper import EnvWrapper
-from rlearn.model.base import BaseRLModel
-from rlearn.model.tools import get_model_by_name
-from rlearn.replaybuf import RandomReplayBuffer
-from rlearn.replaybuf.base import BaseReplayBuffer
+from rlearn.trainer.base import BaseTrainer
+from rlearn.trainer.tools import get_trainer_by_name
 from rlearn.transformer import BaseTransformer
 
 # linus default is fork, force set to spawn
@@ -26,7 +25,7 @@ mp = mp.get_context('spawn')
 class ActorProcess(mp.Process):
     def __init__(
             self,
-            buffer: BaseReplayBuffer,
+            local_buffer_size: int,
             env: EnvWrapper,
             remote_buffer_address: tp.Optional[str] = None,
             action_transformer: tp.Optional[BaseTransformer] = None,
@@ -36,10 +35,10 @@ class ActorProcess(mp.Process):
         self.debug = debug
         self.logger = None
         self.logger_name = ""
-        self.model_type = ""
+        self.trainer_type = ""
         self.init_model_pb_path = ""
-        self.model: tp.Optional[BaseRLModel] = None
-        self.buffer: BaseReplayBuffer = buffer
+        self.trainer: tp.Optional[BaseTrainer] = None
+        self.local_buffer_size = local_buffer_size
         self.env: EnvWrapper = env
         self.action_transformer = action_transformer
         self.max_episode = 0
@@ -60,14 +59,14 @@ class ActorProcess(mp.Process):
 
     def init_params(
             self,
-            model_type: str,
+            trainer_type: str,
             model_pb_path: str,
             init_version: int,
             request_id: str,
             max_episode: int = 0,
             max_episode_step: int = 0,
     ):
-        self.model_type = model_type
+        self.trainer_type = trainer_type
         self.init_model_pb_path = model_pb_path
         self.training_request_id = request_id
         self.ns.version = init_version
@@ -75,8 +74,10 @@ class ActorProcess(mp.Process):
         self.max_episode_step = 0 if max_episode_step is None else max_episode_step
 
     def set_model(self):
-        self.model = get_model_by_name(self.model_type, training=False)
-        self.model.load(self.init_model_pb_path)
+        self.trainer = get_trainer_by_name(self.trainer_type)
+        self.trainer.set_params(min_epsilon=0.1, epsilon_decay=1e-3)
+        self.trainer.set_replay_buffer(max_size=self.local_buffer_size)
+        self.trainer.load_model(self.init_model_pb_path)
         self.logger.debug("initial model is set from path='%s'", self.init_model_pb_path)
         os.remove(self.init_model_pb_path)
         self.model_loaded.set()
@@ -90,7 +91,7 @@ class ActorProcess(mp.Process):
     def try_replicate_model(self):
         with self.lock:
             if self.ns.new_model_path != "":
-                self.model.load_weights(self.ns.new_model_path)
+                self.trainer.load_model_weights(self.ns.new_model_path)
                 os.remove(self.ns.new_model_path)
                 self.ns.new_model_path = ""
                 self.model_loaded.set()
@@ -98,7 +99,7 @@ class ActorProcess(mp.Process):
 
     def send_data_to_remote_buffer(self, buf_stub):
         req = buffer_pb2.UploadDataReq(version=self.ns.version, requestId=self.training_request_id)
-        tools.pack_transitions(self.buffer, req)
+        tools.pack_transitions(self.trainer.replay_buffer, req)
         resp = buf_stub.UploadData(req)
         if not resp.done:
             raise ValueError(f"grpc upload data to buffer err: {resp.err}")
@@ -133,17 +134,17 @@ class ActorProcess(mp.Process):
 
                 self.try_replicate_model()
 
-                _a = self.model.predict(s)
+                _a = self.trainer.predict(s)
                 if self.action_transformer is not None:
                     a = self.action_transformer.transform(_a)
                 else:
                     a = _a
                 s_, r, done = self.env.step(a)
-                self.buffer.put(s, _a, r, s_)
+                self.trainer.store_transition(s=s, a=_a, r=r, s_=s_, done=done)
                 s = s_
-                if self.buffer.is_full() and buf_stub is not None:
+                if self.trainer.replay_buffer.is_full() and buf_stub is not None:
                     self.send_data_to_remote_buffer(buf_stub)
-                    self.buffer.clear()
+                    self.trainer.replay_buffer.clear()
                 if done:
                     break
 
@@ -192,7 +193,7 @@ class ActorService(actor_pb2_grpc.ActorServicer):
                 filepath = os.path.normpath(os.path.join(tmp_dir, req.meta.filename))
                 request_id = req.meta.requestId
                 self.actor.init_params(
-                    model_type=req.meta.modelType,
+                    trainer_type=req.meta.trainerType,
                     model_pb_path=filepath,
                     init_version=req.meta.version,
                     request_id=request_id,
@@ -201,10 +202,10 @@ class ActorService(actor_pb2_grpc.ActorServicer):
                 )
                 self.logger.debug(
                     'Start | '
-                    '{"reqId": "%s", "modelType": "%s","filename": "%s", "version": %d, '
+                    '{"reqId": "%s", "trainerType": "%s","filename": "%s", "version": %d, '
                     '"maxEpisode": %d, "maxEpisodeStep": %d}',
                     req.meta.requestId,
-                    req.meta.modelType,
+                    req.meta.trainerType,
                     req.meta.filename,
                     req.meta.version,
                     req.meta.maxEpisode,
@@ -284,7 +285,7 @@ def _start_server(
     )
 
     actor_p = ActorProcess(
-        buffer=RandomReplayBuffer(max_size=local_buffer_size),
+        local_buffer_size=local_buffer_size,
         env=env,
         remote_buffer_address=remote_buffer_address,
         action_transformer=action_transformer,
@@ -312,152 +313,3 @@ def start_actor_server(
     server = _start_server(port, remote_buffer_address, local_buffer_size, env, action_transformer, debug)
     server.wait_for_termination()
     return server
-
-# def start_actor_server(
-#         port,
-#         buffer_address: str,
-#         debug: bool = False
-# ) -> tp.Tuple[grpc.Server, ActorService]:
-#     server = grpc.server(
-#         futures.ThreadPoolExecutor(
-#             max_workers=1,  # one for update, one for replicate
-#             thread_name_prefix="s"
-#         ), options=[
-#             ('grpc.max_send_message_length', 1024 * 1024 * 20),
-#         ]
-#     )
-#     actor = Actor(
-#         model: BaseRLModel,
-#         buffer: BaseReplayBuffer,
-#         env: RLEnv,
-#         action_transformer: tp.Optional[BaseTransformer] = None,
-#         episode_max_step: tp.Optional[int] = None
-#     )
-#     service = ActorService(max_size, buf, debug)
-#     buffer_pb2_grpc.add_ReplayBufferServicer_to_server(service, server)
-#     server.add_insecure_port(f'[::]:{port}')
-#     server.start()
-#     service.logger.info("python grpc has started at http://127.0.0.1:%s", port)
-#     return server
-
-
-# def _get_wrapped_update(model, buffer_address, update, thread_service: EnvService):
-#     stub = None
-#     if buffer_address is not None and not model.is_on_policy:
-#         channel = grpc.insecure_channel(buffer_address)
-#         stub = ReplayBufferStub(channel=channel)
-#
-#     def wrap_update(*args, **kwargs):
-#         if model.is_on_policy:
-#             thread_service.try_wait_update()
-#         res = update(*args, **kwargs)
-#         if stub is not None and model.replay_buffer.current_loading_point > 100:
-#             # push data to remote replay buffer
-#             req = UploadDataReq()
-#             tipecommon.matrix.pack_transitions(model.replay_buffer, req)
-#             resp = stub.UploadData(req)
-#             if not resp.done:
-#                 raise ValueError(f"grpc upload data to buffer err: {resp.err}")
-#             model.replay_buffer.clear()
-#         return res
-#
-#     return wrap_update
-#
-#
-# def _process(asset_dir, current_time):
-#     board_path = os.path.abspath(os.path.join(asset_dir, "data", "result", "actor-" + current_time))
-#     shutil.rmtree(board_path, ignore_errors=True)
-#     os.makedirs(board_path, exist_ok=True)
-#
-#     code_path = os.path.join(asset_dir, "code.py")
-#     user_def_module = tipecommon.dynamic_import(
-#         path=code_path,
-#         module_name="user_def",
-#         variables={
-#             "train_setting": {
-#                 "board_path": board_path,
-#             },
-#             "model_learn": False,  # only collect data but not learn
-#         }
-#     )
-#
-#     try:
-#         conf = getattr(user_def_module, "conf")
-#         model = getattr(user_def_module, "model")
-#         update = getattr(user_def_module, "update")
-#     except KeyError as e:
-#         raise ValueError(f"does not found required value in user_def_module: {e}")
-#     return conf, model, update
-#
-#
-# def run_gym_env(env_name: str, map_data: tp.Dict[str, tp.Any], asset_dir: str, port=None, buffer_address=None):
-#     import gym
-#
-#     env = gym.make(env_name, new_step_api=True, render_mode=None)
-#
-#     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")
-#     conf, model, update = _process(asset_dir, current_time)
-#
-#     grpc_server, thread_service = start_grpc_server(port)
-#     thread_service.set_train_distributed(model)
-#     if buffer_address is None:
-#         jmap = actor_gym_env.ON_POLICY_ENV_JOB_MAP
-#     else:
-#         jmap = actor_gym_env.OFF_POLICY_ENV_JOB_MAP
-#
-#     wrapped_update = _get_wrapped_update(model, buffer_address, update, thread_service)
-#     td = threading.Thread(target=jmap[env_name], kwargs=dict(
-#         update=wrapped_update, conf=conf, env=env, map_data=map_data
-#     ))
-#     td.start()
-#     grpc_server.wait_for_termination()
-#     td.join()
-#
-#
-# def run_ts_env(env_name: str, map_data: tp.Union[str, tp.Any], asset_dir: str, port=None, buffer_address=None):
-#     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")
-#     replay_dir = os.path.abspath(os.path.join(asset_dir, "data", "result", "actor-" + current_time, "replay"))
-#     shutil.rmtree(replay_dir, ignore_errors=True)
-#     os.makedirs(replay_dir, exist_ok=True)
-#
-#     conf, model, update = _process(asset_dir, current_time)
-#     model: BaseRLModel
-#
-#     tipesdk.make(
-#         env=env_name,
-#         map_data=map_data,
-#         epoch_setting={
-#             "Epoch": conf.epochs
-#         },
-#         random_seed=1,
-#         result_dir=replay_dir,
-#         force=False
-#     )
-#
-#     wrapped_update = _get_wrapped_update(model, buffer_address, update)
-#     tipesdk.hook(update_fn=wrapped_update, port=port, model=model)
-#     tipesdk.run()
-#
-#
-# def run(env_name: str, map_data: tp.Union[str, tp.Any], asset_dir: str, port=None, debug=False, buffer_address=None):
-#     ts_game_envs = set()
-#     for _env in os.listdir(tipecommon.const.ENV_STAGE_DIR):
-#         if not os.path.isdir(os.path.join(tipecommon.const.ENV_STAGE_DIR, env_name)):
-#             continue
-#         if _env.startswith("__") or _env.startswith("."):
-#             continue
-#         ts_game_envs.add(_env)
-#
-#     if debug:
-#         tipesdk.log.set_debug_level()
-#     else:
-#         tipesdk.log.set_info_level()
-#
-#     if env_name in ts_game_envs:
-#         run_ts_env(
-#           env_name=env_name, map_data=map_data, asset_dir=asset_dir,
-#           port=port, buffer_address=buffer_address)
-#     else:
-#         run_gym_env(
-#               env_name=env_name, map_data=map_data,
-#               asset_dir=asset_dir, port=port, buffer_address=buffer_address)

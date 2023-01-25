@@ -19,38 +19,42 @@ class DataInterface(tp.Protocol):
     requestId: str
 
 
-def unpack_transitions(interface: DataInterface):
+def unpack_transitions(interface: DataInterface) -> tp.Tuple[int, tp.Dict[str, np.ndarray]]:
     data, attributes = interface.data.values[:], interface.data.attributes
-    attr = json.loads(attributes)
-    p = np.prod(attr["s_shape"])
-    s = np.reshape(data[:p], newshape=attr["s_shape"])
-    p_ = p + np.prod(attr["a_shape"])
-    a = np.reshape(data[p:p_], newshape=attr["a_shape"])
-    p = p_
-    r = np.reshape(data[p:], newshape=attr["r_shape"])
-    s_ = None
-    if attr["has_next_state"]:
-        s_ = s[:, 1]
-        s = s[:, 0]
-    return s, a, r, s_
+    try:
+        attr = json.loads(attributes)
+    except json.JSONDecodeError:
+        return 0, {}
+
+    batch = {}
+    p = 0
+    batch_size = None
+    for attr_shape in attr:
+        name = attr_shape["name"]
+        shape = attr_shape["shape"]
+        p_ = np.prod(shape) + p
+        b = np.reshape(data[p:p_], newshape=shape)
+        p = p_
+        batch[name] = b
+        if batch_size is None:
+            batch_size = b.shape[0]
+    if batch_size is None:
+        batch_size = 0
+    return batch_size, batch
 
 
 def pack_transitions(buffer, interface: DataInterface, max_size: int = None):
     if max_size is None or max_size > buffer.current_loading_point:
-        s, a, r = buffer.get_current_loading()
+        data = buffer.get_current_loading()
     else:
-        s = buffer.s[:max_size]
-        a = buffer.a[:max_size]
-        r = buffer.r[:max_size]
+        data = {}
+        for k, v in buffer.data.items():
+            data[k] = v[:max_size]
 
-    v = np.concatenate([s.ravel(), a.ravel(), r.ravel()])
+    keys = list(data.keys())
+    v = np.concatenate([data[k].ravel() for k in keys])
     interface.data.values[:] = v
-    interface.data.attributes = json.dumps({
-        "s_shape": s.shape,
-        "a_shape": a.shape,
-        "r_shape": r.shape,
-        "has_next_state": buffer.has_next_state,
-    })
+    interface.data.attributes = json.dumps([{"name": k, "shape": data[k].shape} for k in keys])
     if interface.requestId == "":
         interface.requestId = str(uuid.uuid4())
     return interface
@@ -58,7 +62,7 @@ def pack_transitions(buffer, interface: DataInterface, max_size: int = None):
 
 def read_pb_iterfile(
         filepath: str,
-        model_type: str,
+        trainer_type: str,
         max_episode: int,
         max_episode_step: int,
         version: int,
@@ -70,7 +74,7 @@ def read_pb_iterfile(
 
     yield actor_pb2.StartReq(meta=actor_pb2.StartMeta(
         filename=os.path.basename(filepath),
-        modelType=model_type,
+        trainerType=trainer_type,
         maxEpisode=max_episode,
         version=version,
         maxEpisodeStep=max_episode_step,

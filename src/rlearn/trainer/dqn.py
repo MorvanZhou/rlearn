@@ -1,5 +1,3 @@
-import typing as tp
-
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -8,7 +6,7 @@ from rlearn.config import TrainConfig
 from rlearn.model.dqn import DQN
 from rlearn.model.tools import build_encoder_from_config
 from rlearn.replaybuf.prioritized_buf import PrioritizedReplayBuffer
-from rlearn.trainer.base import BaseTrainer
+from rlearn.trainer.base import BaseTrainer, TrainResult
 
 
 class DQNTrainer(BaseTrainer):
@@ -54,32 +52,30 @@ class DQNTrainer(BaseTrainer):
         self._set_tensorboard([self.model.q])
 
     def predict(self, s: np.ndarray) -> int:
-        if np.random.random() < self.epsilon:
-            return np.random.randint(0, sum(self.model.q.output_shape[1:]))
-        return self.model.predict(s)
+        self.decay_epsilon()
+        return self.model.disturbed_action(s, self.epsilon)
 
-    def store_transition(self, s, a, r, s_):
-        self.replay_buffer.put_one(s, a, r, s_)
+    def store_transition(self, s, a, r, s_, *args, **kwargs):
+        self.replay_buffer.put_one(s=s, a=a, r=r, s_=s_)
 
-    def train_batch(self) -> tp.Dict[str, tp.Any]:
+    def train_batch(self) -> TrainResult:
         if self.opt is None:
             self.set_default_optimizer()
 
-        res = {"loss": 0, "q": 0}
-        if self.replay_buffer.empty():
+        res = TrainResult(value={"loss": 0, "q": 0}, model_replaced=False)
+        if self.replay_buffer.is_empty():
             return res
 
-        bs, ba, br, bs_ = self.replay_buffer.sample(self.batch_size)
-        ba = ba.ravel().astype(np.int32)
+        batch = self.replay_buffer.sample(self.batch_size)
+        ba = batch["a"]
 
-        self.try_replace_params(src=self.model.q, target=self.model.q_)
-        self.decay_epsilon()
+        res.model_replaced = self.try_replace_params(source=self.model.q, target=self.model.q_)
 
-        q_ = self.model.q_.predict(bs_, verbose=0)
-        q_target = br.ravel() + self.gamma * tf.reduce_max(q_, axis=1)
+        q_ = self.model.q_.predict(batch["s_"], verbose=0)
+        q_target = batch["r"] + self.gamma * tf.reduce_max(q_, axis=1)
         a_indices = tf.stack([tf.range(tf.shape(ba)[0], dtype=tf.int32), ba], axis=1)
         with tf.GradientTape() as tape:
-            q = self.model.q(bs)
+            q = self.model.q(batch["s"])
             q_wrt_a = tf.gather_nd(params=q, indices=a_indices)
             if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
                 td = q_target - q_wrt_a
@@ -92,7 +88,7 @@ class DQNTrainer(BaseTrainer):
         grads = tape.gradient(loss, self.model.q.trainable_variables)
         self.opt.apply_gradients(zip(grads, self.model.q.trainable_variables))
 
-        res.update({"loss": loss.numpy(), "q": q_wrt_a.numpy().ravel().mean()})
+        res.value.update({"loss": loss.numpy(), "q": q_wrt_a.numpy().ravel().mean()})
         return res
 
     def save_model_weights(self, path: str):

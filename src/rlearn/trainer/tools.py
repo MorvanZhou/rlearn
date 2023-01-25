@@ -56,3 +56,17 @@ def get_all():
     if len(__TRAINER_MAP) == 0:
         _set_trainer_map(BaseTrainer, __TRAINER_MAP)
     return __TRAINER_MAP
+
+
+def parse_2_learning_rate(learning_rate: tp.Union[tp.Sequence[float], float]) -> tp.Tuple[float, float]:
+    if isinstance(learning_rate, (tuple, list)) and len(learning_rate) <= 2:
+        l_len = len(learning_rate)
+        if l_len == 1:
+            l1, l2 = learning_rate[0]
+        elif l_len == 2:
+            l1, l2 = learning_rate[0], learning_rate[1]
+        else:
+            raise ValueError("learning rate must greater then 1")
+    else:
+        l1, l2 = learning_rate, learning_rate
+    return l1, l2

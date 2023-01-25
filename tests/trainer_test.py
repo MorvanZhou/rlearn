@@ -159,7 +159,7 @@ class TrainerTest(unittest.TestCase):
         self.assertIsInstance(trainer.replay_buffer, rlearn.RandomReplayBuffer)
         v = trainer.model.q.trainable_variables[0][0][0].numpy()
         v_ = trainer.model.q_.trainable_variables[0][0][0].numpy()
-        replaced = trainer.try_replace_params(src=trainer.model.q, target=trainer.model.q_)
+        replaced = trainer.try_replace_params(source=trainer.model.q, target=trainer.model.q_)
         self.assertTrue(replaced)
         self.assertAlmostEqual(
             trainer.model.q_.trainable_variables[0][0][0].numpy(),

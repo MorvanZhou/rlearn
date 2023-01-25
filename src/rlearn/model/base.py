@@ -28,6 +28,10 @@ class BaseRLModel(ABC):
         pass
 
     @abstractmethod
+    def disturbed_action(self, x, epsilon: float):
+        pass
+
+    @abstractmethod
     def save_weights(self, path: str):
         """Save to zip file"""
         pass

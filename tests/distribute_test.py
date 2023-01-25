@@ -43,12 +43,11 @@ class BufferTest(unittest.TestCase):
     def test_put(self):
         req = buffer_pb2.UploadDataReq()
         req.data.values[:] = [1, 2, 3, 4, 5, 6, 7, 8]
-        req.data.attributes = json.dumps({
-            "s_shape": [2, 2],
-            "a_shape": [2, 1],
-            "r_shape": [2, 1],
-            "has_next_state": False,
-        })
+        req.data.attributes = json.dumps([
+            {"name": "s", "shape": [2, 2]},
+            {"name": "a", "shape": [2, 1]},
+            {"name": "r", "shape": [2, 1]}]
+        )
         resp = self.stub.UploadData(req)
         self.assertTrue(resp.done)
         self.assertEqual("", resp.err)
@@ -56,11 +55,11 @@ class BufferTest(unittest.TestCase):
     def test_download(self):
         self.test_put()
         resp = self.stub.DownloadData(buffer_pb2.DownloadDataReq())
-        s, a, r, s_ = tools.unpack_transitions(resp)
-        self.assertEqual(2, s.shape[1])
-        self.assertEqual(1, a.shape[1])
-        self.assertEqual(1, r.shape[1])
-        self.assertIsNone(s_)
+        _, batch = tools.unpack_transitions(resp)
+        self.assertEqual(2, batch["s"].shape[1])
+        self.assertEqual(1, batch["a"].shape[1])
+        self.assertEqual(1, batch["r"].shape[1])
+        self.assertTrue("s_" not in batch)
 
 
 class ActorProcessTest(unittest.TestCase):
@@ -84,10 +83,9 @@ class ActorProcessTest(unittest.TestCase):
         self.assertIsInstance(done, bool)
 
     def test_ep_step_generator(self):
-        buffer = rlearn.RandomReplayBuffer(500)
         env = CartPoleSmoothReward()
         actor_p = distribute.actor.ActorProcess(
-            buffer=buffer,
+            local_buffer_size=500,
             env=env,
             remote_buffer_address=None,
             action_transformer=None,
@@ -110,21 +108,20 @@ class ActorProcessTest(unittest.TestCase):
                 break
 
     def test_actor_process(self):
-        buffer = rlearn.RandomReplayBuffer(500)
         env = CartPoleSmoothReward()
         actor = distribute.actor.ActorProcess(
-            buffer=buffer,
+            local_buffer_size=500,
             env=env,
             remote_buffer_address=None,
             action_transformer=None,
         )
         actor.init_params(
-            "DQN", self.model_pb_path, init_version=0, request_id="dqn_train", max_episode=2, max_episode_step=5)
+            "DQNTrainer", self.model_pb_path, init_version=0,
+            request_id="dqn_train", max_episode=2, max_episode_step=5)
         actor.start()
         actor.join()
         self.assertEqual(1, actor.ns.episode_num)
         self.assertLess(actor.ns.episode_step_num, 5)
-        self.assertLess(buffer.current_loading_point, 5 * 2)
 
     def test_actor_process_in_process(self):
         buf_port = tools.get_available_port()
@@ -144,16 +141,15 @@ class ActorProcessTest(unittest.TestCase):
         self.assertTrue(resp.done)
         self.assertEqual("", resp.err)
 
-        buffer = rlearn.RandomReplayBuffer(10)
         env = CartPoleSmoothReward()
         actor_p = distribute.actor.ActorProcess(
-            buffer=buffer,
+            local_buffer_size=10,
             env=env,
             remote_buffer_address=buf_address,
             action_transformer=None,
         )
         actor_p.init_params(
-            "DQN",
+            "DQNTrainer",
             self.model_pb_path,
             init_version=init_version,
             request_id="dqn_train",
@@ -167,15 +163,16 @@ class ActorProcessTest(unittest.TestCase):
         self.assertLess(actor_p.ns.episode_step_num, 20)
         resp = buf_stub.DownloadData(buffer_pb2.DownloadDataReq(maxSize=10, requestId="xx"))
         self.assertEqual("xx", resp.requestId)
-        s, a, r, s_ = tools.unpack_transitions(resp)
+        batch_size, batch = tools.unpack_transitions(resp)
+        self.assertGreater(batch_size, 0)
         buf_server.stop(None)
 
-        self.assertEqual(4, s.shape[1])
-        self.assertEqual(1, a.shape[1])
-        self.assertEqual(1, r.shape[1])
-        self.assertEqual(4, s_.shape[1])
-        for i in [s, a, r, s_]:
-            self.assertGreaterEqual(i.shape[0], buffer.max_size)
+        self.assertEqual(4, batch["s"].shape[1])
+        self.assertEqual(1, batch["a"].ndim)
+        self.assertEqual(1, batch["r"].ndim)
+        self.assertEqual(4, batch["s_"].shape[1])
+        for i in batch.values():
+            self.assertGreaterEqual(i.shape[0], 10)
 
 
 class ActorServiceTest(unittest.TestCase):
@@ -239,7 +236,7 @@ class ActorServiceTest(unittest.TestCase):
 
         resp = self.actor_stub.Start(tools.read_pb_iterfile(
             self.model_pb_path,
-            model_type="DQN",
+            trainer_type="DQNTrainer",
             max_episode=0,
             max_episode_step=0,
             version=version,
@@ -262,17 +259,16 @@ class ActorServiceTest(unittest.TestCase):
         self.assertEqual("", resp.err)
 
         resp = self.buf_stub.DownloadData(buffer_pb2.DownloadDataReq(maxSize=3, requestId="bufDownload"))
-        s, a, r, s_ = tools.unpack_transitions(resp)
-        self.assertIsInstance(s, np.ndarray)
-        self.assertIsInstance(a, np.ndarray)
-        self.assertIsInstance(r, np.ndarray)
-        self.assertEqual((3, 1), r.shape)
-        self.assertIsInstance(s_, np.ndarray)
-        self.assertEqual((3, 4), s.shape)
-        self.assertEqual((3, 4), s_.shape)
+        batch_size, batch = tools.unpack_transitions(resp)
+        self.assertEqual(3, batch_size)
+        self.assertIsInstance(batch["s"], np.ndarray)
+        self.assertIsInstance(batch["a"], np.ndarray)
+        self.assertIsInstance(batch["r"], np.ndarray)
+        self.assertEqual((3,), batch["r"].shape)
+        self.assertIsInstance(batch["s_"], np.ndarray)
+        self.assertEqual((3, 4), batch["s"].shape)
+        self.assertEqual((3, 4), batch["s_"].shape)
         self.assertEqual("bufDownload", resp.requestId)
-        for data in tools.unpack_transitions(resp):
-            self.assertEqual(3, len(data))
 
 
 class LearnerTest(unittest.TestCase):

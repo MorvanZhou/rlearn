@@ -15,7 +15,10 @@ class BaseTransformer(ABC):
 
 
 class ContinuousAction(BaseTransformer):
-    def __init__(self, bound: tp.Union[tp.Sequence[tp.Sequence[float]], tp.Sequence[float]]):
+    def __init__(
+            self,
+            bound: tp.Union[tp.Sequence[tp.Sequence[float]], tp.Sequence[float]],
+    ):
         _bound_width = []
         _bound_min = []
         if not isinstance(bound[0], (tuple, list)):
@@ -49,7 +52,10 @@ class ContinuousAction(BaseTransformer):
 
 
 class DiscreteAction(BaseTransformer):
-    def __init__(self, actions: tp.Sequence[tp.Union[float, str]]):
+    def __init__(
+            self,
+            actions: tp.Sequence[tp.Union[float, str]],
+    ):
         self.actions = actions
 
     def transform(

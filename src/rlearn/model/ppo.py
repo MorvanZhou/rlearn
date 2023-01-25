@@ -54,10 +54,15 @@ class _PPO(BaseRLModel, metaclass=ABCMeta):
     def predict(self, s):
         s = np.expand_dims(s, axis=0)
         dist = self.dist(self.pi_, s)  # use stable policy parameters to predict
-        action = tf.squeeze(dist.sample(1)).numpy()
+        action = tf.squeeze(dist.sample(1), axis=[0, 1]).numpy()
+        if np.isnan(action).any():
+            raise ValueError("action contains NaN")
         if action.ndim == 0 and np.issubdtype(action, np.integer):
             action = int(action)
         return action
+
+    def disturbed_action(self, x, epsilon: float):
+        raise NotImplemented
 
     def save_weights(self, path):
         model_tmp_dir = path
@@ -122,6 +127,12 @@ class PPODiscrete(_PPO):
         o = keras.layers.Softmax()(o)
         return keras.Model(inputs=encoder.inputs, outputs=[o])
 
+    def disturbed_action(self, x, epsilon: float):
+        # if np.random.random() < epsilon:
+        #     a_size = self.pi.outputs[0].shape[1]
+        #     return np.random.randint(0, a_size)
+        return self.predict(x)
+
 
 class PPOContinue(_PPO):
     name = __qualname__
@@ -136,9 +147,15 @@ class PPOContinue(_PPO):
         o = net(s)
         a_size = o.shape[1] // 2
         loc, scale = tf.tanh(o[:, :a_size]), tf.nn.sigmoid(o[:, a_size:])
-        return tfp.distributions.Normal(loc=loc, scale=scale)
+        return tfp.distributions.MultivariateNormalDiag(loc=loc, scale_diag=scale)
 
     @staticmethod
     def set_pi_encoder_callback(encoder: keras.Sequential, action_num: int):
         o = keras.layers.Dense(action_num * 2)(encoder.output)
         return keras.Model(inputs=encoder.inputs, outputs=[o])
+
+    def disturbed_action(self, x, epsilon: float):
+        # if np.random.random() < epsilon:
+        #     a_size = self.pi.outputs[0].shape[1] // 2
+        #     return np.random.uniform(-1, 1, size=a_size)
+        return self.predict(x)

@@ -92,6 +92,7 @@ _SERVICEREADYRESP = _descriptor.Descriptor(
     serialized_end=138,
 )
 
+
 _LEARNERSETMODELTYPEREQ = _descriptor.Descriptor(
     name='LearnerSetModelTypeReq',
     full_name='replayBuffer.LearnerSetModelTypeReq',
@@ -129,6 +130,7 @@ _LEARNERSETMODELTYPEREQ = _descriptor.Descriptor(
     serialized_start=140,
     serialized_end=203,
 )
+
 
 _LEARNERSETMODELTYPERESP = _descriptor.Descriptor(
     name='LearnerSetModelTypeResp',
@@ -174,6 +176,7 @@ _LEARNERSETMODELTYPERESP = _descriptor.Descriptor(
     serialized_start=205,
     serialized_end=276,
 )
+
 
 _LEARNERSETVERSIONREQ = _descriptor.Descriptor(
     name='LearnerSetVersionReq',

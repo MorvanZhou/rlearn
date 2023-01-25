@@ -36,6 +36,8 @@ class DDPG(BaseRLModel):
         encoding = tf.concat([encoder.output, action_inputs.output], axis=1)
         o = keras.layers.Dense(action_num * 16)(encoding)
         o = keras.layers.ReLU()(o)
+        o = keras.layers.Dense(32)(o)
+        o = keras.layers.ReLU()(o)
         o = keras.layers.Dense(1)(o)
         return keras.Model(inputs=encoder.inputs + [action_inputs.input, ], outputs=[o])
 
@@ -54,7 +56,15 @@ class DDPG(BaseRLModel):
             self.critic_ = self.clone_model(self.critic)
 
     def predict(self, s) -> np.ndarray:
-        return self.actor.predict(np.expand_dims(s, axis=0), verbose=0)[0]
+        a = self.actor.predict(np.expand_dims(s, axis=0), verbose=0).ravel()
+        if np.isnan(a).any():
+            raise ValueError("action contains NaN")
+        return a
+
+    def disturbed_action(self, x, epsilon: float):
+        if np.random.random() < epsilon:
+            return np.random.uniform(-1, 1, size=self.actor.output_shape[1])
+        return self.predict(x)
 
     def save_weights(self, path):
         model_tmp_dir = path

@@ -7,284 +7,293 @@ import unittest
 import gym
 from tensorflow import keras
 
+import gym_wrapper_test
 import rlearn
 from rlearn.distribute import tools
 
 
-class GymTest(unittest.TestCase):
-    @classmethod
-    def tearDownClass(cls) -> None:
-        shutil.rmtree(os.path.join(os.path.dirname(__file__), "tmp"), ignore_errors=True)
+def cartpole_reward(s_, env):
+    x, _, theta, _ = s_
+    r1 = (env.x_threshold - abs(x)) / env.x_threshold - 0.8
+    r2 = (env.theta_threshold_radians - abs(theta)) / env.theta_threshold_radians - 0.5
+    r = r1 + r2
+    return r
 
-    def test_dqn(self):
-        conf = rlearn.TrainConfig(
-            trainer=rlearn.DQNTrainer.name,
-            batch_size=32,
-            epochs=10,
+
+def train_cartpole(conf, render_mode="human"):
+    trainer = rlearn.get_trainer_by_name(
+        conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), f"test_{conf.trainer}"),
+        seed=2
+    )
+    rlearn.set_config_to_trainer(conf, trainer)
+    action_transformer = rlearn.transformer.DiscreteAction(actions=[0, 1])
+    moving_r = 0
+    env = gym.make(
+        'CartPole-v1', new_step_api=True,
+        render_mode=render_mode
+    )
+    env.reset(seed=1)
+    ep = 0
+    for ep in range(conf.epochs):
+        s = env.reset(return_info=False)
+        ep_r = 0
+        value = None
+        for _ in range(200):  # in one episode
+            _a = trainer.predict(s)
+            # IMPORTANT: it is better to record permuted action in buffer
+            a = action_transformer.transform(_a)
+            s_, _, done, _, _ = env.step(a)
+            r = cartpole_reward(s_, env)
+            # IMPORTANT: it is better to record permuted action in buffer
+            trainer.store_transition(s, a, r, s_, done)
+            s = s_
+            ep_r += r
+            if ep >= conf.not_learn_epochs:
+                res = trainer.train_batch()
+                value = res.value
+            if done:
+                trainer.trace({
+                    "ep_reward": ep_r,
+                }, step=ep)
+                break
+        moving_r = 0.05 * ep_r + 0.95 * moving_r
+        print(f"{ep} r={ep_r:.2f}, mov={moving_r:.2f} value={value}")
+        if moving_r > 30:
+            break
+    env.close()
+    return ep
+
+
+def train_pendulum(conf, render_mode="human"):
+    trainer = rlearn.get_trainer_by_name(
+        conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), f"test_{conf.trainer}"),
+        seed=3
+    )
+    rlearn.set_config_to_trainer(conf, trainer)
+    action_transformer = rlearn.transformer.ContinuousAction(conf.action_transform)
+
+    env = gym.make(
+        'Pendulum-v1', new_step_api=True,
+        render_mode=render_mode
+    )
+    env.reset(seed=1)
+    max_ep_step = 200
+    moving = None
+    ep = 0
+    for ep in range(conf.epochs):
+        s = env.reset(return_info=False)
+        ep_r = 0
+        value = None
+        for _ in range(max_ep_step):  # in one episode
+            _a = trainer.predict(s)
+            # IMPORTANT: it is better to record permuted action in buffer
+            a = action_transformer.transform(_a)
+            s_, r, _, _, _ = env.step(a)
+            # IMPORTANT: it is better to record permuted action in buffer
+            trainer.store_transition(s, _a, (r + 8) / 8, s_)
+            s = s_
+            ep_r += r
+
+            res = trainer.train_batch()
+            value = res.value
+
+        if ep % 20 == 0:
+            dir_ = os.path.join(trainer.log_dir, "checkpoints", f"ep-{ep:06d}")
+            trainer.save_model_weights(dir_)
+            trainer.load_model_weights(dir_)
+        trainer.trace({
+            "ep_reward": ep_r,
+        }, step=ep)
+        if moving is None:
+            moving = ep_r
+        moving = moving * .95 + ep_r * .05
+        print(f"{ep} r={ep_r:.2f} mov={moving:.2f} value={value}")
+        if moving > -900:
+            break
+    env.close()
+    return ep
+
+
+def train_mountain_car(conf, render_mode="human"):
+    trainer = rlearn.get_trainer_by_name(
+        conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), f"test_{conf.trainer}"),
+        seed=2
+    )
+    rlearn.set_config_to_trainer(conf, trainer)
+    action_transformer = rlearn.transformer.DiscreteAction([0, 1, 2])
+    mov = 1000
+    env = gym.make(
+        'MountainCar-v0', new_step_api=True,
+        render_mode=render_mode,
+    )
+    env.reset(seed=1)
+    ep = 0
+    for ep in range(conf.epochs):
+        s = env.reset(return_info=False)
+        step = 0
+        while True:  # in one episode
+            _a = trainer.predict(s)
+            a = action_transformer.transform(_a)
+            s_, _, done, _, _ = env.step(a)
+            r = 1. if done else 0
+            trainer.store_transition(s, a, r, s_)
+            s = s_
+            step += 1
+            res = trainer.train_batch()
+            if done:
+                if ep % 20 == 0:
+                    dir_ = os.path.join(trainer.log_dir, "checkpoints", f"ep-{ep:06d}")
+                    trainer.save_model_weights(dir_)
+                    trainer.load_model_weights(dir_)
+                break
+
+        mov = mov * 0.8 + step * 0.2
+        print(f"{ep} step={step} mov={mov}, value={res.value}")
+        if mov < 700:
+            break
+
+    env.close()
+    return ep
+
+
+class GymTest(unittest.TestCase):
+    def setUp(self) -> None:
+        epochs = 200
+        batch_size = 32
+        buffer_size = 5000
+        gamma = 0.9
+        self.render_mode = "human"
+        self.cartpole_conf = rlearn.TrainConfig(
+            trainer="",
+            batch_size=batch_size,
+            epochs=epochs,
             action_transform=[0, 1],
-            nets=[rlearn.NetConfig(
-                input_shape=(4,),
-                layers=[
-                    rlearn.LayerConfig("dense", args={"units": 20}),
-                    rlearn.LayerConfig("relu"),
-                ]
-            )],
-            gamma=0.9,
+            nets=[
+                rlearn.NetConfig(
+                    input_shape=(4,),
+                    layers=[
+                        rlearn.LayerConfig("dense", args={"units": 32}),
+                        rlearn.LayerConfig("relu"),
+                    ]
+                ),
+                rlearn.NetConfig(
+                    input_shape=(4,),
+                    layers=[
+                        rlearn.LayerConfig("dense", args={"units": 32}),
+                        rlearn.LayerConfig("relu"),
+                    ]
+                )
+            ],
+            gamma=gamma,
             learning_rates=(0.01,),
-            replay_buffer=rlearn.ReplayBufferConfig(500),
+            replay_buffer=rlearn.ReplayBufferConfig(buffer_size),
             replace_step=100,
             not_learn_epochs=2,
             epsilon_decay=0.1,
             min_epsilon=0.1,
             args={}
         )
-        trainer = rlearn.get_trainer_by_name(
-            conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), "test_dqn"),
-            seed=2
-        )
-        rlearn.set_config_to_trainer(conf, trainer)
-
-        moving_r = 0
-        env = gym.make('CartPole-v1', new_step_api=True)
-        env.reset(seed=1)
-        for ep in range(conf.epochs):
-            s = env.reset(return_info=False)
-            ep_r = 0
-            loss = 0
-            q_max = 0
-            for _ in range(200):  # in one episode
-                a = trainer.predict(s)
-                s_, _, done, _, _ = env.step(a)
-                x, _, theta, _ = s_
-                r1 = (env.x_threshold - abs(x)) / env.x_threshold - 0.8
-                r2 = (env.theta_threshold_radians - abs(theta)) / env.theta_threshold_radians - 0.5
-                r = r1 + r2
-                trainer.store_transition(s, a, r, s_)
-                s = s_
-                ep_r += r
-                if ep >= conf.not_learn_epochs:
-                    res = trainer.train_batch()
-                    loss, q_max = res["loss"], res["q"]
-                if done:
-                    trainer.trace({
-                        "ep_reward": ep_r,
-                        "loss": loss,
-                        "q_max": q_max,
-                        "epsilon": trainer.epsilon
-                    }, step=ep)
-                    break
-            moving_r = 0.2 * ep_r + 0.8 * moving_r
-            print(f"{ep} r={ep_r:.2f}, loss={loss:.4f} qmax={q_max:.4f}")
-        self.assertGreater(moving_r, 10, msg=f"{moving_r=}")
-        env.close()
-
-    def test_dueling_dqn(self):
-        conf = rlearn.TrainConfig(
-            trainer=rlearn.DuelingDQNTrainer.name,
-            batch_size=16,
-            epochs=10,
-            action_transform=[0, 1],
-            nets=[rlearn.NetConfig(
-                input_shape=(4,),
-                layers=[
-                    rlearn.LayerConfig("dense", args={"units": 20}),
-                    rlearn.LayerConfig("relu"),
-                ]
-            )],
-            gamma=0.9,
-            learning_rates=(0.01,),
-            replay_buffer=rlearn.ReplayBufferConfig(500),
-            replace_step=100,
-            not_learn_epochs=2,
-            epsilon_decay=0.05,
-            min_epsilon=0.1,
-            args={}
-        )
-        trainer = rlearn.get_trainer_by_name(
-            conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), "test_dueling_dqn"),
-            seed=4
-        )
-        rlearn.set_config_to_trainer(conf, trainer)
-
-        env = gym.make('CartPole-v1', new_step_api=True)
-        env.reset(seed=1)
-        moving_r = 0
-        for ep in range(conf.epochs):
-            s = env.reset(return_info=False)
-            ep_r = 0
-            loss = 0
-            q_max = 0
-            for _ in range(200):  # in one episode
-                a = trainer.predict(s)
-                s_, _, done, _, _ = env.step(a)
-                x, _, theta, _ = s_
-                r1 = (env.x_threshold - abs(x)) / env.x_threshold - 0.8
-                r2 = (env.theta_threshold_radians - abs(theta)) / env.theta_threshold_radians - 0.5
-                r = r1 + r2
-                trainer.store_transition(s, a, r, s_)
-                s = s_
-                ep_r += r
-                if ep >= conf.not_learn_epochs:
-                    res = trainer.train_batch()
-                    loss, q_max = res["loss"], res["q"]
-                if done:
-                    if ep % 20 == 0:
-                        dir_ = os.path.join(trainer.log_dir, "checkpoints", f"ep-{ep:06d}")
-                        trainer.save_model_weights(dir_)
-                        trainer.load_model_weights(dir_)
-                    trainer.trace({
-                        "ep_reward": ep_r,
-                        "loss": loss,
-                        "q_max": q_max,
-                        "epsilon": trainer.epsilon
-                    }, step=ep)
-                    break
-            moving_r = 0.2 * ep_r + 0.8 * moving_r
-            print(f"{ep} r={ep_r:.2f}, loss={loss:.4f} qmax={q_max:.4f}")
-        self.assertGreater(moving_r, 6, msg=f"{moving_r=}")
-        env.close()
-
-    def test_ppo(self):
-        conf = rlearn.TrainConfig(
-            trainer=rlearn.PPOContinueTrainer.name,
-            batch_size=16,
-            epochs=3,
+        self.pendulum_conf = rlearn.TrainConfig(
+            trainer="",
+            batch_size=batch_size,
+            epochs=epochs,
             action_transform=[[-2, 2]],
-            replay_buffer=rlearn.ReplayBufferConfig(1000),
-            replace_step=100,
+            replay_buffer=rlearn.ReplayBufferConfig(buffer_size),
+            replace_step=200,
             nets=[
                 rlearn.NetConfig(
                     input_shape=(3,),
                     layers=[
-                        rlearn.LayerConfig("dense", args={"units": 20}),
+                        rlearn.LayerConfig("dense", args={"units": 32}),
                         rlearn.LayerConfig("relu"),
                     ]
                 ),
                 rlearn.NetConfig(
                     input_shape=(3,),
                     layers=[
-                        rlearn.LayerConfig("dense", args={"units": 20}),
+                        rlearn.LayerConfig("dense", args={"units": 32}),
                         rlearn.LayerConfig("relu"),
                     ]
                 )
             ],
-            gamma=0.9,
+            gamma=gamma,
             learning_rates=(0.01, 0.01),
-            args={}
-        )
-        trainer = rlearn.get_trainer_by_name(
-            conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), "test_ppo"),
-            seed=4
-        )
-        rlearn.set_config_to_trainer(conf, trainer)
-        action_transformer = rlearn.transformer.ContinuousAction(conf.action_transform)
-
-        env = gym.make('Pendulum-v1', new_step_api=True)
-        env.reset(seed=1)
-        max_ep_step = 200
-        learn_step = 0
-        for ep in range(conf.epochs):
-            s = env.reset(return_info=False)
-            ep_r = 0
-            a_loss, c_loss = 0, 0
-            for t in range(max_ep_step):  # in one episode
-                raw_a = trainer.predict(s)
-                real_a = action_transformer.transform(raw_a)
-                s_, r, _, _, _ = env.step(real_a)
-                done = t == max_ep_step - 1
-                trainer.store_transition(s, raw_a, (r + 8) / 8, done)
-                s = s_
-                ep_r += r
-
-                # update ppo
-                res = trainer.train_batch()
-                learn_step += 1
-                a_loss, c_loss = res["a_loss"], res["c_loss"]
-
-            if ep % 20 == 0:
-                dir_ = os.path.join(trainer.log_dir, "checkpoints", f"ep-{ep:06d}")
-                trainer.save_model_weights(dir_)
-                trainer.load_model_weights(dir_)
-            trainer.trace({
-                "ep_reward": ep_r,
-                "loss_actor": a_loss,
-                "loss_critic": c_loss,
-            }, step=ep)
-            print(f"{ep} r={ep_r:.2f}, a={a_loss:.4f} c={c_loss:.4f}")
-
-        env.close()
-
-    def test_prioritized_dqn(self):
-        conf = rlearn.TrainConfig(
-            trainer=rlearn.DQNTrainer.name,
-            batch_size=16,
-            epochs=10,
-            action_transform=[0, 1, 2],
-            nets=[rlearn.NetConfig(
-                input_shape=(2,),
-                layers=[
-                    rlearn.LayerConfig("dense", args={"units": 20}),
-                    rlearn.LayerConfig("relu"),
-                ]
-            )],
-            gamma=0.95,
-            learning_rates=(0.001,),
-            replay_buffer=rlearn.ReplayBufferConfig(10000),
-            replace_step=600,
-            not_learn_epochs=0,
             epsilon_decay=0.1,
             min_epsilon=0.1,
-            args={"buffer": rlearn.PrioritizedReplayBuffer.name, "seed": 8}
+            args={}
+        )
+        self.mountain_car_conf = rlearn.TrainConfig(
+            trainer="",
+            batch_size=batch_size,
+            epochs=epochs,
+            action_transform=[0, 1, 2],
+            nets=[
+                rlearn.NetConfig(
+                    input_shape=(2,),
+                    layers=[
+                        rlearn.LayerConfig("dense", args={"units": 32}),
+                        rlearn.LayerConfig("relu"),
+                    ]
+                ),
+                rlearn.NetConfig(
+                    input_shape=(2,),
+                    layers=[
+                        rlearn.LayerConfig("dense", args={"units": 32}),
+                        rlearn.LayerConfig("relu"),
+                    ]
+                )
+            ],
+            gamma=gamma,
+            learning_rates=(0.01,),
+            replay_buffer=rlearn.ReplayBufferConfig(buffer_size),
+            replace_step=100,
+            not_learn_epochs=2,
+            epsilon_decay=0.1,
+            min_epsilon=0.1,
+            args={}
         )
 
-        trainer = rlearn.get_trainer_by_name(
-            conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), "test_p_dqn"),
-            seed=4
-        )
-        rlearn.set_config_to_trainer(conf, trainer)
-        passed = False
-        ep_pass_record = []
-        env = gym.make('MountainCar-v0', new_step_api=True)
-        env.reset(seed=1)
-        for ep in range(conf.epochs):
-            s = env.reset(return_info=False)
-            ep_r = 0.
-            loss = 0
-            q_max = 0
-            for t in range(200):  # in one episode
-                a = trainer.predict(s)
-                s_, _, done, _, _ = env.step(a)
-                r = 10 if done else 1 if s_[0] > 0.33 else 0
-                trainer.store_transition(s, a, r, s_)
-                s = s_
-                ep_r += r
-                if ep >= conf.not_learn_epochs:
-                    res = trainer.train_batch()
-                    loss, q_max = res["loss"], res["q"]
-                if done:
-                    if ep % 20 == 0:
-                        dir_ = os.path.join(trainer.log_dir, "checkpoints", f"ep-{ep:06d}")
-                        trainer.save_model_weights(dir_)
-                        trainer.load_model_weights(dir_)
-                    trainer.trace({
-                        "ep_reward": ep_r,
-                        "loss": loss,
-                        "q_max": q_max,
-                        "epsilon": trainer.epsilon
-                    }, step=ep)
-                    break
+    @classmethod
+    def tearDownClass(cls) -> None:
+        shutil.rmtree(os.path.join(os.path.dirname(__file__), "tmp"), ignore_errors=True)
 
-            print(f"{ep} r={ep_r:.2f}, loss={loss:.4f} qmax={q_max:.4f}")
-            if t < 199:
-                ep_pass_record.append(1)
-            else:
-                ep_pass_record.append(0)
-            if sum(ep_pass_record[-6:]) >= 1:
-                passed = True
-                break
+    def test_dqn(self):
+        # 29 r=123.33, mov=31.88 value={'loss': 0.008630372, 'q': 4.0718727}
+        self.cartpole_conf.trainer = rlearn.DQNTrainer.name
+        ep = train_cartpole(self.cartpole_conf, self.render_mode)
+        self.assertLess(ep, 50)
 
-        self.assertTrue(passed, msg=f"{ep_pass_record=}")
-        env.close()
+    def test_dueling_dqn(self):
+        # 18 r=97.65, mov=30.95 value={'loss': 0.03248573, 'q': 3.6843674}
+        self.cartpole_conf.trainer = rlearn.DuelingDQNTrainer.name
+        ep = train_cartpole(self.cartpole_conf, self.render_mode)
+        self.assertLess(ep, 50)
+
+    def test_ppo_discrete(self):
+        # 65 r=67.24, mov=30.84 value={'pi_loss': -0.01581239, 'critic_loss': 0.44217706}
+        self.cartpole_conf.trainer = rlearn.PPODiscreteTrainer.name
+        self.cartpole_conf.learning_rates = (0.01, 0.01)
+        ep = train_cartpole(self.cartpole_conf, self.render_mode)
+        self.assertLess(ep, 70)
+
+    def test_ddpg(self):
+        # 21 r=-261.60 mov=-888.00 value={'actor_loss': -5.081643, 'critic_loss': 0.017063033}
+        self.pendulum_conf.trainer = rlearn.DDPGTrainer.name
+        ep = train_pendulum(self.pendulum_conf, self.render_mode)
+        self.assertLess(ep, 50)
+
+    def test_ppo_continuous(self):
+        # 46 r=-517.77 mov=-888.73 value={'pi_loss': 0.13905787, 'critic_loss': 0.017424757}
+        self.pendulum_conf.trainer = rlearn.PPOContinueTrainer.name
+        ep = train_pendulum(self.pendulum_conf, self.render_mode)
+        self.assertLess(ep, 60)
+
+    def test_prioritized_dqn(self):
+        # 10 step=174 mov=629.4898035712, value={'loss': 0.0005622931, 'q': 0.82957065}
+        self.mountain_car_conf.trainer = rlearn.DQNTrainer.name
+        self.mountain_car_conf.replay_buffer = rlearn.ReplayBufferConfig(10000, buf="PrioritizedReplayBuffer")
+        ep = train_mountain_car(self.mountain_car_conf, self.render_mode)
+        self.assertLess(ep, 20)
 
 
 class DistributedGym(unittest.TestCase):
@@ -297,7 +306,7 @@ class DistributedGym(unittest.TestCase):
             port=buf_port,
             max_size=10000,
             buf="RandomReplayBuffer",
-            debug=True,
+            # debug=True,
         ))
         p.start()
         self.ps.append(p)
@@ -325,11 +334,11 @@ class DistributedGym(unittest.TestCase):
         return actors_address
 
     def test_dqn(self):
-        env = gym_wrapper.CartPoleDiscreteReward(render_mode="human")
-        actors_address = self.set_actors(env)
+        env = gym_wrapper_test.CartPoleDiscreteReward(render_mode="human")
+        actors_address = self.set_actors(env, n_actors=4)
 
         trainer = rlearn.trainer.DQNTrainer()
-        trainer.set_replay_buffer(max_size=1000)
+        trainer.set_replay_buffer(max_size=5000)
         trainer.set_model_encoder(
             q=keras.Sequential([
                 keras.layers.InputLayer(4),
@@ -350,15 +359,15 @@ class DistributedGym(unittest.TestCase):
             result_dir=self.result_dir,
             debug=True,
         )
-        learner.run(epoch=100, epoch_step=None, replicate_step=100)
+        learner.run(epoch=30, epoch_step=None, replicate_step=100)
 
     def test_ddpg(self):
-        env = gym_wrapper.Pendulum(render_mode="human")
-        action_transformer = rlearn.transformer.ContinuousAction([[-2, 2]])
-        actors_address = self.set_actors(env, n_actors=2, action_transformer=action_transformer)
+        env = gym_wrapper_test.Pendulum(render_mode="human")
+        action_transformer = rlearn.transformer.ContinuousAction([-2, 2])
+        actors_address = self.set_actors(env, n_actors=4, action_transformer=action_transformer)
 
         trainer = rlearn.trainer.DDPGTrainer()
-        trainer.set_replay_buffer(max_size=2000)
+        trainer.set_replay_buffer(max_size=3000)
         trainer.set_model_encoder(
             actor=keras.Sequential([
                 keras.layers.InputLayer(3),
@@ -384,14 +393,14 @@ class DistributedGym(unittest.TestCase):
             result_dir=self.result_dir,
             debug=True,
         )
-        learner.run(epoch=300, epoch_step=None, replicate_step=100)
+        learner.run(epoch=50, epoch_step=None, replicate_step=100)
 
     def test_ppo_discrete(self):
-        env = gym_wrapper.CartPoleDiscreteReward(render_mode="human")
-        actors_address = self.set_actors(env, n_actors=5, local_buffer_size=200)
+        env = gym_wrapper_test.CartPoleDiscreteReward(render_mode="human")
+        actors_address = self.set_actors(env, n_actors=4, local_buffer_size=100)
 
         trainer = rlearn.trainer.PPODiscreteTrainer()
-        trainer.set_replay_buffer(max_size=2000)
+        trainer.set_replay_buffer(max_size=3000)
         trainer.set_model_encoder(
             pi=keras.Sequential([
                 keras.layers.InputLayer(4),
@@ -417,24 +426,25 @@ class DistributedGym(unittest.TestCase):
             result_dir=self.result_dir,
             debug=True,
         )
-        learner.run(epoch=500, epoch_step=None)
+        learner.run(epoch=200, epoch_step=None)
 
     def test_ppo_continue(self):
-        env = gym_wrapper.Pendulum(render_mode="human")
-        action_transformer = rlearn.transformer.ContinuousAction([[-2, 2]])
-        actors_address = self.set_actors(env, n_actors=5, local_buffer_size=200, action_transformer=action_transformer)
+        env = gym_wrapper_test.Pendulum(render_mode="human")
+        action_transformer = rlearn.transformer.ContinuousAction([-2, 2])
+        actors_address = self.set_actors(
+            env, n_actors=4, local_buffer_size=100, action_transformer=action_transformer)
 
         trainer = rlearn.trainer.PPOContinueTrainer()
         trainer.set_replay_buffer(max_size=2000)
         trainer.set_model_encoder(
             pi=keras.Sequential([
                 keras.layers.InputLayer(3),
-                keras.layers.Dense(20),
+                keras.layers.Dense(32),
                 keras.layers.ReLU(),
             ]),
             critic=keras.Sequential([
                 keras.layers.InputLayer(3),
-                keras.layers.Dense(20),
+                keras.layers.Dense(32),
                 keras.layers.ReLU(),
             ]),
             action_num=1,
@@ -451,4 +461,4 @@ class DistributedGym(unittest.TestCase):
             result_dir=self.result_dir,
             debug=True,
         )
-        learner.run(epoch=500, epoch_step=None)
+        learner.run(epoch=200, epoch_step=None)

@@ -31,6 +31,7 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
         self.is_on_policy = False
         self.replay_buffer = replaybuf.get_buffer_by_name(name=name, max_size=max_size)
         self.is_uploading = False
+        self.is_downloading = False
 
     def ServiceReady(self, request, context):
         self.logger.debug("""ServiceReady | {"reqId": "%s"}""", request.requestId)
@@ -61,11 +62,18 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
                 err=f"version='{request.version}' is not aline with learner's '{self.version}'",
                 requestId=request.requestId,
             )
+        while True:
+            if not self.is_downloading:
+                break
+            self.logger.debug("waiting data downloading and clear")
+            time.sleep(0.05)
 
-        s, a, r, s_ = tools.unpack_transitions(request)
+        batch_size, batch = tools.unpack_transitions(request)
+        if batch_size == 0:
+            return buffer_pb2.UploadDataResp(done=False, err="no data uploaded", requestId=request.requestId)
         try:
             self.is_uploading = True
-            self.replay_buffer.put_batch(s, a, r, s_)
+            self.replay_buffer.put_batch(**batch)
         except (ValueError, TypeError) as e:
             self.logger.error("UpdateData err: %s", str(e).replace("\n", "\\n"))
             resp = buffer_pb2.UploadDataResp(done=False, err=str(e), requestId=request.requestId)
@@ -82,12 +90,18 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
                 break
             self.logger.debug("waiting data uploading")
             time.sleep(0.05)
+
+        if self.replay_buffer.is_empty():
+            return buffer_pb2.DownloadDataResp(err="no data", requestId=request.requestId)
+
         max_size = request.maxSize
         if max_size <= 0:
             max_size = None
+        self.is_downloading = True
         resp = buffer_pb2.DownloadDataResp(err="", requestId=request.requestId)
         tools.pack_transitions(buffer=self.replay_buffer, interface=resp, max_size=max_size)
         self.replay_buffer.clear()
+        self.is_downloading = False
         return resp
 
 

@@ -1,6 +1,7 @@
 import inspect
 import typing as tp
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -12,8 +13,15 @@ from rlearn.model.base import BaseRLModel
 from rlearn.replaybuf.base import BaseReplayBuffer
 
 
+@dataclass
+class TrainResult:
+    value: tp.Dict[str, float]
+    model_replaced: bool = False
+
+
 class BaseTrainer(ABC):
     is_on_policy = False
+    name = __qualname__
 
     def __init__(
             self,
@@ -34,8 +42,6 @@ class BaseTrainer(ABC):
         self.epsilon = 1.
         self.gamma = 0.9
 
-        self.model_replaced = False
-
         self._replace_counter = 0
         self.log_dir = log_dir
         self.board = None
@@ -45,7 +51,7 @@ class BaseTrainer(ABC):
         pass
 
     @abstractmethod
-    def train_batch(self):
+    def train_batch(self) -> TrainResult:
         pass
 
     @abstractmethod
@@ -107,7 +113,7 @@ class BaseTrainer(ABC):
 
     def set_params(
             self,
-            learning_rate: tp.Union[tp.Sequence[float], float] = 0.001,
+            learning_rate: tp.Union[tp.Sequence[float], float] = 1e-4,
             batch_size: int = 32,
             gamma: float = 0.9,
             replace_ratio: float = 1.,
@@ -125,16 +131,16 @@ class BaseTrainer(ABC):
 
     def replace_target_net(
             self,
-            src: keras.Model,
-            target: keras.Model,
+            source: tp.Union[tp.Sequence[keras.Model], keras.Model],
+            target: tp.Union[tp.Sequence[keras.Model], keras.Model],
             ratio: tp.Optional[float] = None
     ):
         """
         替代 target 网络。
 
         Args:
-            src: 替代者网络
-            target: 被替代网络
+            source: 替代者网络或网络列表
+            target: 被替代网络或网络列表
             ratio: 被替代网络，有多少被替代的幅度。例如 ratio=0.1, 表示原始 target 的占比是 0.9，
                 src 的占比是 0.1，新 target 的更像原始 target
         """
@@ -142,20 +148,35 @@ class BaseTrainer(ABC):
             ratio = self.replace_ratio
         if ratio > 1. or ratio < 0.:
             raise ValueError(f"replace ratio must in range of [0, 1], but get {ratio}")
-        for layer_, layer in zip(target.layers, src.layers):
-            for weights_, weights in zip(layer_.weights, layer.weights):
-                if ratio == 1.:
-                    weights_.assign(weights)
-                else:
-                    weights_.assign(weights_ * (1 - ratio) + weights * ratio)
+        if isinstance(source, (tuple, list)):
+            src_seq = source
+        else:
+            src_seq = [source, ]
+        if isinstance(target, (tuple, list)):
+            target_seq = target
+        else:
+            target_seq = [target, ]
 
-    def try_replace_params(self, src, target, ratio: tp.Optional[float] = None) -> bool:
+        for s, t in zip(src_seq, target_seq):
+            for layer_, layer in zip(t.layers, s.layers):
+                for weights_, weights in zip(layer_.weights, layer.weights):
+                    if ratio == 1.:
+                        weights_.assign(weights)
+                    else:
+                        weights_.assign(weights_ * (1 - ratio) + weights * ratio)
+
+    def try_replace_params(
+            self,
+            source: tp.Union[tp.Sequence[keras.Model], keras.Model],
+            target: tp.Union[tp.Sequence[keras.Model], keras.Model],
+            ratio: tp.Optional[float] = None,
+    ) -> bool:
         """
         尝试替代 target 网络，如果 replace_step <= 0 或者 到了 replace_step 时，进行替换 target 网络的工作。
 
         Args:
-            src: 替代者网络
-            target: 被替代网络
+            source: 替代者网络或网络列表
+            target: 被替代网络或网络列表
             ratio: 被替代网络，有多少被替代的幅度。例如 ratio=0.1, 表示原始 target 的占比是 0.9，
                 src 的占比是 0.1，新 target 的更像原始 target
 
@@ -165,11 +186,7 @@ class BaseTrainer(ABC):
         replaced = False
         self._replace_counter += 1
         if self.replace_step <= 0 or self._replace_counter % self.replace_step == 0:
-            if isinstance(src, (tuple, list)) and isinstance(target, (tuple, list)):
-                for s, t in zip(src, target):
-                    self.replace_target_net(s, t, ratio)
-            else:
-                self.replace_target_net(src, target, ratio)
+            self.replace_target_net(source, target, ratio)
             self._replace_counter = 0
             replaced = True
         return replaced

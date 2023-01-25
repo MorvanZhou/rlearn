@@ -9,100 +9,57 @@ class BaseReplayBuffer(ABC):
 
     def __init__(self, max_size: int):
         self._max_size = max_size
-        self.has_next_state = False
 
         self._is_full = False
         self._is_empty = True
 
-        self.s = None
-        self.a = None
-        self.r = np.zeros((self.max_size, 1), dtype=np.float32)
+        self.data: tp.Dict[str, np.ndarray] = {}
 
-    def put(
-            self,
-            s: np.ndarray,
-            a: tp.Union[int, float, np.ndarray],
-            r: float,
-            s_: tp.Optional[np.ndarray] = None
-    ) -> None:
-        return self.put_one(s, a, r, s_)
+    def put(self, **kwargs: tp.Union[int, float, np.ndarray]) -> None:
+        return self.put_one(**kwargs)
 
-    def preprocess_batch_data(
-            self,
-            s: np.ndarray,
-            a: np.ndarray,
-            r: np.ndarray,
-            s_: tp.Optional[np.ndarray] = None
-    ) -> tp.Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        if r.ndim == 1:
-            r = r[:, None]
-        if r.ndim > 2:
-            raise ValueError(f"wrong reward dimension='{r.ndim}', batch reward must be 2d array")
-        # init state memory
-        if self.s is None:
-            if s_ is None:
-                shape = (self.max_size, *s.shape[1:])
+    def preprocess_batch_data(self, **kwargs: np.ndarray) -> tp.Tuple[int, tp.Dict[str, np.ndarray]]:
+        l_ = None
+        for k in kwargs.keys():
+            if not isinstance(kwargs[k], np.ndarray):
+                kwargs[k] = np.array([[kwargs[k]]], dtype=type(kwargs[k]))
+            batch_size = kwargs[k].shape[0]
+            if l_ is None:
+                l_ = batch_size
+            if batch_size != l_:
+                raise ValueError(f"batch size of '{k}'={batch_size}  is not the same as others={l_}")
+
+        for k, v in kwargs.items():
+            # init memory
+            if k not in self.data:
+                self.data[k] = np.zeros((self.max_size, *v.shape[1:]), dtype=v.dtype)
+        if l_ is None:
+            raise ValueError("no data is put in replay buffer")
+        return l_, kwargs
+
+    def put_one(self, **kwargs: tp.Union[int, float, np.ndarray]):
+        for k in kwargs.keys():
+            if not isinstance(kwargs[k], np.ndarray):
+                kwargs[k] = np.array([kwargs[k]], dtype=type(kwargs[k]))
             else:
-                self.has_next_state = True
-                shape = (self.max_size, 2, *s.shape[1:])
+                if kwargs[k].ndim < 2:
+                    kwargs[k] = np.expand_dims(kwargs[k], axis=0)
+        self.put_batch(**kwargs)
 
-            self.s = np.zeros(shape, dtype=np.float32)
-        if self.a is None:
-            self.a = np.zeros((self.max_size, *a.shape[1:]), dtype=np.float32)
-
-        if self.has_next_state and s.shape != s_.shape:
-            raise ValueError("shape mismatch: current state and next state")
-        if not (a.shape[0] == s.shape[0] == r.shape[0]):
-            raise ValueError("action/state/reward batch size not the same")
-        if a.ndim < 2:
-            raise ValueError("action must has at least 2 dimensions")
-
-        if self.has_next_state:
-            s = np.expand_dims(s, axis=1)
-            s_ = np.expand_dims(s_, axis=1)
-            states = np.concatenate([s, s_], axis=1)
-        else:
-            states = s
-        return states, a, r
-
-    def put_one(
-            self,
-            s: np.ndarray,
-            a: tp.Union[int, float, np.ndarray],
-            r: float,
-            s_: tp.Optional[np.ndarray] = None
-    ):
-        if isinstance(a, (int, float, np.int8, np.int32, np.int64)) or not isinstance(a, np.ndarray):
-            a = np.array([[a]], dtype=np.float32)
-        if a.ndim < 2:
-            a = np.expand_dims(a, axis=0)
-        s = np.expand_dims(s, axis=0)
-        s_ = np.expand_dims(s_, axis=0)
-        r = np.array([[r]], dtype=np.float32)
-        self.put_batch(s, a, r, s_)
-
-    def process_state_data(self, s, s_):
-        if self.has_next_state:
-            s = np.expand_dims(s, axis=1)
-            s_ = np.expand_dims(s_, axis=1)
-            states = np.concatenate([s, s_], axis=1)
-        else:
-            states = s
-        return states
-
-    def empty(self):
+    def is_empty(self):
         return self._is_empty
 
     def is_full(self):
         return self._is_full
 
-    def get_current_loading(self) -> (np.ndarray, np.ndarray, np.ndarray):
-        if self.s is None or self.a is None or self.r is None:
-            return np.array([], dtype=np.float32), np.array([], dtype=np.float32), np.array([], dtype=np.float32)
-        all_s = self.s[:self.current_loading_point]
-        a = self.a[:self.current_loading_point]
-        r = self.r[:self.current_loading_point]
-        return all_s, a, r
+    def get_current_loading(self) -> tp.Dict[str, np.ndarray]:
+        if self._is_empty:
+            raise ValueError("no data in replay buffer")
+        data = {}
+        p = self.current_loading_point
+        for k, v in self.data.items():
+            data[k] = v[:p]
+        return data
 
     @property
     @abstractmethod
@@ -110,17 +67,11 @@ class BaseReplayBuffer(ABC):
         pass
 
     @abstractmethod
-    def put_batch(
-            self,
-            s: np.ndarray,
-            a: np.ndarray,
-            r: np.ndarray,
-            s_: tp.Optional[np.ndarray] = None
-    ) -> None:
+    def put_batch(self, **kwargs: np.ndarray) -> None:
         pass
 
     @abstractmethod
-    def sample(self, batch_size: int) -> tp.Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def sample(self, batch_size: int) -> tp.Dict[str, np.ndarray]:
         pass
 
     @abstractmethod
