@@ -36,11 +36,11 @@ class DDPGTrainer(BaseTrainer):
 
     def set_model_encoder(self, actor: keras.Model, critic: keras.Model, action_num: int):
         self.model.set_encoder(actor=actor, critic=critic, action_num=action_num)
-        self._set_tensorboard([self.model.actor, self.model.critic])
+        self._set_tensorboard([self.model.models["actor"], self.model.models["critic"]])
 
     def set_model(self, actor: keras.Model, critic: keras.Model):
         self.model.set_model(actor=actor, critic=critic)
-        self._set_tensorboard([self.model.actor, self.model.critic])
+        self._set_tensorboard([self.model.models["actor"], self.model.models["critic"]])
 
     def set_model_encoder_from_config(self, config: TrainConfig):
         action_num = len(config.action_transform)
@@ -65,24 +65,27 @@ class DDPGTrainer(BaseTrainer):
         batch = self.replay_buffer.sample(self.batch_size)
 
         res.model_replaced = self.try_replace_params(
-            [self.model.actor, self.model.critic], [self.model.actor_, self.model.critic_])
+            [self.model.models["actor"], self.model.models["critic"]],
+            [self.model.models["actor_"], self.model.models["critic_"]])
 
         with tf.GradientTape() as tape:
-            a = self.model.actor(batch["s"])
-            q = self.model.critic([batch["s"], a])
+            a = self.model.models["actor"](batch["s"])
+            q = self.model.models["critic"]([batch["s"], a])
             la = tf.reduce_mean(-q)
 
-            grads = tape.gradient(la, self.model.actor.trainable_variables)
-            self.opt_a.apply_gradients(zip(grads, self.model.actor.trainable_variables))
+            tv = self.model.models["actor"].trainable_variables
+            grads = tape.gradient(la, tv)
+            self.opt_a.apply_gradients(zip(grads, tv))
 
         with tf.GradientTape() as tape:
-            a_ = self.model.actor_(batch["s_"])
-            q_ = batch["r"][:, None] + self.gamma * self.model.critic_([batch["s_"], a_])
-            q = self.model.critic([batch["s"], batch["a"]])
+            a_ = self.model.models["actor_"](batch["s_"])
+            q_ = batch["r"][:, None] + self.gamma * self.model.models["critic_"]([batch["s_"], a_])
+            q = self.model.models["critic"]([batch["s"], batch["a"]])
             lc = self.loss(q_, q)
 
-            grads = tape.gradient(lc, self.model.critic.trainable_variables)
-            self.opt_c.apply_gradients(zip(grads, self.model.critic.trainable_variables))
+            tv = self.model.models["critic"].trainable_variables
+            grads = tape.gradient(lc, tv)
+            self.opt_c.apply_gradients(zip(grads, tv))
 
         res.value.update({
             "actor_loss": la.numpy(),
@@ -96,15 +99,3 @@ class DDPGTrainer(BaseTrainer):
 
     def store_transition(self, s, a, r, s_, *args, **kwargs):
         self.replay_buffer.put_one(s=s, a=a, r=r, s_=s_)
-
-    def save_model_weights(self, path: str):
-        self.model.save_weights(path)
-
-    def load_model_weights(self, path: str):
-        self.model.load_weights(path)
-
-    def save_model(self, path: str):
-        self.model.save(path)
-
-    def load_model(self, path: str):
-        self.model.load(path)

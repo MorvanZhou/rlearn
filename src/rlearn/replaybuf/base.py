@@ -33,6 +33,9 @@ class BaseReplayBuffer(ABC):
             # init memory
             if k not in self.data:
                 self.data[k] = np.zeros((self.max_size, *v.shape[1:]), dtype=v.dtype)
+            else:
+                if self.data[k].shape[1:] != v.shape[1:]:
+                    raise ValueError(f"data {k} has different shape as {self.data[k].shape}, {v.shape}")
         if l_ is None:
             raise ValueError("no data is put in replay buffer")
         return l_, kwargs

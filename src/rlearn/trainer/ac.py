@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 from rlearn.config import TrainConfig
-from rlearn.model.ac import AcrtorCrititcContinue, AcrtorCrititcDiscrete
+from rlearn.model.ac import ActorCriticContinue, ActorCriticDiscrete
 from rlearn.model.tools import build_encoder_from_config
 from rlearn.trainer.base import BaseTrainer, TrainResult
 from rlearn.trainer.tools import parse_2_learning_rate
@@ -47,14 +47,14 @@ class _ActorCriticTrainer(BaseTrainer):
 
     def set_model_encoder(self, actor: keras.Model, critic: keras.Model, action_num: int):
         self.model.set_encoder(actor, critic, action_num)
-        self._set_tensorboard([self.model.actor, self.model.critic])
+        self._set_tensorboard([self.model.models["actor"], self.model.models["critic"]])
 
     def set_model_encoder_from_config(self, config: TrainConfig):
         raise NotImplemented
 
     def set_model(self, actor: keras.Model, critic: keras.Model):
         self.model.set_model(actor=actor, critic=critic)
-        self._set_tensorboard([self.model.actor, self.model.critic])
+        self._set_tensorboard([self.model.models["actor"], self.model.models["critic"]])
 
     def predict(self, s: np.ndarray) -> np.ndarray:
         self.decay_epsilon()
@@ -69,12 +69,12 @@ class _ActorCriticTrainer(BaseTrainer):
             return
 
         adv = []
-        next_v = self.model.critic.predict(
+        next_v = self.model.models["critic"].predict(
             np.expand_dims(np.array(s_, dtype=np.float32), axis=0),
             verbose=0).ravel()[0]
 
         bs = np.array(self.buffer_s, dtype=np.float32)
-        vs = self.model.critic.predict(bs, verbose=0).ravel()
+        vs = self.model.models["critic"].predict(bs, verbose=0).ravel()
         _gae_lam = 0
         for i in range(len(self.buffer_s) - 1, -1, -1):  # backward count
             non_terminate = 0. if self.buffer_done[i] else 1.
@@ -113,16 +113,17 @@ class _ActorCriticTrainer(BaseTrainer):
         batch = self.replay_buffer.sample(self.batch_size)
         with tf.GradientTape() as tape:
             # critic
-            vs = self.model.critic(batch["s"])
+            vs = self.model.models["critic"](batch["s"])
             td = batch["returns"] - vs
             lc = tf.reduce_mean(tf.square(td))
 
-            grads = tape.gradient(lc, self.model.critic.trainable_variables)
-            self.opt_c.apply_gradients(zip(grads, self.model.critic.trainable_variables))
+            tv = self.model.models["critic"].trainable_variables
+            grads = tape.gradient(lc, tv)
+            self.opt_c.apply_gradients(zip(grads, tv))
 
         with tf.GradientTape() as tape:
             # actor
-            dist = self.model.dist(self.model.actor, batch["s"])
+            dist = self.model.dist(self.model.models["actor"], batch["s"])
             log_prob = dist.log_prob(batch["a"])
             exp_v = log_prob * tf.squeeze(td)
 
@@ -133,8 +134,9 @@ class _ActorCriticTrainer(BaseTrainer):
 
             la = - tf.reduce_mean(exp_v) - entropy
 
-            grads = tape.gradient(la, self.model.actor.trainable_variables)
-            self.opt_a.apply_gradients(zip(grads, self.model.actor.trainable_variables))
+            tv = self.model.models["actor"].trainable_variables
+            grads = tape.gradient(la, tv)
+            self.opt_a.apply_gradients(zip(grads, tv))
 
         self.replay_buffer.clear()
         self.buffer_s.clear()
@@ -144,18 +146,6 @@ class _ActorCriticTrainer(BaseTrainer):
 
         res.value.update({"actor_loss": la.numpy(), "critic_loss": lc.numpy()})
         return res
-
-    def save_model_weights(self, path: str):
-        self.model.save_weights(path)
-
-    def load_model_weights(self, path: str):
-        self.model.load_weights(path)
-
-    def save_model(self, path: str):
-        self.model.save(path)
-
-    def load_model(self, path: str):
-        self.model.load(path)
 
 
 class ActorCriticDiscreteTrainer(_ActorCriticTrainer):
@@ -168,7 +158,7 @@ class ActorCriticDiscreteTrainer(_ActorCriticTrainer):
             lam: float = 0.9,
     ):
         super().__init__(
-            AcrtorCrititcDiscrete(training=True),
+            ActorCriticDiscrete(training=True),
             log_dir=log_dir,
             entropy_coef=entropy_coef,
             lam=lam,
@@ -192,7 +182,7 @@ class ActorCriticContinueTrainer(_ActorCriticTrainer):
             lam: float = 0.9,
     ):
         super().__init__(
-            AcrtorCrititcContinue(training=True),
+            ActorCriticContinue(training=True),
             log_dir=log_dir,
             entropy_coef=entropy_coef,
             lam=lam,

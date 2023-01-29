@@ -52,14 +52,14 @@ class _PPOTrainer(BaseTrainer):
 
     def set_model_encoder(self, pi: keras.Model, critic: keras.Model, action_num: int):
         self.model.set_encoder(pi, critic, action_num)
-        self._set_tensorboard([self.model.pi, self.model.critic])
+        self._set_tensorboard([self.model.models["pi"], self.model.models["critic"]])
 
     def set_model_encoder_from_config(self, config: TrainConfig):
         raise NotImplemented
 
     def set_model(self, pi: keras.Model, critic: keras.Model):
         self.model.set_model(pi=pi, critic=critic)
-        self._set_tensorboard([self.model.pi, self.model.critic])
+        self._set_tensorboard([self.model.models["pi"], self.model.models["critic"]])
 
     def predict(self, s: np.ndarray) -> np.ndarray:
         self.decay_epsilon()
@@ -74,12 +74,12 @@ class _PPOTrainer(BaseTrainer):
             return
 
         adv = []
-        next_v = self.model.critic.predict(
+        next_v = self.model.models["critic"].predict(
             np.expand_dims(np.array(s_, dtype=np.float32), axis=0),
             verbose=0).ravel()[0]
 
         bs = np.array(self.buffer_s, dtype=np.float32)
-        vs = self.model.critic.predict(bs, verbose=0).ravel()
+        vs = self.model.models["critic"].predict(bs, verbose=0).ravel()
         _gae_lam = 0
         for i in range(len(self.buffer_s) - 1, -1, -1):  # backward count
             non_terminate = 0. if self.buffer_done[i] else 1.
@@ -92,7 +92,7 @@ class _PPOTrainer(BaseTrainer):
         returns = adv + vs
         adv = (adv - adv.mean()) / (adv.std() + 1e-4)
 
-        dist_ = self.model.dist(self.model.pi_, bs)
+        dist_ = self.model.dist(self.model.models["pi_"], bs)
         log_prob = dist_.log_prob(ba).numpy()
         self.replay_buffer.put_batch(
             s=bs,
@@ -103,7 +103,7 @@ class _PPOTrainer(BaseTrainer):
         )
 
         # discounted_r = []
-        # vs_ = self.model.critic.predict(
+        # vs_ = self.model.models["critic"].predict(
         #     np.expand_dims(np.array(s_, dtype=np.float32), axis=0),
         #     verbose=0).ravel()[0]
         # for i in range(len(self.buffer_s) - 1, -1, -1):  # backward count
@@ -113,11 +113,11 @@ class _PPOTrainer(BaseTrainer):
         #     discounted_r.insert(0, vs_)
         # bs = np.vstack(self.buffer_s)
         # ba = np.array(self.buffer_a, dtype=np.float32)
-        # dist_ = self.model.dist(self.model.pi_, bs)
+        # dist_ = self.model.dist(self.model.models["pi_"], bs)
         # log_prob = dist_.log_prob(ba).numpy()
         # returns = np.array(discounted_r, dtype=np.float32)[:, None]
         # returns = (returns - returns.mean()) / (returns.std() + 1e-5)
-        # adv = (returns - self.model.critic.predict(bs, verbose=0)).ravel()
+        # adv = (returns - self.model.models["critic"].predict(bs, verbose=0)).ravel()
         # self.replay_buffer.put_batch(
         #     s=bs,
         #     a=ba,
@@ -146,15 +146,16 @@ class _PPOTrainer(BaseTrainer):
             batch = self.replay_buffer.sample(self.batch_size)
             with tf.GradientTape() as tape:
                 # critic
-                vs = self.model.critic(batch["s"])
+                vs = self.model.models["critic"](batch["s"])
                 lc = self.loss(batch["returns"], vs)
 
-                grads = tape.gradient(lc, self.model.critic.trainable_variables)
-                self.opt_c.apply_gradients(zip(grads, self.model.critic.trainable_variables))
+                tv = self.model.models["critic"].trainable_variables
+                grads = tape.gradient(lc, tv)
+                self.opt_c.apply_gradients(zip(grads, tv))
 
             with tf.GradientTape() as tape:
                 # actor
-                dist = self.model.dist(self.model.pi, batch["s"])
+                dist = self.model.dist(self.model.models["pi"], batch["s"])
                 ratio = tf.exp(dist.log_prob(batch["a"]) - batch["old_log_prob"])
                 surrogate = ratio * batch["adv"]
                 clipped_surrogate = tf.clip_by_value(
@@ -169,11 +170,12 @@ class _PPOTrainer(BaseTrainer):
 
                 la = - tf.reduce_mean(tf.minimum(surrogate, clipped_surrogate)) - entropy
 
-                grads = tape.gradient(la, self.model.pi.trainable_variables)
-                self.opt_a.apply_gradients(zip(grads, self.model.pi.trainable_variables))
+                tv = self.model.models["pi"].trainable_variables
+                grads = tape.gradient(la, tv)
+                self.opt_a.apply_gradients(zip(grads, tv))
 
         res.model_replaced = self.try_replace_params(
-            source=[self.model.pi], target=[self.model.pi_], ratio=1.)
+            source=[self.model.models["pi"]], target=[self.model.models["pi_"]], ratio=1.)
         if res.model_replaced:
             self.replay_buffer.clear()
             self.buffer_s.clear()
@@ -183,18 +185,6 @@ class _PPOTrainer(BaseTrainer):
 
         res.value.update({"pi_loss": la.numpy(), "critic_loss": lc.numpy()})
         return res
-
-    def save_model_weights(self, path: str):
-        self.model.save_weights(path)
-
-    def load_model_weights(self, path: str):
-        self.model.load_weights(path)
-
-    def save_model(self, path: str):
-        self.model.save(path)
-
-    def load_model(self, path: str):
-        self.model.load(path)
 
 
 class PPODiscreteTrainer(_PPOTrainer):

@@ -1,50 +1,9 @@
-import os
 import typing as tp
-import zipfile
 
 from tensorflow import keras
 
 from rlearn.config import NetConfig
 from rlearn.model.base import BaseRLModel
-
-
-def zip_ckpt_model(src_dir, dest_path=None):
-    if dest_path is None:
-        dest_path = src_dir + ".zip"
-    dest_dir = os.path.dirname(dest_path)
-    if dest_dir != "":
-        os.makedirs(dest_dir, exist_ok=True)
-    with zipfile.ZipFile(dest_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for filename in os.listdir(src_dir):
-            if ".ckpt." not in filename:
-                continue
-            filepath = os.path.join(src_dir, filename)
-            zipf.write(filepath, os.path.relpath(filepath, src_dir))
-
-
-def zip_pb_model(src_dir, dest_path=None):
-    if dest_path is None:
-        dest_path = src_dir + ".zip"
-    dest_dir = os.path.dirname(dest_path)
-    if dest_dir != "":
-        os.makedirs(dest_dir, exist_ok=True)
-    with zipfile.ZipFile(dest_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for root, _, filenames in os.walk(src_dir):
-            for filename in filenames:
-                filepath = os.path.join(root, filename)
-                zipf.write(filepath, os.path.relpath(filepath, src_dir))
-
-
-def unzip_model(path, dest_dir=None):
-    if not path.endswith(".zip"):
-        path += ".zip"
-    if dest_dir is None:
-        dest_dir = os.path.normpath(path).rsplit(".zip")[0]
-        os.makedirs(dest_dir, exist_ok=True)
-    with zipfile.ZipFile(path, "r") as zip_ref:
-        zip_ref.extractall(dest_dir)
-    return dest_dir
-
 
 LAYER_BUILD_MAP = {
     "relu": lambda args, trainable: keras.layers.ReLU(),

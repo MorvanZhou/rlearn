@@ -63,8 +63,8 @@ class TrainerTest(unittest.TestCase):
             log_dir=os.path.join(tempfile.gettempdir(), "test_dqn")
         )
         rlearn.trainer.set_config_to_trainer(conf, trainer)
-        self.assertIsNotNone(trainer.model.q_)
-        self.assertIsNotNone(trainer.model.q)
+        self.assertIn("q_", trainer.model.models)
+        self.assertIn("q", trainer.model.models)
 
     def test_class_name(self):
         for k, v in rlearn.trainer.tools.get_all().items():
@@ -85,8 +85,8 @@ class TrainerTest(unittest.TestCase):
             action_num=1
         )
         trainer.set_params(learning_rate=0.01)
-        self.assertEqual((None, 2), trainer.model.actor.input_shape)
-        self.assertEqual((None, 1), trainer.model.actor.output_shape)
+        self.assertEqual((None, 2), trainer.model.models["actor"].input_shape)
+        self.assertEqual((None, 1), trainer.model.models["actor"].output_shape)
 
     def test_ddpg_add_model(self):
         trainer = rlearn.trainer.DDPGTrainer()
@@ -113,8 +113,8 @@ class TrainerTest(unittest.TestCase):
             critic=C(),
         )
 
-        self.assertEqual((None, 2), trainer.model.actor.input_shape)
-        self.assertEqual((None, 2), trainer.model.actor.output_shape)
+        self.assertEqual((None, 2), trainer.model.models["actor"].input_shape)
+        self.assertEqual((None, 2), trainer.model.models["actor"].output_shape)
 
         trainer.set_replay_buffer(8)
         trainer.set_params(learning_rate=0.01, batch_size=8)
@@ -132,8 +132,8 @@ class TrainerTest(unittest.TestCase):
                 keras.layers.Dense(3)
             ])
         )
-        self.assertEqual((None, 2), trainer.model.q.input_shape)
-        self.assertEqual((None, 3), trainer.model.q.output_shape)
+        self.assertEqual((None, 2), trainer.model.models["q"].input_shape)
+        self.assertEqual((None, 3), trainer.model.models["q"].output_shape)
         pred = trainer.predict(np.zeros([2, ]))
         self.assertIsInstance(pred, int)
 
@@ -157,12 +157,13 @@ class TrainerTest(unittest.TestCase):
         )
         self.assertEqual(1, trainer.epsilon)
         self.assertIsInstance(trainer.replay_buffer, rlearn.RandomReplayBuffer)
-        v = trainer.model.q.trainable_variables[0][0][0].numpy()
-        v_ = trainer.model.q_.trainable_variables[0][0][0].numpy()
-        replaced = trainer.try_replace_params(source=trainer.model.q, target=trainer.model.q_)
+        v = trainer.model.models["q"].trainable_variables[0][0][0].numpy()
+        v_ = trainer.model.models["q_"].trainable_variables[0][0][0].numpy()
+        replaced = trainer.try_replace_params(source=trainer.model.models["q"],
+                                              target=trainer.model.models["q_"])
         self.assertTrue(replaced)
         self.assertAlmostEqual(
-            trainer.model.q_.trainable_variables[0][0][0].numpy(),
+            trainer.model.models["q_"].trainable_variables[0][0][0].numpy(),
             v_ * (1 - replace_ratio) + v * replace_ratio)
         self.assertIsInstance(trainer.predict(np.zeros([2, ])), int)
 

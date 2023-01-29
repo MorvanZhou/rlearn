@@ -40,7 +40,7 @@ class DQNTrainer(BaseTrainer):
 
     def set_model_encoder(self, q: keras.Model, action_num: int):
         self.model.set_encoder(q, action_num)
-        self._set_tensorboard(self.model.q)
+        self._set_tensorboard(self.model.models["q"])
 
     def set_model_encoder_from_config(self, config: TrainConfig):
         action_num = len(config.action_transform)
@@ -49,7 +49,7 @@ class DQNTrainer(BaseTrainer):
 
     def set_model(self, q: keras.Model):
         self.model.set_model(q=q)
-        self._set_tensorboard([self.model.q])
+        self._set_tensorboard([self.model.models["q"]])
 
     def predict(self, s: np.ndarray) -> int:
         self.decay_epsilon()
@@ -69,13 +69,14 @@ class DQNTrainer(BaseTrainer):
         batch = self.replay_buffer.sample(self.batch_size)
         ba = batch["a"]
 
-        res.model_replaced = self.try_replace_params(source=self.model.q, target=self.model.q_)
+        res.model_replaced = self.try_replace_params(
+            source=self.model.models["q"], target=self.model.models["q_"])
 
-        q_ = self.model.q_.predict(batch["s_"], verbose=0)
+        q_ = self.model.models["q_"].predict(batch["s_"], verbose=0)
         q_target = batch["r"] + self.gamma * tf.reduce_max(q_, axis=1)
         a_indices = tf.stack([tf.range(tf.shape(ba)[0], dtype=tf.int32), ba], axis=1)
         with tf.GradientTape() as tape:
-            q = self.model.q(batch["s"])
+            q = self.model.models["q"](batch["s"])
             q_wrt_a = tf.gather_nd(params=q, indices=a_indices)
             if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
                 td = q_target - q_wrt_a
@@ -85,20 +86,9 @@ class DQNTrainer(BaseTrainer):
                 self.replay_buffer.batch_update(np.abs(td.numpy()))
             else:
                 loss = self.loss(q_target, q_wrt_a)
-        grads = tape.gradient(loss, self.model.q.trainable_variables)
-        self.opt.apply_gradients(zip(grads, self.model.q.trainable_variables))
+        tv = self.model.models["q"].trainable_variables
+        grads = tape.gradient(loss, tv)
+        self.opt.apply_gradients(zip(grads, tv))
 
         res.value.update({"loss": loss.numpy(), "q": q_wrt_a.numpy().ravel().mean()})
         return res
-
-    def save_model_weights(self, path: str):
-        self.model.save_weights(path)
-
-    def load_model_weights(self, path: str):
-        self.model.load_weights(path)
-
-    def save_model(self, path: str):
-        self.model.save(path)
-
-    def load_model(self, path: str):
-        self.model.load(path)

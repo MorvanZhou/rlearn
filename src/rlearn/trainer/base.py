@@ -55,22 +55,6 @@ class BaseTrainer(ABC):
         pass
 
     @abstractmethod
-    def save_model_weights(self, path: str):
-        pass
-
-    @abstractmethod
-    def load_model_weights(self, path: str):
-        pass
-
-    @abstractmethod
-    def save_model(self, path: str):
-        pass
-
-    @abstractmethod
-    def load_model(self, path: str):
-        pass
-
-    @abstractmethod
     def predict(self, s: np.ndarray):
         pass
 
@@ -89,6 +73,18 @@ class BaseTrainer(ABC):
     @abstractmethod
     def set_model(self, *args, **kwargs):
         pass
+
+    def save_model_weights(self, path: str):
+        self.model.save_weights(path)
+
+    def load_model_weights(self, path: str):
+        self.model.load_weights(path)
+
+    def save_model(self, path: str):
+        self.model.save(path)
+
+    def load_model(self, path: str):
+        self.model.load(path)
 
     def trace(self, data: dict, step: int):
         if self.board is None:

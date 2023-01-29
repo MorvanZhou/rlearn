@@ -1,25 +1,19 @@
-
-import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-from rlearn.model.base import BaseRLModel
+from rlearn.model.base import BaseStochasticModel
 
 
-class DDPG(BaseRLModel):
+class _SAC(BaseStochasticModel):
     name = __qualname__
 
     def __init__(
             self,
+            is_discrete: bool,
             training: bool = True,
     ):
-        BaseRLModel.__init__(self, training=training)
+        super().__init__(is_discrete=is_discrete, training=training)
         self.predicted_model_name = "actor"
-
-    @staticmethod
-    def set_actor_encoder_callback(encoder: keras.Sequential, action_num: int):
-        o = keras.layers.Dense(action_num, activation="tanh")(encoder.output)
-        return keras.Model(inputs=encoder.inputs, outputs=[o])
 
     @staticmethod
     def set_critic_encoder_callback(encoder: keras.Sequential, action_num: int):
@@ -45,17 +39,19 @@ class DDPG(BaseRLModel):
     def set_model(self, actor: keras.Model, critic: keras.Model):
         self.models["actor"] = actor
         if self.training:
-            self.models["actor_"] = self.clone_model(self.models["actor"])
             self.models["critic"] = critic
             self.models["critic_"] = self.clone_model(self.models["critic"])
 
-    def predict(self, s) -> np.ndarray:
-        a = self.models["actor"].predict(np.expand_dims(s, axis=0), verbose=0).ravel()
-        if np.isnan(a).any():
-            raise ValueError("action contains NaN")
-        return a
 
-    def disturbed_action(self, x, epsilon: float):
-        if np.random.random() < epsilon:
-            return np.random.uniform(-1, 1, size=self.models["actor"].output_shape[1])
-        return self.predict(x)
+class SACDiscrete(_SAC):
+    name = __qualname__
+
+    def __init__(self, training: bool = True):
+        super().__init__(is_discrete=True, training=training)
+
+
+class SACContinue(_SAC):
+    name = __qualname__
+
+    def __init__(self, training: bool = True, ):
+        super().__init__(is_discrete=False, training=training)

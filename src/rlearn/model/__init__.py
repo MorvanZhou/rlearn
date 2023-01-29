@@ -1,4 +1,4 @@
-from rlearn.model.ac import AcrtorCrititcDiscrete, AcrtorCrititcContinue
+from rlearn.model.ac import ActorCriticDiscrete, ActorCriticContinue
 from rlearn.model.ddpg import DDPG
 from rlearn.model.dqn import DQN
 from rlearn.model.dueling_dqn import DuelingDQN
