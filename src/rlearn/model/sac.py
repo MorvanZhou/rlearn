@@ -1,10 +1,22 @@
+"""
+The Soft Actor-Critic (SAC) algorithm extends the DDPG algorithm by
+1) using a stochastic policy, which in theory can express multi-modal
+optimal policies. This also enables the use of
+2) entropy regularization based on the stochastic policy's entropy. It serves as a built-in,
+state-dependent exploration heuristic for the agent, instead of relying on non-correlated
+noise processes as in DDPG, or TD3 Additionally, it incorporates the
+3) usage of two Soft Q-network to reduce the overestimation bias issue in Q-network-based methods.
+"""
+
+from abc import ABC
+
 import tensorflow as tf
 from tensorflow import keras
 
 from rlearn.model.base import BaseStochasticModel
 
 
-class _SAC(BaseStochasticModel):
+class _SAC(BaseStochasticModel, ABC):
     name = __qualname__
 
     def __init__(
@@ -14,6 +26,44 @@ class _SAC(BaseStochasticModel):
     ):
         super().__init__(is_discrete=is_discrete, training=training)
         self.predicted_model_name = "actor"
+
+    @staticmethod
+    def set_critic_encoder_callback(encoder: keras.Sequential, action_num: int):
+        raise NotImplemented
+
+    def set_encoder(self, actor: keras.Model, critic: keras.Model, action_num: int):
+        a = self.set_actor_encoder_callback(actor, action_num)
+        c = None
+        if self.training:
+            c = self.set_critic_encoder_callback(critic, action_num)
+        self.set_model(a, c)
+
+    def set_model(self, actor: keras.Model, critic: keras.Model):
+        self.models["actor"] = actor
+        if self.training:
+            self.models["c1"] = critic
+            self.models["c1_"] = self.clone_model(self.models["c1"])
+            self.models["c2"] = critic
+            self.models["c2_"] = self.clone_model(self.models["c2"])
+
+
+class SACDiscrete(_SAC):
+    name = __qualname__
+
+    def __init__(self, training: bool = True):
+        super().__init__(is_discrete=True, training=training)
+
+    @staticmethod
+    def set_critic_encoder_callback(encoder: keras.Sequential, action_num: int):
+        o = keras.layers.Dense(action_num)(encoder.output)
+        return keras.Model(inputs=encoder.inputs, outputs=[o])
+
+
+class SACContinue(_SAC):
+    name = __qualname__
+
+    def __init__(self, training: bool = True, ):
+        super().__init__(is_discrete=False, training=training)
 
     @staticmethod
     def set_critic_encoder_callback(encoder: keras.Sequential, action_num: int):
@@ -28,30 +78,3 @@ class _SAC(BaseStochasticModel):
         o = keras.layers.ReLU()(o)
         o = keras.layers.Dense(1)(o)
         return keras.Model(inputs=encoder.inputs + [action_inputs.input, ], outputs=[o])
-
-    def set_encoder(self, actor: keras.Model, critic: keras.Model, action_num: int):
-        a = self.set_actor_encoder_callback(actor, action_num)
-        c = None
-        if self.training:
-            c = self.set_critic_encoder_callback(critic, action_num)
-        self.set_model(a, c)
-
-    def set_model(self, actor: keras.Model, critic: keras.Model):
-        self.models["actor"] = actor
-        if self.training:
-            self.models["critic"] = critic
-            self.models["critic_"] = self.clone_model(self.models["critic"])
-
-
-class SACDiscrete(_SAC):
-    name = __qualname__
-
-    def __init__(self, training: bool = True):
-        super().__init__(is_discrete=True, training=training)
-
-
-class SACContinue(_SAC):
-    name = __qualname__
-
-    def __init__(self, training: bool = True, ):
-        super().__init__(is_discrete=False, training=training)

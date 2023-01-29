@@ -17,7 +17,7 @@ class _PPOTrainer(BaseTrainer):
             model: keras.Model,
             log_dir: str = None,
             clip_epsilon: float = 0.2,
-            entropy_coef: float = 0.,
+            entropy_coef: float = 0.01,
             lam: float = 0.9,
             update_time: int = 1,
     ):
@@ -38,6 +38,12 @@ class _PPOTrainer(BaseTrainer):
         self.buffer_r = []
         self.buffer_done = []
 
+    def set_model_encoder_from_config(self, config: TrainConfig):
+        action_num = len(config.action_transform)
+        pi_encoder = build_encoder_from_config(config.nets[0], trainable=True)
+        critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
+        self.set_model_encoder(pi_encoder, critic_encoder, action_num)
+
     def set_default_optimizer(self):
         l1, l2 = parse_2_learning_rate(self.learning_rate)
 
@@ -53,9 +59,6 @@ class _PPOTrainer(BaseTrainer):
     def set_model_encoder(self, pi: keras.Model, critic: keras.Model, action_num: int):
         self.model.set_encoder(pi, critic, action_num)
         self._set_tensorboard([self.model.models["pi"], self.model.models["critic"]])
-
-    def set_model_encoder_from_config(self, config: TrainConfig):
-        raise NotImplemented
 
     def set_model(self, pi: keras.Model, critic: keras.Model):
         self.model.set_model(pi=pi, critic=critic)
@@ -194,7 +197,7 @@ class PPODiscreteTrainer(_PPOTrainer):
             self,
             log_dir: str = None,
             clip_epsilon: float = 0.2,
-            entropy_coef: float = 0.,
+            entropy_coef: float = 0.01,
             lam: float = 0.9,
             update_time: int = 1,
     ):
@@ -207,13 +210,6 @@ class PPODiscreteTrainer(_PPOTrainer):
             update_time=update_time,
         )
 
-    def set_model_encoder_from_config(self, config: TrainConfig):
-        action_num = len(config.action_transform)
-
-        pi_encoder = build_encoder_from_config(config.nets[0], trainable=True)
-        critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
-        self.set_model_encoder(pi_encoder, critic_encoder, action_num)
-
 
 class PPOContinueTrainer(_PPOTrainer):
     name = __qualname__
@@ -222,7 +218,7 @@ class PPOContinueTrainer(_PPOTrainer):
             self,
             log_dir: str = None,
             clip_epsilon: float = 0.2,
-            entropy_coef: float = 0.,
+            entropy_coef: float = 0.01,
             lam: float = 0.9,
             update_time: int = 1,
     ):
@@ -234,9 +230,3 @@ class PPOContinueTrainer(_PPOTrainer):
             lam=lam,
             update_time=update_time,
         )
-
-    def set_model_encoder_from_config(self, config: TrainConfig):
-        action_num = len(config.action_transform)
-        pi_encoder = build_encoder_from_config(config.nets[0], trainable=True)
-        critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
-        self.set_model_encoder(pi_encoder, critic_encoder, action_num)

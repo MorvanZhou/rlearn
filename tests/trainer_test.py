@@ -223,6 +223,62 @@ class TrainerTest(unittest.TestCase):
             a = trainer.model.predict(np.random.random((2,)))
             self.assertIsInstance(a, int, msg=f"{a}")
 
+    def test_sac_continuous(self):
+        trainer = rlearn.SACContinueTrainer()
+        trainer.set_model_encoder(
+            actor=keras.Sequential([
+                keras.layers.InputLayer((2,)),
+                keras.layers.Dense(10),
+            ]),
+            critic=keras.Sequential([
+                keras.layers.InputLayer((2,)),
+                keras.layers.Dense(10),
+            ]),
+            action_num=1
+        )
+        trainer.set_params(
+            learning_rate=[0.01, 0.01],
+            batch_size=32,
+            min_epsilon=0.1,
+            epsilon_decay=5e-5,
+            gamma=0.9,
+            replace_step=4,
+        )
+        action_transformer = rlearn.transformer.ContinuousAction([[0, 360]])
+
+        self.assertEqual(1, trainer.epsilon)
+        for _ in range(10):
+            a = trainer.model.predict(np.random.random((2,)))
+            a = action_transformer.transform(a).ravel()[0]
+            self.assertTrue(0 <= a <= 360, msg=f"{a}")
+
+    def test_sac_discrete(self):
+        trainer = rlearn.SACDiscreteTrainer()
+        trainer.set_model_encoder(
+            actor=keras.Sequential([
+                keras.layers.InputLayer((2,)),
+                keras.layers.Dense(10),
+            ]),
+            critic=keras.Sequential([
+                keras.layers.InputLayer((2,)),
+                keras.layers.Dense(10),
+            ]),
+            action_num=1
+        )
+        trainer.set_replay_buffer(1000)
+        trainer.set_params(
+            learning_rate=[0.001, 0.001],
+            batch_size=32,
+            min_epsilon=0.1,
+            epsilon_decay=5e-5,
+            gamma=0.9,
+            replace_step=4,
+        )
+
+        for _ in range(10):
+            a = trainer.model.predict(np.random.random((2,)))
+            self.assertIsInstance(a, int, msg=f"{a}")
+
     def test_dueling_dqn(self):
         trainer = rlearn.trainer.DuelingDQNTrainer()
         net = keras.Sequential([

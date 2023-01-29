@@ -121,6 +121,44 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(3, len(pred))
         self.assertEqual(rlearn.DDPG.name, m.name)
 
+    def test_sac_continue(self):
+        m = rlearn.SACContinue()
+        m.set_encoder(
+            actor=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(32),
+                keras.layers.ReLU(),
+            ]),
+            critic=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(32),
+                keras.layers.ReLU(),
+            ]),
+            action_num=3
+        )
+        pred = m.predict(np.zeros([2, ]))
+        self.assertIsInstance(pred, np.ndarray)
+        self.assertEqual(3, len(pred))
+        self.assertEqual(rlearn.SACContinue.name, m.name)
+
+    def test_sac_discrete(self):
+        m = rlearn.SACDiscrete()
+        m.set_encoder(
+            actor=keras.Sequential([
+                keras.layers.InputLayer((2,)),
+                keras.layers.Dense(10),
+            ]),
+            critic=keras.Sequential([
+                keras.layers.InputLayer((2,)),
+                keras.layers.Dense(10),
+            ]),
+            action_num=1
+        )
+
+        for _ in range(10):
+            a = m.predict(np.random.random((2,)))
+            self.assertIsInstance(a, int, msg=f"{a}")
+
     def test_ddpg_add_model(self):
         m = rlearn.DDPG()
         m.set_model(

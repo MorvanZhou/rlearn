@@ -139,7 +139,7 @@ class BaseStochasticModel(BaseRLModel, ABC):
     def dist(self, net: keras.Model, s: np.ndarray):
         if self.is_discrete:
             o = net(s)
-            return tfp.distributions.Categorical(probs=o)
+            return tfp.distributions.Categorical(logits=o)
 
         o = net(s)
         a_size = o.shape[1] // 2
@@ -162,7 +162,6 @@ class BaseStochasticModel(BaseRLModel, ABC):
     def set_actor_encoder_callback(self, encoder: keras.Sequential, action_num: int) -> keras.Model:
         if self.is_discrete:
             o = keras.layers.Dense(action_num)(encoder.output)
-            o = keras.layers.Softmax()(o)
             return keras.Model(inputs=encoder.inputs, outputs=[o])
 
         o = keras.layers.Dense(action_num * 2)(encoder.output)

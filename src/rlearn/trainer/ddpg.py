@@ -78,8 +78,9 @@ class DDPGTrainer(BaseTrainer):
             self.opt_a.apply_gradients(zip(grads, tv))
 
         with tf.GradientTape() as tape:
-            a_ = self.model.models["actor_"](batch["s_"])
-            q_ = batch["r"][:, None] + self.gamma * self.model.models["critic_"]([batch["s_"], a_])
+            with tape.stop_recording():
+                a_ = self.model.models["actor_"](batch["s_"])
+                q_ = batch["r"][:, None] + self.gamma * self.model.models["critic_"]([batch["s_"], a_])
             q = self.model.models["critic"]([batch["s"], batch["a"]])
             lc = self.loss(q_, q)
 

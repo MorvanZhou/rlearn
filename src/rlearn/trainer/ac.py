@@ -16,7 +16,7 @@ class _ActorCriticTrainer(BaseTrainer):
             self,
             model: keras.Model,
             log_dir: str = None,
-            entropy_coef: float = 0.,
+            entropy_coef: float = 0.01,
             lam: float = 0.9,
     ):
         super().__init__(log_dir)
@@ -33,6 +33,12 @@ class _ActorCriticTrainer(BaseTrainer):
         self.buffer_r = []
         self.buffer_done = []
 
+    def set_model_encoder_from_config(self, config: TrainConfig):
+        action_num = len(config.action_transform)
+        actor_encoder = build_encoder_from_config(config.nets[0], trainable=True)
+        critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
+        self.set_model_encoder(actor_encoder, critic_encoder, action_num)
+
     def set_default_optimizer(self):
         l1, l2 = parse_2_learning_rate(self.learning_rate)
 
@@ -48,9 +54,6 @@ class _ActorCriticTrainer(BaseTrainer):
     def set_model_encoder(self, actor: keras.Model, critic: keras.Model, action_num: int):
         self.model.set_encoder(actor, critic, action_num)
         self._set_tensorboard([self.model.models["actor"], self.model.models["critic"]])
-
-    def set_model_encoder_from_config(self, config: TrainConfig):
-        raise NotImplemented
 
     def set_model(self, actor: keras.Model, critic: keras.Model):
         self.model.set_model(actor=actor, critic=critic)
@@ -154,7 +157,7 @@ class ActorCriticDiscreteTrainer(_ActorCriticTrainer):
     def __init__(
             self,
             log_dir: str = None,
-            entropy_coef: float = 0.,
+            entropy_coef: float = 0.01,
             lam: float = 0.9,
     ):
         super().__init__(
@@ -164,13 +167,6 @@ class ActorCriticDiscreteTrainer(_ActorCriticTrainer):
             lam=lam,
         )
 
-    def set_model_encoder_from_config(self, config: TrainConfig):
-        action_num = len(config.action_transform)
-
-        actor_encoder = build_encoder_from_config(config.nets[0], trainable=True)
-        critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
-        self.set_model_encoder(actor_encoder, critic_encoder, action_num)
-
 
 class ActorCriticContinueTrainer(_ActorCriticTrainer):
     name = __qualname__
@@ -178,7 +174,7 @@ class ActorCriticContinueTrainer(_ActorCriticTrainer):
     def __init__(
             self,
             log_dir: str = None,
-            entropy_coef: float = 0.,
+            entropy_coef: float = 0.01,
             lam: float = 0.9,
     ):
         super().__init__(
@@ -187,9 +183,3 @@ class ActorCriticContinueTrainer(_ActorCriticTrainer):
             entropy_coef=entropy_coef,
             lam=lam,
         )
-
-    def set_model_encoder_from_config(self, config: TrainConfig):
-        action_num = len(config.action_transform)
-        actor_encoder = build_encoder_from_config(config.nets[0], trainable=True)
-        critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
-        self.set_model_encoder(actor_encoder, critic_encoder, action_num)

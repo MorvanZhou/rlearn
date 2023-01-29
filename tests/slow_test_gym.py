@@ -301,6 +301,16 @@ class GymTest(unittest.TestCase):
         ep = train_cartpole(self.cartpole_conf, self.render_mode)
         self.assertLess(ep, 90)
 
+    def test_sac_discrete(self):
+        self.cartpole_conf.trainer = rlearn.SACDiscreteTrainer.name
+        self.cartpole_conf.learning_rates = (0.01, 0.01)
+        ep = train_cartpole(self.cartpole_conf, self.render_mode)
+        self.assertLess(ep, 90)
+
+    def test_sac_continuous(self):
+        self.pendulum_conf.trainer = rlearn.SACContinueTrainer.name
+        ep = train_pendulum(self.pendulum_conf, self.render_mode)
+        self.assertLess(ep, 60)
 
 class ExperienceDistributedGym(unittest.TestCase):
     def setUp(self) -> None:
