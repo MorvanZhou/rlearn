@@ -352,6 +352,7 @@ class GymTest(unittest.TestCase):
         ep = train_mountain_car(self.mountain_car_conf, self.render_mode, rnd=rnd)
         self.assertLess(ep, 20)
 
+
 class ExperienceDistributedGym(unittest.TestCase):
     def setUp(self) -> None:
         self.result_dir = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "dist_gym_test")
@@ -368,6 +369,7 @@ class ExperienceDistributedGym(unittest.TestCase):
         self.ps.append(p)
 
     def tearDown(self) -> None:
+        [p.join() for p in self.ps]
         [p.terminate() for p in self.ps]
         shutil.rmtree(self.result_dir, ignore_errors=True)
 
