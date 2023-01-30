@@ -18,6 +18,7 @@ class _ActorCriticTrainer(BaseTrainer):
             log_dir: str = None,
             entropy_coef: float = 0.01,
             lam: float = 0.9,
+            use_gae: bool = True,
     ):
         super().__init__(log_dir)
 
@@ -27,6 +28,7 @@ class _ActorCriticTrainer(BaseTrainer):
 
         self.lam = lam
         self.entropy_coef = entropy_coef
+        self.use_gae = use_gae
 
         self.buffer_s = []
         self.buffer_a = []
@@ -71,33 +73,52 @@ class _ActorCriticTrainer(BaseTrainer):
         if len(self.buffer_s) < self.batch_size:
             return
 
-        adv = []
-
-        next_v = self.model.models["critic"].predict(
-            np.expand_dims(np.array(s_, dtype=np.float32), axis=0), verbose=0).ravel()[0]
         next_s = np.array(self.buffer_s[1:] + [s_])
         total_r = self.try_combine_int_ext_reward(self.buffer_r, next_s)
 
-        bs = np.array(self.buffer_s, dtype=np.float32)
-        vs = self.model.models["critic"].predict(bs, verbose=0).ravel()
-        _gae_lam = 0
-        for i in range(len(self.buffer_s) - 1, -1, -1):  # backward count
-            non_terminate = 0. if self.buffer_done[i] else 1.
-            delta = total_r[i] + self.gamma * next_v * non_terminate - vs[i]
-            _gae_lam = delta + self.gamma * self.lam * _gae_lam * non_terminate
-            adv.insert(0, _gae_lam)
-            next_v = vs[i]
-        ba = np.array(self.buffer_a, dtype=np.float32)
-        adv = np.array(adv, dtype=np.float32)
-        returns = adv + vs
-        # adv = (adv - adv.mean()) / (adv.std() + 1e-4)
+        if self.use_gae:
+            adv = []
+            next_v = self.model.models["critic"].predict(
+                np.expand_dims(np.array(s_, dtype=np.float32), axis=0), verbose=0).ravel()[0]
+            bs = np.array(self.buffer_s, dtype=np.float32)
+            vs = self.model.models["critic"].predict(bs, verbose=0).ravel()
+            _gae_lam = 0
+            for i in range(len(self.buffer_s) - 1, -1, -1):  # backward count
+                non_terminate = 0. if self.buffer_done[i] else 1.
+                delta = total_r[i] + self.gamma * next_v * non_terminate - vs[i]
+                _gae_lam = delta + self.gamma * self.lam * _gae_lam * non_terminate
+                adv.insert(0, _gae_lam)
+                next_v = vs[i]
+            ba = np.array(self.buffer_a, dtype=np.float32)
+            adv = np.array(adv, dtype=np.float32)
+            returns = adv + vs
+            # adv = (adv - adv.mean()) / (adv.std() + 1e-4)
 
-        self.replay_buffer.put_batch(
-            s=bs,
-            a=ba,
-            returns=np.expand_dims(returns, axis=1),
-            # adv=adv,
-        )
+            self.replay_buffer.put_batch(
+                s=bs,
+                a=ba,
+                returns=np.expand_dims(returns, axis=1),
+                # adv=adv,
+            )
+        else:
+            discounted_r = []
+            vs_ = self.model.models["critic"].predict(
+                np.expand_dims(np.array(s_, dtype=np.float32), axis=0),
+                verbose=0).ravel()[0]
+            for i in range(len(self.buffer_s) - 1, -1, -1):  # backward count
+                if self.buffer_done[i]:
+                    vs_ = 0
+                vs_ = total_r[i] + self.gamma * vs_
+                discounted_r.insert(0, vs_)
+            bs = np.vstack(self.buffer_s)
+            ba = np.array(self.buffer_a, dtype=np.float32)
+            returns = np.array(discounted_r, dtype=np.float32)[:, None]
+            returns = (returns - returns.mean()) / (returns.std() + 1e-5)
+            self.replay_buffer.put_batch(
+                s=bs,
+                a=ba,
+                returns=returns,
+            )
 
         self.buffer_s.clear()
         self.buffer_a.clear()
