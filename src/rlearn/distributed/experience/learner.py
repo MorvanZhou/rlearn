@@ -141,6 +141,9 @@ class Learner:
             t2 = time.perf_counter()
             self.logger.debug("downloaded size=%d, request=%.3fs, unpack=%.3fs, reqId='%s'",
                               batch_size, t1 - t0, t2 - t1, req_id)
+        resp = self.buffer_stub.Stop(buffer_pb2.StopReq(requestId=str(uuid4())))
+        if not resp.done:
+            raise ValueError("buffer not exits")
 
     def replicate_actor_model(self):
         t0 = time.perf_counter()
@@ -241,3 +244,5 @@ class Learner:
             if not resp.done:
                 self.logger.error(
                     "actor not terminated, err: %s, addr='%s', reqId='%s'", resp.err, addr, resp.requestId)
+        for c in self.actors_channel.values():
+            c.close()

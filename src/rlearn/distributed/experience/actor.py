@@ -4,6 +4,7 @@ import os
 import random
 import string
 import tempfile
+import threading
 import time
 import typing as tp
 import uuid
@@ -153,8 +154,9 @@ class ActorProcess(mp.Process):
 
 
 class ActorService(actor_pb2_grpc.ActorServicer):
-    def __init__(self, actor: ActorProcess, debug=False):
+    def __init__(self, actor: ActorProcess, stop_event: threading.Event, debug=False):
         self.actor = actor
+        self.stop_event = stop_event
         name = "".join([random.choice(string.ascii_lowercase) for _ in range(4)])
         self.actor.logger_name = f"actorP-{name}"
         self.logger = get_logger(f"actor-{name}")
@@ -265,6 +267,7 @@ class ActorService(actor_pb2_grpc.ActorServicer):
     def Terminate(self, request, context):
         self.logger.debug("""Terminate | {"reqId": "%s"}""", request.requestId)
         self.actor.terminate()
+        self.stop_event.set()
         return actor_pb2.TerminateResp(done=True, err="", requestId=request.requestId)
 
 
@@ -275,7 +278,8 @@ def _start_server(
         env: EnvWrapper,
         action_transformer: tp.Optional[BaseTransformer] = None,
         debug: bool = False
-) -> grpc.Server:
+) -> tp.Tuple[grpc.Server, threading.Event]:
+    stop_event = threading.Event()
     server = grpc.server(
         futures.ThreadPoolExecutor(
             max_workers=1,  # one for update, one for replicate
@@ -294,13 +298,15 @@ def _start_server(
     )
     service = ActorService(
         actor=actor_p,
+        stop_event=stop_event,
         debug=debug
     )
+
     actor_pb2_grpc.add_ActorServicer_to_server(service, server)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
     service.logger.info("actor has started at http://localhost:%d", port)
-    return server
+    return server, stop_event
 
 
 def start_actor_server(
@@ -311,6 +317,8 @@ def start_actor_server(
         action_transformer: tp.Optional[BaseTransformer] = None,
         debug: bool = False
 ) -> grpc.Server:
-    server = _start_server(port, remote_buffer_address, local_buffer_size, env, action_transformer, debug)
+    server, stop_event = _start_server(port, remote_buffer_address, local_buffer_size, env, action_transformer, debug)
+    stop_event.wait()
+    server.stop(None)
     server.wait_for_termination()
     return server

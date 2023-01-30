@@ -1,5 +1,6 @@
 import inspect
 import logging
+import threading
 import time
 import typing as tp
 from concurrent import futures
@@ -16,10 +17,12 @@ from rlearn.replaybuf.base import BaseReplayBuffer
 class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
     def __init__(
             self,
+            stop_event: threading.Event,
             max_size: int,
             buf: tp.Union[str, tp.Type[BaseReplayBuffer]] = "RandomReplayBuffer",
             debug=False
     ):
+        self.stop_event = stop_event
         if inspect.isclass(buf):
             name = buf.name
         else:
@@ -105,13 +108,19 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
         self.is_downloading = False
         return resp
 
+    def Stop(self, request, context):
+        self.logger.debug("""Stop | {"reqId": "%s"}""", request.requestId)
+        self.stop_event.set()
+        return buffer_pb2.StopResp(done=True, requestId=request.requestId)
+
 
 def _start_server(
         port: int,
         max_size: int,
         buf: tp.Union[str, tp.Type[BaseReplayBuffer]] = "RandomReplayBuffer",
         debug: bool = False,
-) -> grpc.Server:
+) -> tp.Tuple[grpc.Server, threading.Event]:
+    stop_event = threading.Event()
     server = grpc.server(
         futures.ThreadPoolExecutor(
             max_workers=1,  # one for update, one for replicate
@@ -120,12 +129,12 @@ def _start_server(
             ('grpc.max_send_message_length', 1024 * 1024 * 20),
         ]
     )
-    service = ReplayBufferService(max_size, buf, debug)
+    service = ReplayBufferService(stop_event, max_size, buf, debug)
     buffer_pb2_grpc.add_ReplayBufferServicer_to_server(service, server)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
     service.logger.info("replay buffer has started at http://localhost:%d", port)
-    return server
+    return server, stop_event
 
 
 def start_replay_buffer_server(
@@ -134,6 +143,8 @@ def start_replay_buffer_server(
         buf: tp.Union[str, tp.Type[BaseReplayBuffer]] = "RandomReplayBuffer",
         debug: bool = False,
 ) -> grpc.Server:
-    server = _start_server(port, max_size, buf, debug)
+    server, stop_event = _start_server(port, max_size, buf, debug)
+    stop_event.wait()
+    server.stop(None)
     server.wait_for_termination()
     return server

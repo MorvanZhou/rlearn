@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from rlearn.distributed.experience import actor_pb2 as rlearn_dot_distribute_dot_experience_dot_actor__pb2
+from rlearn.distributed.experience import actor_pb2 as rlearn_dot_distributed_dot_experience_dot_actor__pb2
 
 
 class ActorStub(object):
@@ -17,23 +17,23 @@ class ActorStub(object):
         """
         self.ServiceReady = channel.unary_unary(
             '/actor.Actor/ServiceReady',
-            request_serializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.ServiceReadyReq.SerializeToString,
-            response_deserializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.ServiceReadyResp.FromString,
+            request_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.ServiceReadyReq.SerializeToString,
+            response_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.ServiceReadyResp.FromString,
         )
         self.Start = channel.stream_unary(
             '/actor.Actor/Start',
-            request_serializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.StartReq.SerializeToString,
-            response_deserializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.StartResp.FromString,
+            request_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartReq.SerializeToString,
+            response_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartResp.FromString,
         )
         self.ReplicateModel = channel.stream_unary(
             '/actor.Actor/ReplicateModel',
-            request_serializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.ReplicateModelReq.SerializeToString,
-            response_deserializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.ReplicateModelResp.FromString,
+            request_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.ReplicateModelReq.SerializeToString,
+            response_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.ReplicateModelResp.FromString,
         )
         self.Terminate = channel.unary_unary(
             '/actor.Actor/Terminate',
-            request_serializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.TerminateReq.SerializeToString,
-            response_deserializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.TerminateResp.FromString,
+            request_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.TerminateReq.SerializeToString,
+            response_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.TerminateResp.FromString,
         )
 
 
@@ -70,23 +70,23 @@ def add_ActorServicer_to_server(servicer, server):
     rpc_method_handlers = {
         'ServiceReady': grpc.unary_unary_rpc_method_handler(
             servicer.ServiceReady,
-            request_deserializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.ServiceReadyReq.FromString,
-            response_serializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.ServiceReadyResp.SerializeToString,
+            request_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.ServiceReadyReq.FromString,
+            response_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.ServiceReadyResp.SerializeToString,
         ),
         'Start': grpc.stream_unary_rpc_method_handler(
             servicer.Start,
-            request_deserializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.StartReq.FromString,
-            response_serializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.StartResp.SerializeToString,
+            request_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartReq.FromString,
+            response_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartResp.SerializeToString,
         ),
         'ReplicateModel': grpc.stream_unary_rpc_method_handler(
             servicer.ReplicateModel,
-            request_deserializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.ReplicateModelReq.FromString,
-            response_serializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.ReplicateModelResp.SerializeToString,
+            request_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.ReplicateModelReq.FromString,
+            response_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.ReplicateModelResp.SerializeToString,
         ),
         'Terminate': grpc.unary_unary_rpc_method_handler(
             servicer.Terminate,
-            request_deserializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.TerminateReq.FromString,
-            response_serializer=rlearn_dot_distribute_dot_experience_dot_actor__pb2.TerminateResp.SerializeToString,
+            request_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.TerminateReq.FromString,
+            response_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.TerminateResp.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -111,8 +111,8 @@ class Actor(object):
                      timeout=None,
                      metadata=None):
         return grpc.experimental.unary_unary(request, target, '/actor.Actor/ServiceReady',
-                                             rlearn_dot_distribute_dot_experience_dot_actor__pb2.ServiceReadyReq.SerializeToString,
-                                             rlearn_dot_distribute_dot_experience_dot_actor__pb2.ServiceReadyResp.FromString,
+                                             rlearn_dot_distributed_dot_experience_dot_actor__pb2.ServiceReadyReq.SerializeToString,
+                                             rlearn_dot_distributed_dot_experience_dot_actor__pb2.ServiceReadyResp.FromString,
                                              options, channel_credentials,
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -128,8 +128,8 @@ class Actor(object):
               timeout=None,
               metadata=None):
         return grpc.experimental.stream_unary(request_iterator, target, '/actor.Actor/Start',
-                                              rlearn_dot_distribute_dot_experience_dot_actor__pb2.StartReq.SerializeToString,
-                                              rlearn_dot_distribute_dot_experience_dot_actor__pb2.StartResp.FromString,
+                                              rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartReq.SerializeToString,
+                                              rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartResp.FromString,
                                               options, channel_credentials,
                                               insecure, call_credentials, compression, wait_for_ready, timeout,
                                               metadata)
@@ -146,8 +146,8 @@ class Actor(object):
                        timeout=None,
                        metadata=None):
         return grpc.experimental.stream_unary(request_iterator, target, '/actor.Actor/ReplicateModel',
-                                              rlearn_dot_distribute_dot_experience_dot_actor__pb2.ReplicateModelReq.SerializeToString,
-                                              rlearn_dot_distribute_dot_experience_dot_actor__pb2.ReplicateModelResp.FromString,
+                                              rlearn_dot_distributed_dot_experience_dot_actor__pb2.ReplicateModelReq.SerializeToString,
+                                              rlearn_dot_distributed_dot_experience_dot_actor__pb2.ReplicateModelResp.FromString,
                                               options, channel_credentials,
                                               insecure, call_credentials, compression, wait_for_ready, timeout,
                                               metadata)
@@ -164,7 +164,7 @@ class Actor(object):
                   timeout=None,
                   metadata=None):
         return grpc.experimental.unary_unary(request, target, '/actor.Actor/Terminate',
-                                             rlearn_dot_distribute_dot_experience_dot_actor__pb2.TerminateReq.SerializeToString,
-                                             rlearn_dot_distribute_dot_experience_dot_actor__pb2.TerminateResp.FromString,
+                                             rlearn_dot_distributed_dot_experience_dot_actor__pb2.TerminateReq.SerializeToString,
+                                             rlearn_dot_distributed_dot_experience_dot_actor__pb2.TerminateResp.FromString,
                                              options, channel_credentials,
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

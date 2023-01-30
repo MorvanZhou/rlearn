@@ -3,6 +3,7 @@ import multiprocessing
 import os
 import shutil
 import time
+import typing as tp
 import unittest
 
 import grpc
@@ -23,7 +24,7 @@ class BufferTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.server = distributed.experience.buffer._start_server(
+        cls.server, _ = distributed.experience.buffer._start_server(
             port=cls.port,
             max_size=100,
             buf="RandomReplayBuffer",
@@ -125,7 +126,7 @@ class ActorProcessTest(unittest.TestCase):
 
     def test_actor_process_in_process(self):
         buf_port = tools.get_available_port()
-        buf_server = distributed.experience.buffer._start_server(
+        buf_server, _ = distributed.experience.buffer._start_server(
             port=buf_port,
             max_size=100,
             buf="RandomReplayBuffer",
@@ -188,7 +189,7 @@ class ActorServiceTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         buf_port = tools.get_available_port()
         buf_address = f'localhost:{buf_port}'
-        cls.buf_server = distributed.experience.buffer._start_server(
+        cls.buf_server, _ = distributed.experience.buffer._start_server(
             port=buf_port,
             max_size=100,
             buf="RandomReplayBuffer",
@@ -198,7 +199,7 @@ class ActorServiceTest(unittest.TestCase):
         cls.buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=buf_channel)
 
         actor_port = tools.get_available_port()
-        cls.actor_server = distributed.experience.actor._start_server(
+        cls.actor_server, _ = distributed.experience.actor._start_server(
             port=actor_port,
             remote_buffer_address=buf_address,
             local_buffer_size=3,
@@ -274,7 +275,7 @@ class ActorServiceTest(unittest.TestCase):
 class LearnerTest(unittest.TestCase):
     buf_address = None
     actors_address = []
-    ps = []
+    ps: tp.List[multiprocessing.Process] = []
     result_dir = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "dist_learner_test")
 
     @classmethod
@@ -307,6 +308,7 @@ class LearnerTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
+        [p.join() for p in cls.ps]
         [p.terminate() for p in cls.ps]
         shutil.rmtree(cls.result_dir, ignore_errors=True)
 

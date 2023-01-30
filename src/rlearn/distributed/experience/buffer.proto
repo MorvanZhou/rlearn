@@ -14,6 +14,7 @@ service ReplayBuffer {
   rpc LearnerSetVersion (LearnerSetVersionReq) returns (LearnerSetVersionResp) {}
   rpc UploadData (UploadDataReq) returns (UploadDataResp) {}
   rpc DownloadData (DownloadDataReq) returns (DownloadDataResp) {}
+  rpc Stop(StopReq) returns (StopResp) {}
 }
 
 message ServiceReadyReq {
@@ -73,4 +74,13 @@ message DownloadDataResp {
   Data data = 1;
   string err = 2;
   string requestId = 3;
+}
+
+message StopReq {
+  string requestId = 1;
+}
+
+message StopResp {
+  bool done = 1;
+  string requestId = 2;
 }
