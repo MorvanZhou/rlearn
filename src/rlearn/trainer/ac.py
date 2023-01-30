@@ -5,8 +5,8 @@ from tensorflow import keras
 from rlearn.config import TrainConfig
 from rlearn.model.ac import ActorCriticContinue, ActorCriticDiscrete
 from rlearn.model.tools import build_encoder_from_config
+from rlearn.trainer import tools
 from rlearn.trainer.base import BaseTrainer, TrainResult
-from rlearn.trainer.tools import parse_2_learning_rate
 
 
 class _ActorCriticTrainer(BaseTrainer):
@@ -42,7 +42,7 @@ class _ActorCriticTrainer(BaseTrainer):
         self.set_model_encoder(actor_encoder, critic_encoder, action_num)
 
     def set_default_optimizer(self):
-        l1, l2 = parse_2_learning_rate(self.learning_rate)
+        l1, l2 = tools.parse_2_learning_rate(self.learning_rate)
 
         self.opt_a = keras.optimizers.Adam(
             learning_rate=l1,
@@ -75,45 +75,35 @@ class _ActorCriticTrainer(BaseTrainer):
 
         next_s = np.array(self.buffer_s[1:] + [s_])
         total_r = self.try_combine_int_ext_reward(self.buffer_r, next_s)
+        ba = np.array(self.buffer_a, dtype=np.float32)
+        bs = np.array(self.buffer_s, dtype=np.float32)
 
         if self.use_gae:
-            adv = []
-            next_v = self.model.models["critic"].predict(
-                np.expand_dims(np.array(s_, dtype=np.float32), axis=0), verbose=0).ravel()[0]
-            bs = np.array(self.buffer_s, dtype=np.float32)
-            vs = self.model.models["critic"].predict(bs, verbose=0).ravel()
-            _gae_lam = 0
-            for i in range(len(self.buffer_s) - 1, -1, -1):  # backward count
-                non_terminate = 0. if self.buffer_done[i] else 1.
-                delta = total_r[i] + self.gamma * next_v * non_terminate - vs[i]
-                _gae_lam = delta + self.gamma * self.lam * _gae_lam * non_terminate
-                adv.insert(0, _gae_lam)
-                next_v = vs[i]
-            ba = np.array(self.buffer_a, dtype=np.float32)
-            adv = np.array(adv, dtype=np.float32)
-            returns = adv + vs
-            # adv = (adv - adv.mean()) / (adv.std() + 1e-4)
+            returns, _ = tools.general_average_estimation(
+                value_model=self.model.models["critic"],
+                batch_s=bs,
+                batch_r=total_r,
+                batch_done=self.buffer_done,
+                s_=s_,
+                gamma=self.gamma,
+                lam=self.lam,
+            )
 
             self.replay_buffer.put_batch(
                 s=bs,
                 a=ba,
-                returns=np.expand_dims(returns, axis=1),
+                returns=returns,
                 # adv=adv,
             )
         else:
-            discounted_r = []
-            vs_ = self.model.models["critic"].predict(
-                np.expand_dims(np.array(s_, dtype=np.float32), axis=0),
-                verbose=0).ravel()[0]
-            for i in range(len(self.buffer_s) - 1, -1, -1):  # backward count
-                if self.buffer_done[i]:
-                    vs_ = 0
-                vs_ = total_r[i] + self.gamma * vs_
-                discounted_r.insert(0, vs_)
-            bs = np.vstack(self.buffer_s)
-            ba = np.array(self.buffer_a, dtype=np.float32)
-            returns = np.array(discounted_r, dtype=np.float32)[:, None]
-            returns = (returns - returns.mean()) / (returns.std() + 1e-5)
+            returns, _ = tools.discounted_reward(
+                value_model=self.model.models["critic"],
+                batch_s=bs,
+                batch_r=total_r,
+                batch_done=self.buffer_done,
+                s_=s_,
+                gamma=self.gamma,
+            )
             self.replay_buffer.put_batch(
                 s=bs,
                 a=ba,
@@ -140,8 +130,8 @@ class _ActorCriticTrainer(BaseTrainer):
         with tf.GradientTape() as tape:
             # critic
             vs = self.model.models["critic"](batch["s"])
-            td = batch["returns"] - vs
-            lc = tf.reduce_mean(tf.square(td))
+            adv = batch["returns"] - vs
+            lc = tf.reduce_mean(tf.square(adv))
 
             tv = self.model.models["critic"].trainable_variables
             grads = tape.gradient(lc, tv)
@@ -151,7 +141,7 @@ class _ActorCriticTrainer(BaseTrainer):
             # actor
             dist = self.model.dist(self.model.models["actor"], batch["s"])
             log_prob = dist.log_prob(batch["a"])
-            exp_v = log_prob * tf.squeeze(td)
+            exp_v = log_prob * tf.squeeze(adv)
 
             if self.entropy_coef == 0.:
                 entropy = 0.

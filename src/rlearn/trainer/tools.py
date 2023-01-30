@@ -2,6 +2,7 @@ import typing as tp
 
 import numpy as np
 import tensorflow as tf
+from tensorflow import keras
 
 from rlearn.config import TrainConfig
 from rlearn.trainer.base import BaseTrainer
@@ -70,3 +71,56 @@ def parse_2_learning_rate(learning_rate: tp.Union[tp.Sequence[float], float]) ->
     else:
         l1, l2 = learning_rate, learning_rate
     return l1, l2
+
+
+BatchReward = tp.TypeVar('BatchReward', tp.List[float], np.ndarray)
+
+
+def general_average_estimation(
+        value_model: keras.Model,
+        batch_s: np.ndarray,
+        batch_r: BatchReward,
+        batch_done: tp.List[bool],
+        s_: np.ndarray,
+        gamma: float = 0.9,
+        lam: float = 0.9,
+):
+    adv = []
+    next_v = value_model.predict(
+        np.expand_dims(np.array(s_, dtype=np.float32), axis=0), verbose=0).ravel()[0]
+    vs = value_model.predict(batch_s, verbose=0).ravel()
+    _gae_lam = 0
+    for i in range(len(batch_s) - 1, -1, -1):  # backward count
+        non_terminate = 0. if batch_done[i] else 1.
+        delta = batch_r[i] + gamma * next_v * non_terminate - vs[i]
+        _gae_lam = delta + gamma * lam * _gae_lam * non_terminate
+        adv.insert(0, _gae_lam)
+        next_v = vs[i]
+
+    adv = np.array(adv, dtype=np.float32)
+    returns = adv + vs
+    adv = (adv - adv.mean()) / (adv.std() + 1e-4)
+    return np.expand_dims(returns, axis=1), adv
+
+
+def discounted_reward(
+        value_model: keras.Model,
+        batch_s: np.ndarray,
+        batch_r: BatchReward,
+        batch_done: tp.List[bool],
+        s_: np.ndarray,
+        gamma: float = 0.9,
+):
+    discounted_r = []
+    vs_ = value_model.predict(
+        np.expand_dims(np.array(s_, dtype=np.float32), axis=0),
+        verbose=0).ravel()[0]
+    for i in range(len(batch_s) - 1, -1, -1):  # backward count
+        if batch_done[i]:
+            vs_ = 0
+        vs_ = batch_r[i] + gamma * vs_
+        discounted_r.insert(0, vs_)
+    returns = np.array(discounted_r, dtype=np.float32)
+    returns = (returns - returns.mean()) / (returns.std() + 1e-5)
+    adv = (returns - value_model.predict(batch_s, verbose=0))
+    return np.expand_dims(returns, axis=1), adv

@@ -372,11 +372,11 @@ class GymTest(unittest.TestCase):
         self.assertLess(ep, 50)
 
     def test_ppo_discrete(self):
-        # 65 r=67.24, mov=30.84 value={'pi_loss': -0.01581239, 'critic_loss': 0.44217706}
+        # 38 r=98.69, mov=32.19 value={'pi_loss': -0.014326467, 'critic_loss': 0.10958307, 'reward': 4.6177177}
         self.cartpole_conf.trainer = rlearn.PPODiscreteTrainer.name
         self.cartpole_conf.learning_rates = (0.01, 0.01)
         ep = train_cartpole(self.cartpole_conf, self.render_mode)
-        self.assertLess(ep, 70)
+        self.assertLess(ep, 50)
 
     def test_ddpg(self):
         # 21 r=-261.60 mov=-888.00 value={'actor_loss': -5.081643, 'critic_loss': 0.017063033}
