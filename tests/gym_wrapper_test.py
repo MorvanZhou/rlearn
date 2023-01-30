@@ -1,6 +1,6 @@
 import unittest
 
-import gym
+import gymnasium
 import numpy as np
 from tensorflow import keras
 
@@ -9,12 +9,12 @@ import rlearn
 
 class CartPoleSmoothReward(rlearn.EnvWrapper):
     def __init__(self, render_mode=None, seed=None):
-        self.env = gym.make('CartPole-v1', new_step_api=True, render_mode=render_mode)
+        self.env = gymnasium.make('CartPole-v1', render_mode=render_mode)
         if seed is not None:
             self.env.reset(seed=seed)
 
     def reset(self):
-        s = self.env.reset(return_info=False)
+        s, _ = self.env.reset()
         return s
 
     def step(self, a):
@@ -41,14 +41,14 @@ class CartPoleDiscreteReward(CartPoleSmoothReward):
 
 class Pendulum(rlearn.EnvWrapper):
     def __init__(self, render_mode=None, seed=None):
-        self.env = gym.make('Pendulum-v1', new_step_api=True, render_mode=render_mode)
+        self.env = gymnasium.make('Pendulum-v1', render_mode=render_mode)
         if seed is not None:
             self.env.reset(seed=seed)
         self.step_count = 0
         self.ep_step = 100
 
     def reset(self) -> np.ndarray:
-        s = self.env.reset(return_info=False)
+        s, _ = self.env.reset()
         self.step_count = 0
         return s
 

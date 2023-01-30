@@ -1,4 +1,4 @@
-gym[classic_control]==0.25.0
+gymnasium[classic_control]>=0.27.1
 grpcio-tools==1.45.0
 tox==3.24.3
 tox-conda

@@ -55,8 +55,8 @@ class DQNTrainer(BaseTrainer):
         self.decay_epsilon()
         return self.model.disturbed_action(s, self.epsilon)
 
-    def store_transition(self, s, a, r, s_, *args, **kwargs):
-        self.replay_buffer.put_one(s=s, a=a, r=r, s_=s_)
+    def store_transition(self, s, a, r, s_, done=False, *args, **kwargs):
+        self.replay_buffer.put_one(s=s, a=a, r=r, s_=s_, done=done)
 
     def train_batch(self) -> TrainResult:
         if self.opt is None:
@@ -74,7 +74,8 @@ class DQNTrainer(BaseTrainer):
 
         q_ = self.model.models["q_"].predict(batch["s_"], verbose=0)
         total_reward = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
-        q_target = total_reward + self.gamma * tf.reduce_max(q_, axis=1)
+        non_terminal = 1. - batch["done"]
+        q_target = total_reward + self.gamma * tf.reduce_max(q_, axis=1) * non_terminal
         a_indices = tf.stack([tf.range(tf.shape(ba)[0], dtype=tf.int32), ba], axis=1)
         with tf.GradientTape() as tape:
             q = self.model.models["q"](batch["s"])

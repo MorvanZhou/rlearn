@@ -4,7 +4,7 @@ import shutil
 import tempfile
 import unittest
 
-import gym
+import gymnasium
 from tensorflow import keras
 
 import gym_wrapper_test
@@ -28,14 +28,14 @@ def train_cartpole(conf, render_mode="human"):
     rlearn.set_config_to_trainer(conf, trainer)
     action_transformer = rlearn.transformer.DiscreteAction(actions=[0, 1])
     moving_r = 0
-    env = gym.make(
-        'CartPole-v1', new_step_api=True,
+    env = gymnasium.make(
+        'CartPole-v1',
         render_mode=render_mode
     )
     env.reset(seed=1)
     ep = 0
     for ep in range(conf.epochs):
-        s = env.reset(return_info=False)
+        s, _ = env.reset()
         ep_r = 0
         value = None
         for _ in range(200):  # in one episode
@@ -74,8 +74,8 @@ def train_pendulum(conf, render_mode="human", rnd=None):
     rlearn.set_config_to_trainer(conf, trainer)
     action_transformer = rlearn.transformer.ContinuousAction(conf.action_transform)
 
-    env = gym.make(
-        'Pendulum-v1', new_step_api=True,
+    env = gymnasium.make(
+        'Pendulum-v1',
         render_mode=render_mode
     )
     env.reset(seed=1)
@@ -83,7 +83,7 @@ def train_pendulum(conf, render_mode="human", rnd=None):
     moving = None
     ep = 0
     for ep in range(conf.epochs):
-        s = env.reset(return_info=False)
+        s, _ = env.reset()
         ep_r = 0
         value = None
         for _ in range(max_ep_step):  # in one episode
@@ -116,6 +116,58 @@ def train_pendulum(conf, render_mode="human", rnd=None):
     return ep
 
 
+def train_arcobot(conf, render_mode="human", rnd=None):
+    trainer = rlearn.get_trainer_by_name(
+        conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), f"test_{conf.trainer}"),
+        seed=3
+    )
+    if rnd is not None:
+        trainer.add_rnd(target=rnd, learning_rate=1e-3)
+    rlearn.set_config_to_trainer(conf, trainer)
+    action_transformer = rlearn.transformer.DiscreteAction(conf.action_transform)
+
+    env = gymnasium.make(
+        'Acrobot-v1',
+        render_mode=render_mode
+    )
+    env.reset(seed=1)
+    max_ep_step = 200
+    moving = None
+    ep = 0
+    for ep in range(conf.epochs):
+        s, _ = env.reset()
+        ep_r = 0
+        value = None
+        for _ in range(max_ep_step):  # in one episode
+            _a = trainer.predict(s)
+            # IMPORTANT: it is better to record permuted action in buffer
+            a = action_transformer.transform(_a)
+            s_, r, _, _, _ = env.step(a)
+            # IMPORTANT: it is better to record permuted action in buffer
+            trainer.store_transition(s, _a, r, s_)
+            s = s_
+            ep_r += r
+
+            res = trainer.train_batch()
+            value = res.value
+
+        if ep % 20 == 0:
+            dir_ = os.path.join(trainer.log_dir, "checkpoints", f"ep-{ep:06d}")
+            trainer.save_model_weights(dir_)
+            trainer.load_model_weights(dir_)
+        trainer.trace({
+            "ep_reward": ep_r,
+        }, step=ep)
+        if moving is None:
+            moving = ep_r
+        moving = moving * .95 + ep_r * .05
+        print(f"{ep} r={ep_r:.2f} mov={moving:.2f} value={value}")
+        if moving > -100:
+            break
+    env.close()
+    return ep
+
+
 def train_mountain_car(conf, render_mode="human", rnd=None):
     trainer = rlearn.get_trainer_by_name(
         conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), f"test_{conf.trainer}"),
@@ -126,21 +178,21 @@ def train_mountain_car(conf, render_mode="human", rnd=None):
     rlearn.set_config_to_trainer(conf, trainer)
     action_transformer = rlearn.transformer.DiscreteAction([0, 1, 2])
     mov = 1000
-    env = gym.make(
-        'MountainCar-v0', new_step_api=True,
+    env = gymnasium.make(
+        'MountainCar-v0',
         render_mode=render_mode,
     )
     env.reset(seed=1)
     ep = 0
     for ep in range(conf.epochs):
-        s = env.reset(return_info=False)
+        s, _ = env.reset()
         step = 0
         while True:  # in one episode
             _a = trainer.predict(s)
             a = action_transformer.transform(_a)
             s_, _, done, _, _ = env.step(a)
             r = 1. if done else 0
-            trainer.store_transition(s, a, r, s_)
+            trainer.store_transition(s, a, r, s_, done)
             s = s_
             step += 1
             res = trainer.train_batch()
@@ -183,6 +235,40 @@ class GymTest(unittest.TestCase):
                 rlearn.NetConfig(
                     input_shape=(4,),
                     layers=[
+                        rlearn.LayerConfig("dense", args={"units": 32}),
+                        rlearn.LayerConfig("relu"),
+                    ]
+                )
+            ],
+            gamma=gamma,
+            learning_rates=(0.01,),
+            replay_buffer=rlearn.ReplayBufferConfig(buffer_size),
+            replace_step=100,
+            not_learn_epochs=2,
+            epsilon_decay=0.1,
+            min_epsilon=0.1,
+            args={}
+        )
+        self.acrobot_conf = rlearn.TrainConfig(
+            trainer="",
+            batch_size=batch_size,
+            epochs=epochs,
+            action_transform=[0, 1, 2],
+            nets=[
+                rlearn.NetConfig(
+                    input_shape=(6,),
+                    layers=[
+                        rlearn.LayerConfig("dense", args={"units": 32}),
+                        rlearn.LayerConfig("relu"),
+                        rlearn.LayerConfig("dense", args={"units": 32}),
+                        rlearn.LayerConfig("relu"),
+                    ]
+                ),
+                rlearn.NetConfig(
+                    input_shape=(6,),
+                    layers=[
+                        rlearn.LayerConfig("dense", args={"units": 32}),
+                        rlearn.LayerConfig("relu"),
                         rlearn.LayerConfig("dense", args={"units": 32}),
                         rlearn.LayerConfig("relu"),
                     ]
@@ -266,6 +352,18 @@ class GymTest(unittest.TestCase):
         self.cartpole_conf.trainer = rlearn.DQNTrainer.name
         ep = train_cartpole(self.cartpole_conf, self.render_mode)
         self.assertLess(ep, 50)
+
+    def test_dqn_acrobot(self):
+        # 29 r=123.33, mov=31.88 value={'loss': 0.008630372, 'q': 4.0718727}
+        self.acrobot_conf.trainer = rlearn.DQNTrainer.name
+        rnd = keras.Sequential([
+            keras.layers.InputLayer(6),
+            keras.layers.Dense(32),
+            keras.layers.ReLU(),
+            keras.layers.Dense(8),
+        ])
+        ep = train_arcobot(self.acrobot_conf, self.render_mode, rnd=rnd)
+        self.assertLess(ep, 100)
 
     def test_dueling_dqn(self):
         # 18 r=97.65, mov=30.95 value={'loss': 0.03248573, 'q': 3.6843674}

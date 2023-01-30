@@ -81,7 +81,8 @@ class _SACTrainer(BaseTrainer):
                 q_min_ = tf.minimum(q1_, q2_)
                 q_ = probs_ * (q_min_ - self.alpha * log_prob_)
                 total_r = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
-                q_ = total_r + self.gamma * tf.reduce_sum(q_, axis=1)
+                non_terminate = 1. - batch["done"]
+                q_ = total_r + self.gamma * tf.reduce_sum(q_, axis=1) * non_terminate
 
                 a_indices = tf.stack(
                     [tf.range(tf.shape(batch["a"])[0], dtype=tf.int32), batch["a"]], axis=1)
@@ -98,7 +99,8 @@ class _SACTrainer(BaseTrainer):
                     q2_a_ = self.model.models["c2_"]([batch["s_"], a_])
                     q_a_min_ = tf.minimum(q1_a_, q2_a_)
                     total_r = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
-                    q_ = total_r[:, None] + self.gamma * (q_a_min_ - self.alpha * log_prob_)
+                    non_terminate = (1. - batch["done"])[:, None]
+                    q_ = total_r[:, None] + self.gamma * (q_a_min_ - self.alpha * log_prob_) * non_terminate
                 q1_a = self.model.models["c1"]([batch["s"], batch["a"]])
                 q2_a = self.model.models["c2"]([batch["s"], batch["a"]])
 
@@ -142,8 +144,8 @@ class _SACTrainer(BaseTrainer):
         self.decay_epsilon()
         return self.model.disturbed_action(s, self.epsilon)
 
-    def store_transition(self, s, a, r, s_, *args, **kwargs):
-        self.replay_buffer.put_one(s=s, a=a, r=r, s_=s_)
+    def store_transition(self, s, a, r, s_, done=False, *args, **kwargs):
+        self.replay_buffer.put_one(s=s, a=a, r=r, s_=s_, done=done)
 
 
 class SACDiscreteTrainer(_SACTrainer):

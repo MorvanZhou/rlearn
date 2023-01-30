@@ -82,7 +82,9 @@ class DDPGTrainer(BaseTrainer):
             with tape.stop_recording():
                 a_ = self.model.models["actor_"](batch["s_"])
                 total_reward = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
-                q_ = total_reward[:, None] + self.gamma * self.model.models["critic_"]([batch["s_"], a_])
+                non_terminate = (1 - batch["done"])[:, None]
+                q_ = total_reward[:, None] + \
+                     self.gamma * self.model.models["critic_"]([batch["s_"], a_]) * non_terminate
             q = self.model.models["critic"]([batch["s"], batch["a"]])
             lc = self.loss(q_, q)
 
@@ -101,5 +103,5 @@ class DDPGTrainer(BaseTrainer):
         self.decay_epsilon()
         return self.model.disturbed_action(s, self.epsilon)
 
-    def store_transition(self, s, a, r, s_, *args, **kwargs):
-        self.replay_buffer.put_one(s=s, a=a, r=r, s_=s_)
+    def store_transition(self, s, a, r, s_, done=False, *args, **kwargs):
+        self.replay_buffer.put_one(s=s, a=a, r=r, s_=s_, done=done)
