@@ -57,6 +57,7 @@ class _SACTrainer(BaseTrainer):
             value={
                 "actor_loss": 0,
                 "critic_loss": 0,
+                "reward": 0,
             },
             model_replaced=False,
         )
@@ -79,7 +80,8 @@ class _SACTrainer(BaseTrainer):
                 q2_ = self.model.models["c2_"](batch["s_"])
                 q_min_ = tf.minimum(q1_, q2_)
                 q_ = probs_ * (q_min_ - self.alpha * log_prob_)
-                q_ = batch["r"] + self.gamma * tf.reduce_sum(q_, axis=1)
+                total_r = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
+                q_ = total_r + self.gamma * tf.reduce_sum(q_, axis=1)
 
                 a_indices = tf.stack(
                     [tf.range(tf.shape(batch["a"])[0], dtype=tf.int32), batch["a"]], axis=1)
@@ -95,7 +97,8 @@ class _SACTrainer(BaseTrainer):
                     q1_a_ = self.model.models["c1_"]([batch["s_"], a_])
                     q2_a_ = self.model.models["c2_"]([batch["s_"], a_])
                     q_a_min_ = tf.minimum(q1_a_, q2_a_)
-                    q_ = batch["r"][:, None] + self.gamma * (q_a_min_ - self.alpha * log_prob_)
+                    total_r = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
+                    q_ = total_r[:, None] + self.gamma * (q_a_min_ - self.alpha * log_prob_)
                 q1_a = self.model.models["c1"]([batch["s"], batch["a"]])
                 q2_a = self.model.models["c2"]([batch["s"], batch["a"]])
 
@@ -131,6 +134,7 @@ class _SACTrainer(BaseTrainer):
         res.value.update({
             "actor_loss": la.numpy(),
             "critic_loss": lc.numpy(),
+            "reward": total_r.mean(),
         })
         return res
 

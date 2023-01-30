@@ -320,3 +320,20 @@ class TrainerTest(unittest.TestCase):
         self.assertTrue(os.path.isfile(path))
         trainer.load_model(path)
         os.remove(path)
+
+    def test_rnd(self):
+        trainer = get_default_ddpg_trainer()
+        trainer.add_rnd(target=keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.ReLU(),
+            keras.layers.Dense(10),
+        ]))
+        r = trainer.try_combine_int_ext_reward(1, np.random.random((2,)))
+        self.assertIsInstance(r, float)
+        r = trainer.try_combine_int_ext_reward([1, 2, 4], np.random.random((3, 2)))
+        self.assertEqual((3,), r.shape)
+        self.assertIsInstance(r, np.ndarray)
+
+        r = trainer.try_combine_int_ext_reward(np.array([1, 2, 4]), np.random.random((3, 2)))
+        self.assertEqual((3,), r.shape)
+        self.assertIsInstance(r, np.ndarray)

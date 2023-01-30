@@ -213,3 +213,18 @@ class ModelTest(unittest.TestCase):
         self.assertTrue(os.path.isfile(path))
         m.load(path)
         os.remove(path)
+
+
+class RNDTest(unittest.TestCase):
+    def test_rnd(self):
+        net = keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.ReLU(),
+            keras.layers.Dense(10),
+        ])
+        rnd = rlearn.RND(target=net)
+        int_r = rnd.intrinsic_reward(np.random.random((3, 2)))
+        self.assertEqual((3,), int_r.shape)
+
+        int_r = rnd.intrinsic_reward(np.random.random((1, 2)))
+        self.assertEqual((1,), int_r.shape)

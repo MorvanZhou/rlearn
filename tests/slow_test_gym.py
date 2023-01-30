@@ -64,11 +64,13 @@ def train_cartpole(conf, render_mode="human"):
     return ep
 
 
-def train_pendulum(conf, render_mode="human"):
+def train_pendulum(conf, render_mode="human", rnd=None):
     trainer = rlearn.get_trainer_by_name(
         conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), f"test_{conf.trainer}"),
         seed=3
     )
+    if rnd is not None:
+        trainer.add_rnd(target=rnd, learning_rate=1e-3)
     rlearn.set_config_to_trainer(conf, trainer)
     action_transformer = rlearn.transformer.ContinuousAction(conf.action_transform)
 
@@ -114,11 +116,13 @@ def train_pendulum(conf, render_mode="human"):
     return ep
 
 
-def train_mountain_car(conf, render_mode="human"):
+def train_mountain_car(conf, render_mode="human", rnd=None):
     trainer = rlearn.get_trainer_by_name(
         conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), f"test_{conf.trainer}"),
         seed=2
     )
+    if rnd is not None:
+        trainer.add_rnd(target=rnd, learning_rate=1e-4)
     rlearn.set_config_to_trainer(conf, trainer)
     action_transformer = rlearn.transformer.DiscreteAction([0, 1, 2])
     mov = 1000
@@ -295,6 +299,18 @@ class GymTest(unittest.TestCase):
         ep = train_mountain_car(self.mountain_car_conf, self.render_mode)
         self.assertLess(ep, 20)
 
+    def test_rnd_dqn(self):
+        # 10 step=174 mov=629.4898035712, value={'loss': 0.0005622931, 'q': 0.82957065}
+        self.mountain_car_conf.trainer = rlearn.DQNTrainer.name
+        rnd = keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.Dense(32),
+            keras.layers.ReLU(),
+            keras.layers.Dense(8),
+        ])
+        ep = train_mountain_car(self.mountain_car_conf, self.render_mode, rnd=rnd, )
+        self.assertLess(ep, 20)
+
     def test_actor_critic(self):
         self.cartpole_conf.trainer = rlearn.ActorCriticDiscreteTrainer.name
         self.cartpole_conf.learning_rates = (0.01, 0.01)
@@ -311,6 +327,30 @@ class GymTest(unittest.TestCase):
         self.pendulum_conf.trainer = rlearn.SACContinueTrainer.name
         ep = train_pendulum(self.pendulum_conf, self.render_mode)
         self.assertLess(ep, 60)
+
+    def test_sac_rnd_discrete(self):
+        rnd = keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.Dense(32),
+            keras.layers.ReLU(),
+            keras.layers.Dense(8),
+        ])
+        self.mountain_car_conf.trainer = rlearn.SACDiscreteTrainer.name
+        self.mountain_car_conf.learning_rates = (0.01, 0.01)
+        ep = train_mountain_car(self.mountain_car_conf, self.render_mode, rnd=rnd)
+        self.assertLess(ep, 20)
+
+    def test_ppo_rnd_discrete(self):
+        rnd = keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.Dense(32),
+            keras.layers.ReLU(),
+            keras.layers.Dense(8),
+        ])
+        self.mountain_car_conf.trainer = rlearn.PPODiscreteTrainer.name
+        self.mountain_car_conf.learning_rates = (0.01, 0.01)
+        ep = train_mountain_car(self.mountain_car_conf, self.render_mode, rnd=rnd)
+        self.assertLess(ep, 20)
 
 class ExperienceDistributedGym(unittest.TestCase):
     def setUp(self) -> None:

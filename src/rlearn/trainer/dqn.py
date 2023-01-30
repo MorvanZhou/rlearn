@@ -62,7 +62,7 @@ class DQNTrainer(BaseTrainer):
         if self.opt is None:
             self.set_default_optimizer()
 
-        res = TrainResult(value={"loss": 0, "q": 0}, model_replaced=False)
+        res = TrainResult(value={"loss": 0, "q": 0, "reward": 0}, model_replaced=False)
         if self.replay_buffer.is_empty():
             return res
 
@@ -73,7 +73,8 @@ class DQNTrainer(BaseTrainer):
             source=self.model.models["q"], target=self.model.models["q_"])
 
         q_ = self.model.models["q_"].predict(batch["s_"], verbose=0)
-        q_target = batch["r"] + self.gamma * tf.reduce_max(q_, axis=1)
+        total_reward = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
+        q_target = total_reward + self.gamma * tf.reduce_max(q_, axis=1)
         a_indices = tf.stack([tf.range(tf.shape(ba)[0], dtype=tf.int32), ba], axis=1)
         with tf.GradientTape() as tape:
             q = self.model.models["q"](batch["s"])
@@ -90,5 +91,9 @@ class DQNTrainer(BaseTrainer):
         grads = tape.gradient(loss, tv)
         self.opt.apply_gradients(zip(grads, tv))
 
-        res.value.update({"loss": loss.numpy(), "q": q_wrt_a.numpy().ravel().mean()})
+        res.value.update({
+            "loss": loss.numpy(),
+            "q": q_wrt_a.numpy().ravel().mean(),
+            "reward": total_reward.mean(),
+        })
         return res

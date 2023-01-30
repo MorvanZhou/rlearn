@@ -56,6 +56,7 @@ class DDPGTrainer(BaseTrainer):
             value={
                 "actor_loss": 0,
                 "critic_loss": 0,
+                "reward": 0,
             },
             model_replaced=False,
         )
@@ -80,7 +81,8 @@ class DDPGTrainer(BaseTrainer):
         with tf.GradientTape() as tape:
             with tape.stop_recording():
                 a_ = self.model.models["actor_"](batch["s_"])
-                q_ = batch["r"][:, None] + self.gamma * self.model.models["critic_"]([batch["s_"], a_])
+                total_reward = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
+                q_ = total_reward[:, None] + self.gamma * self.model.models["critic_"]([batch["s_"], a_])
             q = self.model.models["critic"]([batch["s"], batch["a"]])
             lc = self.loss(q_, q)
 
@@ -91,6 +93,7 @@ class DDPGTrainer(BaseTrainer):
         res.value.update({
             "actor_loss": la.numpy(),
             "critic_loss": lc.numpy(),
+            "reward": total_reward.mean(),
         })
         return res
 

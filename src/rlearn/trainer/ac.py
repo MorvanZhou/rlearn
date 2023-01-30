@@ -72,16 +72,18 @@ class _ActorCriticTrainer(BaseTrainer):
             return
 
         adv = []
+
         next_v = self.model.models["critic"].predict(
-            np.expand_dims(np.array(s_, dtype=np.float32), axis=0),
-            verbose=0).ravel()[0]
+            np.expand_dims(np.array(s_, dtype=np.float32), axis=0), verbose=0).ravel()[0]
+        next_s = np.array(self.buffer_s[1:] + [s_])
+        total_r = self.try_combine_int_ext_reward(self.buffer_r, next_s)
 
         bs = np.array(self.buffer_s, dtype=np.float32)
         vs = self.model.models["critic"].predict(bs, verbose=0).ravel()
         _gae_lam = 0
         for i in range(len(self.buffer_s) - 1, -1, -1):  # backward count
             non_terminate = 0. if self.buffer_done[i] else 1.
-            delta = self.buffer_r[i] + self.gamma * next_v * non_terminate - vs[i]
+            delta = total_r[i] + self.gamma * next_v * non_terminate - vs[i]
             _gae_lam = delta + self.gamma * self.lam * _gae_lam * non_terminate
             adv.insert(0, _gae_lam)
             next_v = vs[i]
@@ -107,7 +109,7 @@ class _ActorCriticTrainer(BaseTrainer):
             self.set_default_optimizer()
 
         res = TrainResult(
-            value={"actor_loss": 0, "critic_loss": 0},
+            value={"actor_loss": 0., "critic_loss": 0., "reward": 0.},
             model_replaced=False,
         )
         if self.replay_buffer.current_loading_point < self.batch_size:
@@ -147,7 +149,11 @@ class _ActorCriticTrainer(BaseTrainer):
         self.buffer_r.clear()
         self.buffer_done.clear()
 
-        res.value.update({"actor_loss": la.numpy(), "critic_loss": lc.numpy()})
+        res.value.update({
+            "actor_loss": la.numpy(),
+            "critic_loss": lc.numpy(),
+            "reward": batch["returns"].mean(),
+        })
         return res
 
 

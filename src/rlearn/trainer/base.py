@@ -10,6 +10,7 @@ from tensorflow import keras
 from rlearn import replaybuf, board
 from rlearn.config import TrainConfig
 from rlearn.model.base import BaseRLModel
+from rlearn.model.rnd import RND
 from rlearn.replaybuf.base import BaseReplayBuffer
 
 
@@ -41,6 +42,7 @@ class BaseTrainer(ABC):
         self.epsilon_decay = 1e-3
         self.epsilon = 1.
         self.gamma = 0.9
+        self.rnd = None  # random network distillation
 
         self._replace_counter = 0
         self.log_dir = log_dir
@@ -193,5 +195,30 @@ class BaseTrainer(ABC):
         else:
             self.epsilon *= (1 - self.epsilon_decay)
 
-    def try_process_replay_buffer(self):
-        return
+    def add_rnd(
+            self,
+            target: keras.Model,
+            predictor: tp.Optional[keras.Model] = None,
+            learning_rate: float = 1e-4,
+    ):
+        self.rnd = RND(target=target, predictor=predictor, learning_rate=learning_rate)
+
+    def try_combine_int_ext_reward(self, ext_reward, next_state: np.ndarray):
+        if self.rnd is None:
+            return ext_reward
+        scalar = False
+        if isinstance(ext_reward, (int, float)):
+            scalar = True
+            next_state = next_state[None, :]
+            ext_reward = np.array([ext_reward, ])
+        elif isinstance(ext_reward, (list, tuple)):
+            ext_reward = np.array(ext_reward)
+
+        if ext_reward.ndim > 1:
+            raise ValueError(f"ext_reward has dim={ext_reward.ndim}, but only accept 1")
+        int_reward = self.rnd.intrinsic_reward(next_state)
+        total_reward = ext_reward + int_reward
+        if scalar:
+            return total_reward[0]
+
+        return total_reward
