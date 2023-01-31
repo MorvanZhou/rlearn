@@ -1,4 +1,5 @@
-from rlearn import k
+from tensorflow import keras
+
 from rlearn import model
 
 
@@ -7,12 +8,12 @@ class DQNSmall(model.DQN):
         super().__init__(training=training)
         self.state_dim = state_dim
         self.action_dim = action_dim
-        net = k.Sequential([
-            k.layers.InputLayer(self.state_dim),
-            k.layers.Dense(32),
-            k.layers.ReLU(),
-            k.layers.Dense(32),
-            k.layers.ReLU(),
+        net = keras.Sequential([
+            keras.layers.InputLayer(self.state_dim),
+            keras.layers.Dense(32),
+            keras.layers.ReLU(),
+            keras.layers.Dense(32),
+            keras.layers.ReLU(),
         ])
         self.set_encoder(net, self.action_dim)
 
@@ -22,15 +23,15 @@ class DQNMiddle(model.DQN):
         super().__init__(training=training)
         self.state_dim = state_dim
         self.action_dim = action_dim
-        net = k.Sequential([
-            k.layers.InputLayer(self.state_dim),
-            k.layers.Dense(128),
-            k.layers.ReLU(),
-            k.layers.Dense(128),
-            k.layers.ReLU(),
-            k.layers.Dense(128),
-            k.layers.ReLU(),
-            k.layers.Dense(self.action_dim)
+        net = keras.Sequential([
+            keras.layers.InputLayer(self.state_dim),
+            keras.layers.Dense(128),
+            keras.layers.ReLU(),
+            keras.layers.Dense(128),
+            keras.layers.ReLU(),
+            keras.layers.Dense(128),
+            keras.layers.ReLU(),
+            keras.layers.Dense(self.action_dim)
         ])
         self.set_encoder(net, self.action_dim)
 
@@ -40,17 +41,17 @@ class DQNLarge(model.DQN):
         super().__init__(training=training)
         self.state_dim = state_dim
         self.action_dim = action_dim
-        net = k.Sequential([
-            k.layers.InputLayer(self.state_dim),
-            k.layers.Dense(256),
-            k.layers.ReLU(),
-            k.layers.Dense(256),
-            k.layers.ReLU(),
-            k.layers.Dense(256),
-            k.layers.ReLU(),
-            k.layers.Dense(256),
-            k.layers.ReLU(),
-            k.layers.Dense(self.action_dim)
+        net = keras.Sequential([
+            keras.layers.InputLayer(self.state_dim),
+            keras.layers.Dense(256),
+            keras.layers.ReLU(),
+            keras.layers.Dense(256),
+            keras.layers.ReLU(),
+            keras.layers.Dense(256),
+            keras.layers.ReLU(),
+            keras.layers.Dense(256),
+            keras.layers.ReLU(),
+            keras.layers.Dense(self.action_dim)
         ])
         self.set_encoder(net, self.action_dim)
 
