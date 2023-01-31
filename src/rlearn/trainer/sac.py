@@ -70,21 +70,25 @@ class _SACTrainer(BaseTrainer):
             [self.model.models["c1_"], self.model.models["c2_"]])
 
         with tf.GradientTape() as tape:
+            total_r = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
+            non_terminal = (1. - batch["done"])
+            assert non_terminal.ndim == 1, ValueError("non_terminal.ndim != 1")
+            assert total_r.ndim == 1, ValueError("total_reward.ndim != 1")
+
             if self.model.is_discrete_action:
-                logits_ = self.model.models["actor"](batch["s_"])
-                log_prob_ = tf.nn.log_softmax(logits_, axis=1)
-                probs_ = tf.nn.softmax(logits_)
+                with tape.stop_recording():
+                    logits_ = self.model.models["actor"](batch["s_"])
+                    log_prob_ = tf.nn.log_softmax(logits_, axis=1)
+                    probs_ = tf.nn.softmax(logits_)
 
-                q1_ = self.model.models["c1_"](batch["s_"])
-                q2_ = self.model.models["c2_"](batch["s_"])
-                q_min_ = tf.minimum(q1_, q2_)
-                q_ = probs_ * (q_min_ - self.alpha * log_prob_)
-                total_r = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
-                non_terminate = 1. - batch["done"]
-                q_ = total_r + self.gamma * tf.reduce_sum(q_, axis=1) * non_terminate
+                    q1_ = self.model.models["c1_"](batch["s_"])
+                    q2_ = self.model.models["c2_"](batch["s_"])
+                    q_min_ = tf.minimum(q1_, q2_)
+                    q_ = probs_ * (q_min_ - self.alpha * log_prob_)
+                    q_ = total_r + self.gamma * tf.reduce_sum(q_, axis=1) * non_terminal
+                    a_indices = tf.stack(
+                        [tf.range(tf.shape(batch["a"])[0], dtype=tf.int32), batch["a"]], axis=1)
 
-                a_indices = tf.stack(
-                    [tf.range(tf.shape(batch["a"])[0], dtype=tf.int32), batch["a"]], axis=1)
                 q1 = self.model.models["c1"](batch["s"])
                 q2 = self.model.models["c2"](batch["s"])
                 q1_a = tf.gather_nd(params=q1, indices=a_indices)
@@ -97,9 +101,7 @@ class _SACTrainer(BaseTrainer):
                     q1_a_ = self.model.models["c1_"]([batch["s_"], a_])
                     q2_a_ = self.model.models["c2_"]([batch["s_"], a_])
                     q_a_min_ = tf.minimum(q1_a_, q2_a_)
-                    total_r = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
-                    non_terminate = (1. - batch["done"])[:, None]
-                    q_ = total_r[:, None] + self.gamma * (q_a_min_ - self.alpha * log_prob_) * non_terminate
+                    q_ = total_r[:, None] + self.gamma * (q_a_min_ - self.alpha * log_prob_) * non_terminal[:, None]
                 q1_a = self.model.models["c1"]([batch["s"], batch["a"]])
                 q2_a = self.model.models["c2"]([batch["s"], batch["a"]])
 

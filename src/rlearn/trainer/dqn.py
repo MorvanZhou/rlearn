@@ -69,8 +69,13 @@ class DQNTrainer(BaseTrainer):
 
         q_ = self.model.models["q_"].predict(batch["s_"], verbose=0)
         total_reward = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
+        assert total_reward.ndim == 1, ValueError("total_reward.ndim != 1")
+
         non_terminal = 1. - batch["done"]
+        assert non_terminal.ndim == 1, ValueError("non_terminate.ndim != 1")
+
         q_target = total_reward + self.gamma * tf.reduce_max(q_, axis=1) * non_terminal
+
         a_indices = tf.stack([tf.range(tf.shape(ba)[0], dtype=tf.int32), ba], axis=1)
         with tf.GradientTape() as tape:
             q = self.model.models["q"](batch["s"])

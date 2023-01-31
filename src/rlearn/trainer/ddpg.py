@@ -26,11 +26,9 @@ class DDPGTrainer(BaseTrainer):
 
         self.opt_a = keras.optimizers.Adam(
             learning_rate=l1,
-            # global_clipnorm=2.,  # stable training
         )
         self.opt_c = keras.optimizers.Adam(
             learning_rate=l2,
-            # global_clipnorm=5.,  # stable training
         )
 
     def set_model_encoder(self, actor: keras.Model, critic: keras.Model, action_num: int):
@@ -81,9 +79,12 @@ class DDPGTrainer(BaseTrainer):
             with tape.stop_recording():
                 a_ = self.model.models["actor_"](batch["s_"])
                 total_reward = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
-                non_terminate = (1 - batch["done"])[:, None]
-                q_ = total_reward[:, None] + \
-                     self.gamma * self.model.models["critic_"]([batch["s_"], a_]) * non_terminate
+                non_terminal = (1 - batch["done"])[:, None]
+                assert non_terminal.ndim == 2, ValueError("non_terminal.ndim != 2")
+                assert total_reward.ndim == 1, ValueError("total_reward.ndim != 1")
+
+                va_ = self.model.models["critic_"]([batch["s_"], a_])
+                q_ = total_reward[:, None] + self.gamma * va_ * non_terminal
             q = self.model.models["critic"]([batch["s"], batch["a"]])
             lc = self.loss(q_, q)
 

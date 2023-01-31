@@ -20,6 +20,7 @@ class ModelTest(unittest.TestCase):
             "PPOContinue": {"is_on_policy": True, "is_discrete_action": False, "predicted_model_name": "pi_"},
             "SACDiscrete": {"is_on_policy": False, "is_discrete_action": True, "predicted_model_name": "actor"},
             "SACContinue": {"is_on_policy": False, "is_discrete_action": False, "predicted_model_name": "actor"},
+            "TD3": {"is_on_policy": False, "is_discrete_action": False, "predicted_model_name": "actor"},
         }
         for name, m in tools.get_all().items():
             self.assertEqual(ps[name]["is_on_policy"], m.is_on_policy)

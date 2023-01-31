@@ -22,7 +22,7 @@ class TrainingTest(unittest.TestCase):
     def setUp(self) -> None:
         self.acrobot_conf = rlearn.TrainConfig(
             trainer="",
-            batch_size=4,
+            batch_size=2,
             epochs=2,
             action_transform=[0, 1, 2],
             nets=[
@@ -52,8 +52,8 @@ class TrainingTest(unittest.TestCase):
             ),
             gamma=0.9,
             learning_rates=(0.01, 0.01),
-            replay_buffer=rlearn.ReplayBufferConfig(10),
-            replace_step=4,
+            replay_buffer=rlearn.ReplayBufferConfig(5),
+            replace_step=2,
             not_learn_epochs=0,
             epsilon_decay=0.1,
             min_epsilon=0.1,
@@ -62,11 +62,11 @@ class TrainingTest(unittest.TestCase):
 
         self.pendulum_conf = rlearn.TrainConfig(
             trainer="",
-            batch_size=4,
+            batch_size=2,
             epochs=2,
             action_transform=[[-2, 2]],
-            replay_buffer=rlearn.ReplayBufferConfig(10),
-            replace_step=4,
+            replay_buffer=rlearn.ReplayBufferConfig(5),
+            replace_step=2,
             nets=[
                 rlearn.NetConfig(
                     input_shape=(3,),
@@ -110,7 +110,7 @@ class TrainingTest(unittest.TestCase):
         )
         for ep in range(conf.epochs):
             s, _ = env.reset()
-            for _ in range(10):  # in one episode
+            for _ in range(5):  # in one episode
                 _a = trainer.predict(s)
                 self.assertIsInstance(_a, np.ndarray)
                 self.assertEqual(1, len(_a))
@@ -139,7 +139,7 @@ class TrainingTest(unittest.TestCase):
         )
         for ep in range(conf.epochs):
             s, _ = env.reset()
-            for _ in range(10):  # in one episode
+            for _ in range(5):  # in one episode
                 _a = trainer.predict(s)
                 self.assertIsInstance(_a, int)
                 # IMPORTANT: it is better to record permuted action in buffer

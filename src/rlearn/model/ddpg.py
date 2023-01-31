@@ -59,5 +59,5 @@ class DDPG(BaseRLModel):
 
     def disturbed_action(self, x, epsilon: float):
         if np.random.random() < epsilon:
-            return np.random.uniform(-1, 1, size=self.models["actor"].output_shape[1])
+            return np.random.uniform(-1., 1., size=self.models["actor"].output_shape[1])
         return self.predict(x)

@@ -72,7 +72,6 @@ def train_pendulum(conf, render_mode="human", rnd=None):
     if rnd is not None:
         trainer.add_rnd(target=rnd, learning_rate=1e-3)
     rlearn.set_config_to_trainer(conf, trainer)
-    action_transformer = rlearn.transformer.ContinuousAction(conf.action_transform)
 
     env = gymnasium.make(
         'Pendulum-v1',
@@ -86,10 +85,9 @@ def train_pendulum(conf, render_mode="human", rnd=None):
         s, _ = env.reset()
         ep_r = 0
         value = None
-        for _ in range(max_ep_step):  # in one episode
+        for _ in range(max_ep_step):
             _a = trainer.predict(s)
-            # IMPORTANT: it is better to record permuted action in buffer
-            a = action_transformer.transform(_a)
+            a = trainer.map_action(_a)
             s_, r, _, _, _ = env.step(a)
             # IMPORTANT: it is better to record permuted action in buffer
             trainer.store_transition(s, _a, (r + 8) / 8, s_)
@@ -124,7 +122,6 @@ def train_arcobot(conf, render_mode="human", rnd=None):
     if rnd is not None:
         trainer.add_rnd(target=rnd, learning_rate=1e-3)
     rlearn.set_config_to_trainer(conf, trainer)
-    action_transformer = rlearn.transformer.DiscreteAction(conf.action_transform)
 
     env = gymnasium.make(
         'Acrobot-v1',
@@ -141,7 +138,7 @@ def train_arcobot(conf, render_mode="human", rnd=None):
         for _ in range(max_ep_step):  # in one episode
             _a = trainer.predict(s)
             # IMPORTANT: it is better to record permuted action in buffer
-            a = action_transformer.transform(_a)
+            a = trainer.map_action(_a)
             s_, r, _, _, _ = env.step(a)
             # IMPORTANT: it is better to record permuted action in buffer
             trainer.store_transition(s, _a, r, s_)
@@ -381,6 +378,12 @@ class GymTest(unittest.TestCase):
     def test_ddpg(self):
         # 21 r=-261.60 mov=-888.00 value={'actor_loss': -5.081643, 'critic_loss': 0.017063033}
         self.pendulum_conf.trainer = rlearn.DDPGTrainer.name
+        ep = train_pendulum(self.pendulum_conf, self.render_mode)
+        self.assertLess(ep, 50)
+
+    def test_td3(self):
+        # 42 r=-401.56 mov=-888.84 value={'actor_loss': -6.233742, 'critic_loss': 0.028469825, 'reward': 0.5677}
+        self.pendulum_conf.trainer = rlearn.TD3Trainer.name
         ep = train_pendulum(self.pendulum_conf, self.render_mode)
         self.assertLess(ep, 50)
 

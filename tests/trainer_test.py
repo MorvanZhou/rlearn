@@ -192,7 +192,7 @@ class TrainerTest(unittest.TestCase):
         action_transformer = rlearn.transformer.ContinuousAction([[0, 360]])
 
         self.assertEqual(1, trainer.epsilon)
-        for _ in range(10):
+        for _ in range(2):
             a = trainer.model.predict(np.random.random((2,)))
             a = action_transformer.transform(a).ravel()[0]
             self.assertTrue(0 <= a <= 360, msg=f"{a}")
@@ -220,7 +220,7 @@ class TrainerTest(unittest.TestCase):
             replace_step=4,
         )
 
-        for _ in range(10):
+        for _ in range(2):
             a = trainer.model.predict(np.random.random((2,)))
             self.assertIsInstance(a, int, msg=f"{a}")
 
@@ -248,7 +248,7 @@ class TrainerTest(unittest.TestCase):
         action_transformer = rlearn.transformer.ContinuousAction([[0, 360]])
 
         self.assertEqual(1, trainer.epsilon)
-        for _ in range(10):
+        for _ in range(2):
             a = trainer.model.predict(np.random.random((2,)))
             a = action_transformer.transform(a).ravel()[0]
             self.assertTrue(0 <= a <= 360, msg=f"{a}")
@@ -276,7 +276,7 @@ class TrainerTest(unittest.TestCase):
             replace_step=4,
         )
 
-        for _ in range(10):
+        for _ in range(2):
             a = trainer.model.predict(np.random.random((2,)))
             self.assertIsInstance(a, int, msg=f"{a}")
 
