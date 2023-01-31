@@ -2,6 +2,7 @@ import typing as tp
 
 from tensorflow import keras
 
+import rlearn.model
 from rlearn.config import NetConfig
 from rlearn.model.base import BaseRLModel
 
@@ -80,7 +81,9 @@ __BASE_MODULE = BaseRLModel.__module__
 
 def _set_model_map(cls, m: dict):
     for subclass in cls.__subclasses__():
-        if subclass.__module__ != __BASE_MODULE and not subclass.__name__.startswith("_"):
+        if subclass.__module__ != __BASE_MODULE \
+                and not subclass.__name__.startswith("_") \
+                and subclass.__module__.startswith(rlearn.model.__name__):
             m[subclass.__name__] = subclass
         _set_model_map(subclass, m)
 
@@ -93,3 +96,9 @@ def get_model_by_name(
         _set_model_map(BaseRLModel, __MODEL_MAP)
     model = __MODEL_MAP[name](training=training)
     return model
+
+
+def get_all() -> tp.Dict[str, tp.Type[BaseRLModel]]:
+    if len(__MODEL_MAP) == 0:
+        _set_model_map(BaseRLModel, __MODEL_MAP)
+    return __MODEL_MAP

@@ -10,7 +10,6 @@ from rlearn.trainer.base import BaseTrainer, TrainResult
 
 
 class _PPOTrainer(BaseTrainer):
-    is_on_policy = True
 
     def __init__(
             self,

@@ -11,7 +11,6 @@ from rlearn.trainer.tools import parse_2_learning_rate
 
 class _SACTrainer(BaseTrainer):
     name = __qualname__
-    is_on_policy = False
 
     def __init__(
             self,
@@ -71,7 +70,7 @@ class _SACTrainer(BaseTrainer):
             [self.model.models["c1_"], self.model.models["c2_"]])
 
         with tf.GradientTape() as tape:
-            if self.model.is_discrete:
+            if self.model.is_discrete_action:
                 logits_ = self.model.models["actor"](batch["s_"])
                 log_prob_ = tf.nn.log_softmax(logits_, axis=1)
                 probs_ = tf.nn.softmax(logits_)
@@ -112,7 +111,7 @@ class _SACTrainer(BaseTrainer):
 
         with tf.GradientTape() as tape:
             # kl divergence
-            if self.model.is_discrete:
+            if self.model.is_discrete_action:
                 logits = self.model.models["actor"](batch["s"])
                 log_prob = tf.nn.log_softmax(logits, axis=1)
                 probs = tf.nn.softmax(logits)

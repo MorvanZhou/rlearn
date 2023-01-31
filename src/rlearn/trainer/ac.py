@@ -10,7 +10,6 @@ from rlearn.trainer.base import BaseTrainer, TrainResult
 
 
 class _ActorCriticTrainer(BaseTrainer):
-    is_on_policy = True
 
     def __init__(
             self,

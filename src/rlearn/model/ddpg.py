@@ -8,13 +8,15 @@ from rlearn.model.base import BaseRLModel
 
 class DDPG(BaseRLModel):
     name = __qualname__
+    is_on_policy = False
+    is_discrete_action = False
+    predicted_model_name = "actor"
 
     def __init__(
             self,
             training: bool = True,
     ):
         BaseRLModel.__init__(self, training=training)
-        self.predicted_model_name = "actor"
 
     @staticmethod
     def set_actor_encoder_callback(encoder: keras.Sequential, action_num: int):
@@ -50,7 +52,7 @@ class DDPG(BaseRLModel):
             self.models["critic_"] = self.clone_model(self.models["critic"])
 
     def predict(self, s) -> np.ndarray:
-        a = self.models["actor"].predict(np.expand_dims(s, axis=0), verbose=0).ravel()
+        a = self.models[self.predicted_model_name].predict(np.expand_dims(s, axis=0), verbose=0).ravel()
         if np.isnan(a).any():
             raise ValueError("action contains NaN")
         return a

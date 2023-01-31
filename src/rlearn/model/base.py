@@ -9,6 +9,9 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow import keras
 
+import rlearn.type
+from rlearn.transformer import BaseTransformer
+
 
 def zip_ckpt_model(src_dir, dest_path=None):
     if dest_path is None:
@@ -49,18 +52,40 @@ def unzip_model(path, dest_dir=None):
 
 
 class BaseRLModel(ABC):
-    name = __qualname__
-
     def __init__(
             self,
             training: bool = True,
     ):
-        self.training = training
+        self.training: bool = training
         self.models: tp.Dict[str, keras.Model] = {}
-        self.predicted_model_name = ""
+        self.action_transformer: tp.Optional[BaseTransformer] = None
 
     def __call__(self, *args, **kwargs):
         return self.predict(*args, **kwargs)
+
+    @classmethod
+    @property
+    @abstractmethod
+    def name(cls):
+        ...
+
+    @classmethod
+    @property
+    @abstractmethod
+    def is_discrete_action(cls):
+        ...
+
+    @classmethod
+    @property
+    @abstractmethod
+    def predicted_model_name(cls):
+        ...
+
+    @classmethod
+    @property
+    @abstractmethod
+    def is_on_policy(cls):
+        ...
 
     @abstractmethod
     def set_encoder(self, *args, **kwargs):
@@ -71,12 +96,24 @@ class BaseRLModel(ABC):
         pass
 
     @abstractmethod
-    def predict(self, x):
+    def predict(self, x: np.ndarray):
         pass
 
     @abstractmethod
     def disturbed_action(self, x, epsilon: float):
         pass
+
+    def set_action_transformer(self, transformer: BaseTransformer):
+        self.action_transformer = transformer
+
+    def map_action(self, action: rlearn.type.Action) -> rlearn.type.Action:
+        if self.action_transformer is None:
+            return action
+        return self.action_transformer.transform(action)
+
+    def mapped_predict(self, x: np.ndarray) -> rlearn.type.Action:
+        a = self.predict(x)
+        return self.map_action(a)
 
     def save_weights(self, path):
         model_tmp_dir = path
@@ -132,12 +169,11 @@ class BaseRLModel(ABC):
 
 
 class BaseStochasticModel(BaseRLModel, ABC):
-    def __init__(self, is_discrete: bool, training: bool = True):
+    def __init__(self, training: bool = True):
         super().__init__(training=training)
-        self.is_discrete = is_discrete
 
     def dist(self, net: keras.Model, s: np.ndarray):
-        if self.is_discrete:
+        if self.is_discrete_action:
             o = net(s)
             return tfp.distributions.Categorical(logits=o)
 
@@ -160,7 +196,7 @@ class BaseStochasticModel(BaseRLModel, ABC):
         return self.predict(x)
 
     def set_actor_encoder_callback(self, encoder: keras.Sequential, action_num: int) -> keras.Model:
-        if self.is_discrete:
+        if self.is_discrete_action:
             o = keras.layers.Dense(action_num)(encoder.output)
             return keras.Model(inputs=encoder.inputs, outputs=[o])
 

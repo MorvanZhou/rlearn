@@ -89,7 +89,6 @@ class ActorProcessTest(unittest.TestCase):
             local_buffer_size=500,
             env=env,
             remote_buffer_address=None,
-            action_transformer=None,
         )
         actor_p.init_params(
             "DQN", self.model_pb_path, init_version=0, request_id="dqn_train", max_episode=2, max_episode_step=20)
@@ -114,7 +113,6 @@ class ActorProcessTest(unittest.TestCase):
             local_buffer_size=500,
             env=env,
             remote_buffer_address=None,
-            action_transformer=None,
         )
         actor.init_params(
             "DQNTrainer", self.model_pb_path, init_version=0,
@@ -147,7 +145,6 @@ class ActorProcessTest(unittest.TestCase):
             local_buffer_size=10,
             env=env,
             remote_buffer_address=buf_address,
-            action_transformer=None,
         )
         actor_p.init_params(
             "DQNTrainer",
@@ -204,7 +201,6 @@ class ActorServiceTest(unittest.TestCase):
             remote_buffer_address=buf_address,
             local_buffer_size=3,
             env=CartPoleSmoothReward(),
-            action_transformer=None,
             debug=True,
         )
         actor_address = f'localhost:{actor_port}'
@@ -240,6 +236,7 @@ class ActorServiceTest(unittest.TestCase):
             trainer_type="DQNTrainer",
             max_episode=0,
             max_episode_step=0,
+            action_transform=[0, 1],
             version=version,
             request_id="start"
         ))
@@ -298,7 +295,6 @@ class LearnerTest(unittest.TestCase):
                 remote_buffer_address=buf_address,
                 local_buffer_size=10,
                 env=CartPoleSmoothReward(),
-                action_transformer=None,
                 # debug=True,
             ))
             p.start()
@@ -327,6 +323,7 @@ class LearnerTest(unittest.TestCase):
             batch_size=32,
             replace_step=15,
         )
+        trainer.set_action_transformer(rlearn.transformer.DiscreteAction([0, 1]))
         learner = distributed.experience.Learner(
             trainer=trainer,
             remote_buffer_address=self.buf_address,

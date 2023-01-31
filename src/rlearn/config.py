@@ -31,6 +31,13 @@ class ReplayBufferConfig:
 
 
 @dataclass
+class RandomNetworkDistillationConfig:
+    target: NetConfig
+    predictor: tp.Optional[NetConfig] = None
+    learning_rate: float = 1e-3
+
+
+@dataclass
 class TrainConfig:
     trainer: str
     batch_size: int
@@ -45,6 +52,7 @@ class TrainConfig:
     not_learn_epochs: int = -1
     min_epsilon: float = 0.1
     epsilon_decay: float = 1e-4
+    random_network_distillation: RandomNetworkDistillationConfig = None
     args: tp.Dict[str, tp.Any] = field(default_factory=dict)
 
     def dump(self, path: str):

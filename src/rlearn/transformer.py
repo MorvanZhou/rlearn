@@ -6,6 +6,9 @@ import tensorflow as tf
 
 
 class BaseTransformer(ABC):
+    def __init__(self, params):
+        self.params = params
+
     @abstractmethod
     def transform(self, a: tp.Union[float, int, tf.Tensor, np.ndarray]) -> tp.Union[float, tf.Tensor, np.ndarray]:
         pass
@@ -19,6 +22,7 @@ class ContinuousAction(BaseTransformer):
             self,
             bound: tp.Union[tp.Sequence[tp.Sequence[float]], tp.Sequence[float]],
     ):
+        super().__init__(params=bound)
         _bound_width = []
         _bound_min = []
         if not isinstance(bound[0], (tuple, list)):
@@ -56,6 +60,7 @@ class DiscreteAction(BaseTransformer):
             self,
             actions: tp.Sequence[tp.Union[float, str]],
     ):
+        super().__init__(params=actions)
         self.actions = actions
 
     def transform(

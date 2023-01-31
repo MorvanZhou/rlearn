@@ -350,6 +350,10 @@ class TrainerToolTest(unittest.TestCase):
         self.assertEqual(0.1, l1)
         self.assertEqual(0.2, l2)
 
+        l1, l2 = tools.parse_2_learning_rate([0.1, ])
+        self.assertEqual(0.1, l1)
+        self.assertEqual(0.1, l2)
+
         with self.assertRaises(ValueError) as cm:
             tools.parse_2_learning_rate([])
 

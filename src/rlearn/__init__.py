@@ -1,7 +1,8 @@
 from rlearn import distributed
 from rlearn import transformer
+from rlearn import type
 from rlearn import zoo
-from rlearn.config import TrainConfig, NetConfig, LayerConfig, ReplayBufferConfig
+from rlearn.config import TrainConfig, NetConfig, LayerConfig, ReplayBufferConfig, RandomNetworkDistillationConfig
 from rlearn.env_wrapper import EnvWrapper
 from rlearn.model import *
 from rlearn.replaybuf import *

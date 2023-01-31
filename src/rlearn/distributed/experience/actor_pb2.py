@@ -16,7 +16,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
     syntax='proto3',
     serialized_options=b'\n\024io.grpc.examples.envB\021ReplayBufferProtoP\001\242\002\003HLW',
     create_key=_descriptor._internal_create_key,
-    serialized_pb=b'\n)rlearn/distributed/experience/actor.proto\x12\x05\x61\x63tor\"$\n\x0fServiceReadyReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"4\n\x10ServiceReadyResp\x12\r\n\x05ready\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t\"\x82\x01\n\tStartMeta\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x13\n\x0btrainerType\x18\x02 \x01(\t\x12\x12\n\nmaxEpisode\x18\x03 \x01(\x03\x12\x16\n\x0emaxEpisodeStep\x18\x04 \x01(\x03\x12\x0f\n\x07version\x18\x05 \x01(\x04\x12\x11\n\trequestId\x18\x06 \x01(\t\"L\n\x08StartReq\x12 \n\x04meta\x18\x01 \x01(\x0b\x32\x10.actor.StartMetaH\x00\x12\x13\n\tchunkData\x18\x02 \x01(\x0cH\x00\x42\t\n\x07request\"9\n\tStartResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"J\n\x12ReplicateModelMeta\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0f\n\x07version\x18\x02 \x01(\x04\x12\x11\n\trequestId\x18\x03 \x01(\t\"^\n\x11ReplicateModelReq\x12)\n\x04meta\x18\x01 \x01(\x0b\x32\x19.actor.ReplicateModelMetaH\x00\x12\x13\n\tchunkData\x18\x02 \x01(\x0cH\x00\x42\t\n\x07request\"B\n\x12ReplicateModelResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"!\n\x0cTerminateReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"=\n\rTerminateResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t2\xff\x01\n\x05\x41\x63tor\x12\x41\n\x0cServiceReady\x12\x16.actor.ServiceReadyReq\x1a\x17.actor.ServiceReadyResp\"\x00\x12.\n\x05Start\x12\x0f.actor.StartReq\x1a\x10.actor.StartResp\"\x00(\x01\x12I\n\x0eReplicateModel\x12\x18.actor.ReplicateModelReq\x1a\x19.actor.ReplicateModelResp\"\x00(\x01\x12\x38\n\tTerminate\x12\x13.actor.TerminateReq\x1a\x14.actor.TerminateResp\"\x00\x42\x31\n\x14io.grpc.examples.envB\x11ReplayBufferProtoP\x01\xa2\x02\x03HLWb\x06proto3'
+    serialized_pb=b'\n)rlearn/distributed/experience/actor.proto\x12\x05\x61\x63tor\"$\n\x0fServiceReadyReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"4\n\x10ServiceReadyResp\x12\r\n\x05ready\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t\"\x9b\x01\n\tStartMeta\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x13\n\x0btrainerType\x18\x02 \x01(\t\x12\x12\n\nmaxEpisode\x18\x03 \x01(\x03\x12\x16\n\x0emaxEpisodeStep\x18\x04 \x01(\x03\x12\x17\n\x0f\x61\x63tionTransform\x18\x05 \x01(\t\x12\x0f\n\x07version\x18\x06 \x01(\x04\x12\x11\n\trequestId\x18\x07 \x01(\t\"L\n\x08StartReq\x12 \n\x04meta\x18\x01 \x01(\x0b\x32\x10.actor.StartMetaH\x00\x12\x13\n\tchunkData\x18\x02 \x01(\x0cH\x00\x42\t\n\x07request\"9\n\tStartResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"J\n\x12ReplicateModelMeta\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x0f\n\x07version\x18\x02 \x01(\x04\x12\x11\n\trequestId\x18\x03 \x01(\t\"^\n\x11ReplicateModelReq\x12)\n\x04meta\x18\x01 \x01(\x0b\x32\x19.actor.ReplicateModelMetaH\x00\x12\x13\n\tchunkData\x18\x02 \x01(\x0cH\x00\x42\t\n\x07request\"B\n\x12ReplicateModelResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"!\n\x0cTerminateReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"=\n\rTerminateResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t2\xff\x01\n\x05\x41\x63tor\x12\x41\n\x0cServiceReady\x12\x16.actor.ServiceReadyReq\x1a\x17.actor.ServiceReadyResp\"\x00\x12.\n\x05Start\x12\x0f.actor.StartReq\x1a\x10.actor.StartResp\"\x00(\x01\x12I\n\x0eReplicateModel\x12\x18.actor.ReplicateModelReq\x1a\x19.actor.ReplicateModelResp\"\x00(\x01\x12\x38\n\tTerminate\x12\x13.actor.TerminateReq\x1a\x14.actor.TerminateResp\"\x00\x42\x31\n\x14io.grpc.examples.envB\x11ReplayBufferProtoP\x01\xa2\x02\x03HLWb\x06proto3'
 )
 
 
@@ -130,15 +130,22 @@ _STARTMETA = _descriptor.Descriptor(
             is_extension=False, extension_scope=None,
             serialized_options=None, file=DESCRIPTOR, create_key=_descriptor._internal_create_key),
         _descriptor.FieldDescriptor(
-            name='version', full_name='actor.StartMeta.version', index=4,
-            number=5, type=4, cpp_type=4, label=1,
+            name='actionTransform', full_name='actor.StartMeta.actionTransform', index=4,
+            number=5, type=9, cpp_type=9, label=1,
+            has_default_value=False, default_value=b"".decode('utf-8'),
+            message_type=None, enum_type=None, containing_type=None,
+            is_extension=False, extension_scope=None,
+            serialized_options=None, file=DESCRIPTOR, create_key=_descriptor._internal_create_key),
+        _descriptor.FieldDescriptor(
+            name='version', full_name='actor.StartMeta.version', index=5,
+            number=6, type=4, cpp_type=4, label=1,
             has_default_value=False, default_value=0,
             message_type=None, enum_type=None, containing_type=None,
             is_extension=False, extension_scope=None,
             serialized_options=None, file=DESCRIPTOR, create_key=_descriptor._internal_create_key),
         _descriptor.FieldDescriptor(
-            name='requestId', full_name='actor.StartMeta.requestId', index=5,
-            number=6, type=9, cpp_type=9, label=1,
+            name='requestId', full_name='actor.StartMeta.requestId', index=6,
+            number=7, type=9, cpp_type=9, label=1,
             has_default_value=False, default_value=b"".decode('utf-8'),
             message_type=None, enum_type=None, containing_type=None,
             is_extension=False, extension_scope=None,
@@ -156,7 +163,7 @@ _STARTMETA = _descriptor.Descriptor(
     oneofs=[
     ],
     serialized_start=145,
-    serialized_end=275,
+    serialized_end=300,
 )
 
 
@@ -199,8 +206,8 @@ _STARTREQ = _descriptor.Descriptor(
             create_key=_descriptor._internal_create_key,
             fields=[]),
     ],
-    serialized_start=277,
-    serialized_end=353,
+    serialized_start=302,
+    serialized_end=378,
 )
 
 
@@ -245,8 +252,8 @@ _STARTRESP = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=355,
-    serialized_end=412,
+    serialized_start=380,
+    serialized_end=437,
 )
 
 
@@ -291,8 +298,8 @@ _REPLICATEMODELMETA = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=414,
-    serialized_end=488,
+    serialized_start=439,
+    serialized_end=513,
 )
 
 
@@ -335,8 +342,8 @@ _REPLICATEMODELREQ = _descriptor.Descriptor(
             create_key=_descriptor._internal_create_key,
             fields=[]),
     ],
-    serialized_start=490,
-    serialized_end=584,
+    serialized_start=515,
+    serialized_end=609,
 )
 
 
@@ -381,8 +388,8 @@ _REPLICATEMODELRESP = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=586,
-    serialized_end=652,
+    serialized_start=611,
+    serialized_end=677,
 )
 
 
@@ -413,8 +420,8 @@ _TERMINATEREQ = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=654,
-    serialized_end=687,
+    serialized_start=679,
+    serialized_end=712,
 )
 
 
@@ -459,8 +466,8 @@ _TERMINATERESP = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[
     ],
-    serialized_start=689,
-    serialized_end=750,
+    serialized_start=714,
+    serialized_end=775,
 )
 
 _STARTREQ.fields_by_name['meta'].message_type = _STARTMETA
@@ -569,8 +576,8 @@ _ACTOR = _descriptor.ServiceDescriptor(
     index=0,
     serialized_options=None,
     create_key=_descriptor._internal_create_key,
-    serialized_start=753,
-    serialized_end=1008,
+    serialized_start=778,
+    serialized_end=1033,
     methods=[
         _descriptor.MethodDescriptor(
             name='ServiceReady',

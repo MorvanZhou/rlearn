@@ -5,9 +5,29 @@ import numpy as np
 from tensorflow import keras
 
 import rlearn
+from rlearn.model import tools
 
 
 class ModelTest(unittest.TestCase):
+    def test_model_properties(self):
+        ps = {
+            "ActorCriticDiscrete": {"is_on_policy": True, "is_discrete_action": True, "predicted_model_name": "actor"},
+            "ActorCriticContinue": {"is_on_policy": True, "is_discrete_action": False, "predicted_model_name": "actor"},
+            "DQN": {"is_on_policy": False, "is_discrete_action": True, "predicted_model_name": "q"},
+            "DDPG": {"is_on_policy": False, "is_discrete_action": False, "predicted_model_name": "actor"},
+            "DuelingDQN": {"is_on_policy": False, "is_discrete_action": True, "predicted_model_name": "q"},
+            "PPODiscrete": {"is_on_policy": True, "is_discrete_action": True, "predicted_model_name": "pi_"},
+            "PPOContinue": {"is_on_policy": True, "is_discrete_action": False, "predicted_model_name": "pi_"},
+            "SACDiscrete": {"is_on_policy": False, "is_discrete_action": True, "predicted_model_name": "actor"},
+            "SACContinue": {"is_on_policy": False, "is_discrete_action": False, "predicted_model_name": "actor"},
+        }
+        for name, m in tools.get_all().items():
+            self.assertEqual(ps[name]["is_on_policy"], m.is_on_policy)
+            self.assertEqual(ps[name]["is_discrete_action"], m.is_discrete_action)
+            self.assertEqual(ps[name]["predicted_model_name"], m.predicted_model_name)
+            m_instance = m()
+            self.assertEqual(0, len(m_instance.models))
+
     def test_dqn(self):
         net = keras.Sequential([
             keras.layers.InputLayer(2),

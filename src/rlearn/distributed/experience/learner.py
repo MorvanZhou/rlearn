@@ -98,6 +98,11 @@ class Learner:
         path = os.path.join(self.result_dir, f"params_v{self.version_count}.zip")
         self.trainer.save_model(path)
         futures = {}
+        if self.trainer.model.action_transformer is None:
+            at = []
+        else:
+            at = self.trainer.model.action_transformer.params
+
         for addr, stub in self.actors_stub.items():
             try:
                 resp_future = stub.Start.future(
@@ -106,6 +111,7 @@ class Learner:
                         trainer_type=self.trainer.name,
                         max_episode=0,
                         max_episode_step=0,
+                        action_transform=at,
                         version=self.version_count,
                         request_id=str(uuid4()),
                     )

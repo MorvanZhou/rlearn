@@ -7,11 +7,13 @@ from pathlib import Path
 import numpy as np
 from tensorflow import keras
 
+import rlearn.type
 from rlearn import replaybuf, board
 from rlearn.config import TrainConfig
 from rlearn.model.base import BaseRLModel
 from rlearn.model.rnd import RND
 from rlearn.replaybuf.base import BaseReplayBuffer
+from rlearn.transformer import BaseTransformer
 
 
 @dataclass
@@ -21,7 +23,6 @@ class TrainResult:
 
 
 class BaseTrainer(ABC):
-    is_on_policy = False
     name = __qualname__
 
     def __init__(
@@ -47,6 +48,10 @@ class BaseTrainer(ABC):
         self._replace_counter = 0
         self.log_dir = log_dir
         self.board = None
+
+    @property
+    def is_on_policy(self):
+        return self.model.is_on_policy
 
     @abstractmethod
     def set_default_optimizer(self):
@@ -222,3 +227,9 @@ class BaseTrainer(ABC):
             return total_reward[0]
 
         return total_reward
+
+    def set_action_transformer(self, transformer: BaseTransformer):
+        self.model.set_action_transformer(transformer)
+
+    def map_action(self, action: rlearn.type.Action) -> rlearn.type.Action:
+        return self.model.map_action(action)

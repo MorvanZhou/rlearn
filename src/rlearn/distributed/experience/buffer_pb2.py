@@ -432,6 +432,7 @@ _DOWNLOADDATAREQ = _descriptor.Descriptor(
     serialized_end=669,
 )
 
+
 _DOWNLOADDATARESP = _descriptor.Descriptor(
     name='DownloadDataResp',
     full_name='replayBuffer.DownloadDataResp',
@@ -477,6 +478,7 @@ _DOWNLOADDATARESP = _descriptor.Descriptor(
     serialized_end=755,
 )
 
+
 _STOPREQ = _descriptor.Descriptor(
     name='StopReq',
     full_name='replayBuffer.StopReq',
@@ -507,6 +509,7 @@ _STOPREQ = _descriptor.Descriptor(
     serialized_start=757,
     serialized_end=785,
 )
+
 
 _STOPRESP = _descriptor.Descriptor(
     name='StopResp',

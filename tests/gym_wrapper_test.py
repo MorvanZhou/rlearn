@@ -88,3 +88,35 @@ class GameWrapperTest(unittest.TestCase):
                 self.assertIsInstance(done, bool)
                 if done:
                     break
+
+    # def test_keyboard(self):
+    #     from pynput.keyboard import Key, Listener
+    #     from queue import Queue
+    #
+    #     pressed = Queue()
+    #
+    #     def on_release(key):
+    #         print(key)
+    #         if key == Key.left:
+    #             pressed.put(0)
+    #         elif key == Key.right:
+    #             pressed.put(1)
+    #
+    #     # Collect events until released
+    #     listener = Listener(on_release=on_release)
+    #     listener.start()
+    #     data = []
+    #     try:
+    #         listener.wait()
+    #         game = CartPoleSmoothReward(render_mode="human")
+    #         for _ in range(10):
+    #             s = game.reset()
+    #             for _ in range(200):
+    #                 a = pressed.get()
+    #                 s_, r, done = game.step(a)
+    #                 data.append([s, a, r, s_, done])
+    #                 if done:
+    #                     break
+    #                 s = s_
+    #     finally:
+    #         listener.stop()

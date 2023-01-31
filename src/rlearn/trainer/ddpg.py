@@ -11,7 +11,6 @@ from rlearn.trainer.tools import parse_2_learning_rate
 
 class DDPGTrainer(BaseTrainer):
     name = __qualname__
-    is_on_policy = False
 
     def __init__(
             self,

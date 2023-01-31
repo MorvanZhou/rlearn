@@ -29,8 +29,9 @@ message StartMeta {
   string trainerType = 2;
   int64 maxEpisode = 3;
   int64 maxEpisodeStep = 4;
-  uint64 version = 5;
-  string requestId = 6;
+  string actionTransform = 5;
+  uint64 version = 6;
+  string requestId = 7;
 }
 
 message StartReq {

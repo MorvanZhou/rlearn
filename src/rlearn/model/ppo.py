@@ -1,14 +1,16 @@
+from abc import ABC
+
 from tensorflow import keras
 
 from rlearn.model.base import BaseStochasticModel
 
 
-class _PPO(BaseStochasticModel):
+class _PPO(BaseStochasticModel, ABC):
     is_on_policy = True
+    predicted_model_name = "pi_"
 
-    def __init__(self, is_discrete: bool, training: bool = True, ):
-        super().__init__(is_discrete=is_discrete, training=training)
-        self.predicted_model_name = "pi_"
+    def __init__(self, training: bool = True, ):
+        super().__init__(training=training)
 
     @staticmethod
     def set_critic_encoder_callback(encoder: keras.Sequential):
@@ -36,13 +38,15 @@ class _PPO(BaseStochasticModel):
 
 class PPODiscrete(_PPO):
     name = __qualname__
+    is_discrete_action = True
 
     def __init__(self, training: bool = True, ):
-        super().__init__(is_discrete=True, training=training)
+        super().__init__(training=training)
 
 
 class PPOContinue(_PPO):
     name = __qualname__
+    is_discrete_action = False
 
     def __init__(self, training: bool = True, ):
-        super().__init__(is_discrete=False, training=training)
+        super().__init__(training=training)

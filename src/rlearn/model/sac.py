@@ -21,15 +21,14 @@ from rlearn.model.base import BaseStochasticModel
 
 
 class _SAC(BaseStochasticModel, ABC):
-    name = __qualname__
+    is_on_policy = False
+    predicted_model_name = "actor"
 
     def __init__(
             self,
-            is_discrete: bool,
             training: bool = True,
     ):
-        super().__init__(is_discrete=is_discrete, training=training)
-        self.predicted_model_name = "actor"
+        super().__init__(training=training)
 
     @staticmethod
     def set_critic_encoder_callback(encoder: keras.Sequential, action_num: int):
@@ -53,9 +52,10 @@ class _SAC(BaseStochasticModel, ABC):
 
 class SACDiscrete(_SAC):
     name = __qualname__
+    is_discrete_action = True
 
     def __init__(self, training: bool = True):
-        super().__init__(is_discrete=True, training=training)
+        super().__init__(training=training)
 
     @staticmethod
     def set_critic_encoder_callback(encoder: keras.Sequential, action_num: int):
@@ -65,9 +65,10 @@ class SACDiscrete(_SAC):
 
 class SACContinue(_SAC):
     name = __qualname__
+    is_discrete_action = False
 
     def __init__(self, training: bool = True, ):
-        super().__init__(is_discrete=False, training=training)
+        super().__init__(training=training)
 
     @staticmethod
     def set_critic_encoder_callback(encoder: keras.Sequential, action_num: int):

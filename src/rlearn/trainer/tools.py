@@ -4,8 +4,18 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
+import rlearn
 from rlearn.config import TrainConfig
+from rlearn.model.tools import build_encoder_from_config
 from rlearn.trainer.base import BaseTrainer
+
+
+def set_trainer_action_transformer(trainer: BaseTrainer, action_transform_config: list):
+    if trainer.model.is_discrete_action:
+        at = rlearn.transformer.DiscreteAction(action_transform_config)
+    else:
+        at = rlearn.transformer.ContinuousAction(action_transform_config)
+    trainer.set_action_transformer(at)
 
 
 def set_config_to_trainer(
@@ -22,6 +32,20 @@ def set_config_to_trainer(
         epsilon_decay=config.epsilon_decay,
     )
     trainer.set_model_encoder_from_config(config=config)
+
+    if config.action_transform is not None and len(config.action_transform) > 0:
+        set_trainer_action_transformer(trainer=trainer, action_transform_config=config.action_transform)
+
+    if config.random_network_distillation is not None:
+        if config.random_network_distillation.predictor is None:
+            predictor_conf = config.random_network_distillation.target
+        else:
+            predictor_conf = config.random_network_distillation.predictor
+        predictor = build_encoder_from_config(predictor_conf, trainable=True)
+        target = build_encoder_from_config(config.random_network_distillation.target)
+        trainer.add_rnd(
+            target=target, predictor=predictor, learning_rate=config.random_network_distillation.learning_rate)
+
     trainer.set_replay_buffer(
         max_size=config.replay_buffer.max_size,
         buf=config.replay_buffer.buf,
@@ -34,7 +58,9 @@ __BASE_MODULE = BaseTrainer.__module__
 
 def _set_trainer_map(cls, m: dict):
     for subclass in cls.__subclasses__():
-        if subclass.__module__ != __BASE_MODULE and not subclass.__name__.startswith("_"):
+        if subclass.__module__ != __BASE_MODULE \
+                and not subclass.__name__.startswith("_") \
+                and subclass.__module__.startswith(rlearn.trainer.__name__):
             m[subclass.__name__] = subclass
         _set_trainer_map(subclass, m)
 
@@ -53,20 +79,17 @@ def get_trainer_by_name(
     return trainer
 
 
-def get_all():
+def get_all() -> tp.Dict[str, tp.Type[BaseTrainer]]:
     if len(__TRAINER_MAP) == 0:
         _set_trainer_map(BaseTrainer, __TRAINER_MAP)
     return __TRAINER_MAP
 
 
-LearningRate = tp.TypeVar("LearningRate", tp.Sequence[float], float)
-
-
-def parse_2_learning_rate(learning_rate: LearningRate) -> tp.Tuple[float, float]:
+def parse_2_learning_rate(learning_rate: rlearn.type.LearningRate) -> tp.Tuple[float, float]:
     if isinstance(learning_rate, (tuple, list)) and len(learning_rate) <= 2:
         l_len = len(learning_rate)
         if l_len == 1:
-            l1, l2 = learning_rate[0]
+            l1 = l2 = learning_rate[0]
         elif l_len == 2:
             l1, l2 = learning_rate[0], learning_rate[1]
         else:
@@ -76,13 +99,10 @@ def parse_2_learning_rate(learning_rate: LearningRate) -> tp.Tuple[float, float]
     return l1, l2
 
 
-BatchReward = tp.TypeVar('BatchReward', tp.List[float], np.ndarray)
-
-
 def general_average_estimation(
         value_model: keras.Model,
         batch_s: np.ndarray,
-        batch_r: BatchReward,
+        batch_r: rlearn.type.BatchReward,
         batch_done: tp.List[bool],
         s_: np.ndarray,
         gamma: float = 0.9,
@@ -109,7 +129,7 @@ def general_average_estimation(
 def discounted_reward(
         value_model: keras.Model,
         batch_s: np.ndarray,
-        batch_r: BatchReward,
+        batch_r: rlearn.type.BatchReward,
         batch_done: tp.List[bool],
         s_: np.ndarray,
         gamma: float = 0.9,

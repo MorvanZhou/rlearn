@@ -6,13 +6,15 @@ from rlearn.model.base import BaseRLModel
 
 class DQN(BaseRLModel):
     name = __qualname__
+    is_discrete_action = True
+    is_on_policy = False
+    predicted_model_name = "q"
 
     def __init__(
             self,
             training: bool = True,
     ):
         super().__init__(training=training)
-        self.predicted_model_name = "q"
 
     @staticmethod
     def set_encoder_callback(encoder: keras.Sequential, action_num: int):
@@ -33,7 +35,7 @@ class DQN(BaseRLModel):
         return: action index
         """
         s = np.expand_dims(s, axis=0)
-        q = self.models["q"].predict(s, verbose=0).ravel()
+        q = self.models[self.predicted_model_name].predict(s, verbose=0).ravel()
         if np.isnan(q).any():
             raise ValueError("action contains NaN")
         a_index = q.argmax()

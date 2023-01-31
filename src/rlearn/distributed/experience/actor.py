@@ -1,3 +1,4 @@
+import json
 import logging
 import multiprocessing as mp
 import os
@@ -17,8 +18,7 @@ from rlearn.distributed.experience import actor_pb2, actor_pb2_grpc, buffer_pb2_
 from rlearn.distributed.logger import get_logger
 from rlearn.env_wrapper import EnvWrapper
 from rlearn.trainer.base import BaseTrainer
-from rlearn.trainer.tools import get_trainer_by_name
-from rlearn.transformer import BaseTransformer
+from rlearn.trainer.tools import get_trainer_by_name, set_trainer_action_transformer
 
 # linus default is fork, force set to spawn
 mp = mp.get_context('spawn')
@@ -30,7 +30,6 @@ class ActorProcess(mp.Process):
             local_buffer_size: int,
             env: EnvWrapper,
             remote_buffer_address: tp.Optional[str] = None,
-            action_transformer: tp.Optional[BaseTransformer] = None,
             debug: bool = False,
     ):
         super().__init__()
@@ -42,11 +41,11 @@ class ActorProcess(mp.Process):
         self.trainer: tp.Optional[BaseTrainer] = None
         self.local_buffer_size = local_buffer_size
         self.env: EnvWrapper = env
-        self.action_transformer = action_transformer
         self.max_episode = 0
         self.max_episode_step = 0
         self.buffer_address = remote_buffer_address
         self.training_request_id = ""
+        self.action_transform = None
 
         mgr = mp.Manager()
         self.ns = mgr.Namespace()
@@ -67,10 +66,13 @@ class ActorProcess(mp.Process):
             request_id: str,
             max_episode: int = 0,
             max_episode_step: int = 0,
+            action_transform: list = None,
     ):
         self.trainer_type = trainer_type
         self.init_model_pb_path = model_pb_path
         self.training_request_id = request_id
+        if action_transform is not None:
+            self.action_transform = action_transform
         self.ns.version = init_version
         self.max_episode = 0 if max_episode is None else max_episode
         self.max_episode_step = 0 if max_episode_step is None else max_episode_step
@@ -79,6 +81,9 @@ class ActorProcess(mp.Process):
         self.trainer = get_trainer_by_name(self.trainer_type)
         self.trainer.set_params(min_epsilon=0.1, epsilon_decay=1e-3)
         self.trainer.set_replay_buffer(max_size=self.local_buffer_size)
+        if self.action_transform is not None:
+            set_trainer_action_transformer(self.trainer, self.action_transform)
+
         self.trainer.load_model(self.init_model_pb_path)
         self.logger.debug("initial model is set from path='%s'", self.init_model_pb_path)
         os.remove(self.init_model_pb_path)
@@ -137,10 +142,8 @@ class ActorProcess(mp.Process):
                 self.try_replicate_model()
 
                 _a = self.trainer.predict(s)
-                if self.action_transformer is not None:
-                    a = self.action_transformer.transform(_a)
-                else:
-                    a = _a
+                a = self.trainer.map_action(_a)
+
                 s_, r, done = self.env.step(a)
                 self.trainer.store_transition(s=s, a=_a, r=r, s_=s_, done=done)
                 s = s_
@@ -193,8 +196,29 @@ class ActorService(actor_pb2_grpc.ActorServicer):
         os.makedirs(tmp_dir)
         for req in request_iterator:
             if req.meta.filename != "":
+                self.logger.debug(
+                    'Start | '
+                    '{"reqId": "%s", "trainerType": "%s","filename": "%s", "version": %d, '
+                    '"maxEpisode": %d, "maxEpisodeStep": %d, "actionTransform": "%s"}',
+                    req.meta.requestId,
+                    req.meta.trainerType,
+                    req.meta.filename,
+                    req.meta.version,
+                    req.meta.maxEpisode,
+                    req.meta.maxEpisodeStep,
+                    req.meta.actionTransform,
+                )
+
                 filepath = os.path.normpath(os.path.join(tmp_dir, req.meta.filename))
                 request_id = req.meta.requestId
+                try:
+                    at = json.loads(req.meta.actionTransform)
+                except json.JSONDecodeError:
+                    at = None
+                else:
+                    if len(at) == 0:
+                        at = None
+
                 self.actor.init_params(
                     trainer_type=req.meta.trainerType,
                     model_pb_path=filepath,
@@ -202,17 +226,9 @@ class ActorService(actor_pb2_grpc.ActorServicer):
                     request_id=request_id,
                     max_episode=req.meta.maxEpisode,
                     max_episode_step=req.meta.maxEpisodeStep,
+                    action_transform=at,
                 )
-                self.logger.debug(
-                    'Start | '
-                    '{"reqId": "%s", "trainerType": "%s","filename": "%s", "version": %d, '
-                    '"maxEpisode": %d, "maxEpisodeStep": %d}',
-                    req.meta.requestId,
-                    req.meta.trainerType,
-                    req.meta.filename,
-                    req.meta.version,
-                    req.meta.maxEpisode,
-                    req.meta.maxEpisodeStep)
+
                 continue
             data.extend(req.chunkData)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -276,7 +292,6 @@ def _start_server(
         remote_buffer_address: str,
         local_buffer_size: int,
         env: EnvWrapper,
-        action_transformer: tp.Optional[BaseTransformer] = None,
         debug: bool = False
 ) -> tp.Tuple[grpc.Server, threading.Event]:
     stop_event = threading.Event()
@@ -293,7 +308,6 @@ def _start_server(
         local_buffer_size=local_buffer_size,
         env=env,
         remote_buffer_address=remote_buffer_address,
-        action_transformer=action_transformer,
         debug=debug,
     )
     service = ActorService(
@@ -314,10 +328,9 @@ def start_actor_server(
         remote_buffer_address: str,
         local_buffer_size: int,
         env: EnvWrapper,
-        action_transformer: tp.Optional[BaseTransformer] = None,
         debug: bool = False
 ) -> grpc.Server:
-    server, stop_event = _start_server(port, remote_buffer_address, local_buffer_size, env, action_transformer, debug)
+    server, stop_event = _start_server(port, remote_buffer_address, local_buffer_size, env, debug)
     stop_event.wait()
     server.stop(None)
     server.wait_for_termination()

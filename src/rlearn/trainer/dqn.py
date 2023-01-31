@@ -11,7 +11,6 @@ from rlearn.trainer.base import BaseTrainer, TrainResult
 
 class DQNTrainer(BaseTrainer):
     name = __qualname__
-    is_on_policy = False
 
     def __init__(
             self,
@@ -24,12 +23,8 @@ class DQNTrainer(BaseTrainer):
         self.loss = keras.losses.MeanSquaredError()
 
     def set_default_optimizer(self):
-        if isinstance(self.learning_rate, (tuple, list)) and len(self.learning_rate) <= 1:
-            l_len = len(self.learning_rate)
-            if l_len == 1:
-                l1 = self.learning_rate[0]
-            else:
-                raise ValueError("learning rate must be 1")
+        if isinstance(self.learning_rate, (tuple, list)):
+            l1 = self.learning_rate[0]
         else:
             l1 = self.learning_rate
 

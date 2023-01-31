@@ -65,6 +65,7 @@ def read_pb_iterfile(
         trainer_type: str,
         max_episode: int,
         max_episode_step: int,
+        action_transform: list,
         version: int,
         chunk_size=1024,
         request_id: tp.Optional[str] = None,
@@ -78,6 +79,7 @@ def read_pb_iterfile(
         maxEpisode=max_episode,
         version=version,
         maxEpisodeStep=max_episode_step,
+        actionTransform=json.dumps(action_transform),
         requestId=request_id
     ))
 
