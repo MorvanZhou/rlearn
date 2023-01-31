@@ -7,6 +7,7 @@
 /src/*.egg-info
 /dist
 /.tox
+/build
 
 /logs
 **/*.log
