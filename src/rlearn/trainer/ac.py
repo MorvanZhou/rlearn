@@ -40,7 +40,7 @@ class _ActorCriticTrainer(BaseTrainer):
         critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
         self.set_model_encoder(actor_encoder, critic_encoder, action_num)
 
-    def set_default_optimizer(self):
+    def _set_default_optimizer(self):
         l1, l2 = tools.parse_2_learning_rate(self.learning_rate)
 
         self.opt_a = keras.optimizers.Adam(
@@ -116,7 +116,7 @@ class _ActorCriticTrainer(BaseTrainer):
 
     def train_batch(self) -> TrainResult:
         if self.opt_a is None or self.opt_c is None:
-            self.set_default_optimizer()
+            self._set_default_optimizer()
 
         res = TrainResult(
             value={"actor_loss": 0., "critic_loss": 0., "reward": 0.},

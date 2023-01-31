@@ -22,7 +22,7 @@ class DQNTrainer(BaseTrainer):
         self.opt = None
         self.loss = keras.losses.MeanSquaredError()
 
-    def set_default_optimizer(self):
+    def _set_default_optimizer(self):
         if isinstance(self.learning_rate, (tuple, list)):
             l1 = self.learning_rate[0]
         else:
@@ -55,7 +55,7 @@ class DQNTrainer(BaseTrainer):
 
     def train_batch(self) -> TrainResult:
         if self.opt is None:
-            self.set_default_optimizer()
+            self._set_default_optimizer()
 
         res = TrainResult(value={"loss": 0, "q": 0, "reward": 0}, model_replaced=False)
         if self.replay_buffer.is_empty():

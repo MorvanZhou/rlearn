@@ -39,7 +39,7 @@ class TD3Trainer(DDPGTrainer):
 
     def train_batch(self) -> TrainResult:
         if self.opt_a is None or self.opt_c is None:
-            self.set_default_optimizer()
+            self._set_default_optimizer()
 
         res = TrainResult(
             value={

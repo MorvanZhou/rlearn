@@ -35,7 +35,8 @@ class BaseTrainer(ABC):
         self.learning_rate: tp.Union[tp.Sequence[float], float] = 0.001
         self.batch_size: int = 32
 
-        self.replay_buffer: tp.Optional[BaseReplayBuffer] = None
+        # default buffer
+        self.replay_buffer: BaseReplayBuffer = replaybuf.RandomReplayBuffer(max_size=2000)
 
         self.replace_ratio = 1.
         self.replace_step = 0
@@ -54,7 +55,7 @@ class BaseTrainer(ABC):
         return self.model.is_on_policy
 
     @abstractmethod
-    def set_default_optimizer(self):
+    def _set_default_optimizer(self):
         pass
 
     @abstractmethod

@@ -21,7 +21,7 @@ class DDPGTrainer(BaseTrainer):
         self.opt_a, self.opt_c = None, None
         self.loss = keras.losses.MeanSquaredError()
 
-    def set_default_optimizer(self):
+    def _set_default_optimizer(self):
         l1, l2 = parse_2_learning_rate(self.learning_rate)
 
         self.opt_a = keras.optimizers.Adam(
@@ -47,7 +47,7 @@ class DDPGTrainer(BaseTrainer):
 
     def train_batch(self) -> TrainResult:
         if self.opt_a is None or self.opt_c is None:
-            self.set_default_optimizer()
+            self._set_default_optimizer()
 
         res = TrainResult(
             value={
