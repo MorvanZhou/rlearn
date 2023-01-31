@@ -113,9 +113,21 @@ trainer.set_params(
 )
 trainer.set_action_transformer(rlearn.transformer.DiscreteAction([0, 1]))
 learner = rlearn.distributed.experience.Learner(
-    trainer=trainer,
-    remote_buffer_address="localhost:50051",
-    remote_actors_address=["localhost:50052", ],
+  trainer=trainer,
+  remote_buffer_address="localhost:50051",
+  remote_actors_address=["localhost:50052", ],
 )
 learner.run(epoch=200)
+```
+
+# Install
+
+```shell
+git clone https://git.woa.com/TIPE/rlearn.git
+cd rlearn
+
+# apple m1 silicon should use conda command first:
+conda install -c apple tensorflow-deps
+
+python3 setup.py install
 ```
