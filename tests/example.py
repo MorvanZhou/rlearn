@@ -1,4 +1,5 @@
 import gymnasium
+from tensorflow import keras
 
 import rlearn
 
@@ -6,10 +7,10 @@ env = gymnasium.make('CartPole-v1', render_mode="human")
 trainer = rlearn.DQNTrainer()
 # trainer.set_replay_buffer(1000)
 trainer.set_model_encoder(
-    q=rlearn.keras.Sequential([
-        rlearn.keras.layers.InputLayer(4),
-        rlearn.keras.layers.Dense(32),
-        rlearn.keras.layers.ReLU(),
+    q=keras.Sequential([
+        keras.layers.InputLayer(4),
+        keras.layers.Dense(32),
+        keras.layers.ReLU(),
     ]),
     action_num=env.action_space.n
 )
