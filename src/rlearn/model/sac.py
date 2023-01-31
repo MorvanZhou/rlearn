@@ -1,4 +1,8 @@
 """
+[Soft Actor-Critic: Off-Policy Maximum Entropy
+ Deep Reinforcement Learning with a Stochastic Actor](https://arxiv.org/abs/1801.01290)
+[Soft Actor-Critic Algorithms and Applications](https://arxiv.org/abs/1812.05905)
+
 The Soft Actor-Critic (SAC) algorithm extends the DDPG algorithm by
 1) using a stochastic policy, which in theory can express multi-modal
 optimal policies. This also enables the use of

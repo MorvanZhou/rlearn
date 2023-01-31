@@ -103,13 +103,18 @@ class _PPOTrainer(BaseTrainer):
                 old_log_prob=log_prob,
             )
         else:
-            returns, adv = tools.discounted_reward(
+            returns = tools.discounted_reward(
                 value_model=self.model.models["critic"],
                 batch_s=bs,
                 batch_r=total_r,
                 batch_done=self.buffer_done,
                 s_=s_,
                 gamma=self.gamma,
+            )
+            adv = tools.discounted_adv(
+                value_model=self.model.models["critic"],
+                batch_s=bs,
+                reward=returns,
             )
             dist_ = self.model.dist(self.model.models["pi_"], bs)
             log_prob = dist_.log_prob(ba).numpy()
@@ -142,7 +147,8 @@ class _PPOTrainer(BaseTrainer):
             with tf.GradientTape() as tape:
                 # critic
                 vs = self.model.models["critic"](batch["s"])
-                lc = self.loss(batch["returns"], vs)
+                assert batch["returns"].ndim == 1, ValueError("batch['returns'].ndim != 1")
+                lc = self.loss(batch["returns"][:, None], vs)
 
                 tv = self.model.models["critic"].trainable_variables
                 grads = tape.gradient(lc, tv)
@@ -151,7 +157,14 @@ class _PPOTrainer(BaseTrainer):
             with tf.GradientTape() as tape:
                 # actor
                 dist = self.model.dist(self.model.models["pi"], batch["s"])
-                ratio = tf.exp(dist.log_prob(batch["a"]) - batch["old_log_prob"])
+                log_prob = dist.log_prob(batch["a"])
+
+                assert batch["adv"].ndim == 1, ValueError("batch['adv'].ndim != 1")
+                assert log_prob.ndim == 1, ValueError("log_prob.ndim != 1")
+                assert batch["old_log_prob"].ndim == 1, ValueError("batch['old_log_prob'].ndim != 1")
+
+                ratio = tf.exp(log_prob - batch["old_log_prob"])
+
                 surrogate = ratio * batch["adv"]
                 clipped_surrogate = tf.clip_by_value(
                     ratio,

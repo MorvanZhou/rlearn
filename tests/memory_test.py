@@ -10,8 +10,9 @@ class MemoryTest(unittest.TestCase):
     def test_random_put_one(self):
         max_size = 10
         m = rlearn.replaybuf.RandomReplayBuffer(max_size=max_size)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             m.sample(1)
+        self.assertEqual("replay buffer is empty", str(cm.exception))
 
         s = np.ones([4, ])
         s_ = np.full([4, ], 2)
@@ -35,11 +36,11 @@ class MemoryTest(unittest.TestCase):
     def test_random_batch_put(self):
         max_size = 10
         m = rlearn.replaybuf.RandomReplayBuffer(max_size=max_size)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             # different batch size
             m.put_batch(
                 s=np.full([22, 3], 1), a=np.full([21, 2], 2), r=np.full([22, ], 3), s_=np.full([22, 3], 4))
-
+        self.assertEqual("batch size of 'a'=21  is not the same as others=22", str(cm.exception))
         # expend dimension
         m.put_batch(
             s=np.full([22, 3], 1), a=np.full([22, ], 2), r=np.full([22, 1], 3), s_=np.full([22, 3], 4))

@@ -59,7 +59,10 @@ def get_all():
     return __TRAINER_MAP
 
 
-def parse_2_learning_rate(learning_rate: tp.Union[tp.Sequence[float], float]) -> tp.Tuple[float, float]:
+LearningRate = tp.TypeVar("LearningRate", tp.Sequence[float], float)
+
+
+def parse_2_learning_rate(learning_rate: LearningRate) -> tp.Tuple[float, float]:
     if isinstance(learning_rate, (tuple, list)) and len(learning_rate) <= 2:
         l_len = len(learning_rate)
         if l_len == 1:
@@ -67,7 +70,7 @@ def parse_2_learning_rate(learning_rate: tp.Union[tp.Sequence[float], float]) ->
         elif l_len == 2:
             l1, l2 = learning_rate[0], learning_rate[1]
         else:
-            raise ValueError("learning rate must greater then 1")
+            raise ValueError("the sequence length of the learning rate must greater than 1")
     else:
         l1, l2 = learning_rate, learning_rate
     return l1, l2
@@ -84,23 +87,23 @@ def general_average_estimation(
         s_: np.ndarray,
         gamma: float = 0.9,
         lam: float = 0.9,
-):
+) -> tp.Tuple[np.ndarray, np.ndarray]:
     adv = []
     next_v = value_model.predict(
         np.expand_dims(np.array(s_, dtype=np.float32), axis=0), verbose=0).ravel()[0]
     vs = value_model.predict(batch_s, verbose=0).ravel()
-    _gae_lam = 0
+    gae_lam = 0
     for i in range(len(batch_s) - 1, -1, -1):  # backward count
         non_terminate = 0. if batch_done[i] else 1.
         delta = batch_r[i] + gamma * next_v * non_terminate - vs[i]
-        _gae_lam = delta + gamma * lam * _gae_lam * non_terminate
-        adv.insert(0, _gae_lam)
+        gae_lam = delta + gamma * lam * gae_lam * non_terminate
+        adv.insert(0, gae_lam)
         next_v = vs[i]
 
     adv = np.array(adv, dtype=np.float32)
     returns = adv + vs
     adv = (adv - adv.mean()) / (adv.std() + 1e-4)
-    return np.expand_dims(returns, axis=1), adv
+    return returns, adv
 
 
 def discounted_reward(
@@ -110,7 +113,7 @@ def discounted_reward(
         batch_done: tp.List[bool],
         s_: np.ndarray,
         gamma: float = 0.9,
-):
+) -> np.ndarray:
     discounted_r = []
     vs_ = value_model.predict(
         np.expand_dims(np.array(s_, dtype=np.float32), axis=0),
@@ -122,5 +125,14 @@ def discounted_reward(
         discounted_r.insert(0, vs_)
     returns = np.array(discounted_r, dtype=np.float32)
     returns = (returns - returns.mean()) / (returns.std() + 1e-5)
-    adv = (returns - value_model.predict(batch_s, verbose=0))
-    return np.expand_dims(returns, axis=1), adv
+    return returns
+
+
+def discounted_adv(
+        value_model: keras.Model,
+        batch_s: np.ndarray,
+        reward: np.ndarray,
+) -> np.ndarray:
+    adv = reward - value_model.predict(batch_s, verbose=0).ravel()
+    adv = (adv - adv.mean()) / (adv.std() + 1e-4)
+    return adv

@@ -1,4 +1,6 @@
 # Random Network Distillation
+# https://arxiv.org/abs/1810.12894
+
 import typing as tp
 
 import numpy as np

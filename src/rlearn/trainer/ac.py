@@ -96,7 +96,7 @@ class _ActorCriticTrainer(BaseTrainer):
                 # adv=adv,
             )
         else:
-            returns, _ = tools.discounted_reward(
+            returns = tools.discounted_reward(
                 value_model=self.model.models["critic"],
                 batch_s=bs,
                 batch_r=total_r,
@@ -130,7 +130,8 @@ class _ActorCriticTrainer(BaseTrainer):
         with tf.GradientTape() as tape:
             # critic
             vs = self.model.models["critic"](batch["s"])
-            adv = batch["returns"] - vs
+            assert batch["returns"].ndim == 1, ValueError("batch['returns'].ndim != 1")
+            adv = batch["returns"][:, None] - vs
             lc = tf.reduce_mean(tf.square(adv))
 
             tv = self.model.models["critic"].trainable_variables
@@ -141,6 +142,9 @@ class _ActorCriticTrainer(BaseTrainer):
             # actor
             dist = self.model.dist(self.model.models["actor"], batch["s"])
             log_prob = dist.log_prob(batch["a"])
+            adv = tf.squeeze(adv)
+            assert adv.ndim == 1, ValueError("adv.ndim != 1")
+            assert log_prob.ndim == 1, ValueError("log_prob.ndim != 1")
             exp_v = log_prob * tf.squeeze(adv)
 
             if self.entropy_coef == 0.:

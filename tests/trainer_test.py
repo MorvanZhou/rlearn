@@ -7,6 +7,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 import rlearn
+from rlearn.trainer import tools
 from rlearn.trainer.base import BaseTrainer
 
 
@@ -337,3 +338,55 @@ class TrainerTest(unittest.TestCase):
         r = trainer.try_combine_int_ext_reward(np.array([1, 2, 4]), np.random.random((3, 2)))
         self.assertEqual((3,), r.shape)
         self.assertIsInstance(r, np.ndarray)
+
+
+class TrainerToolTest(unittest.TestCase):
+    def test_parse_lr(self):
+        l1, l2 = tools.parse_2_learning_rate(0.1)
+        self.assertEqual(l1, l2)
+        self.assertEqual(0.1, l1)
+
+        l1, l2 = tools.parse_2_learning_rate([0.1, 0.2])
+        self.assertEqual(0.1, l1)
+        self.assertEqual(0.2, l2)
+
+        with self.assertRaises(ValueError) as cm:
+            tools.parse_2_learning_rate([])
+
+        self.assertEqual("the sequence length of the learning rate must greater than 1", str(cm.exception))
+
+    def test_general_average_estimation(self):
+        model = keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.Dense(1),
+        ])
+        returns, adv = tools.general_average_estimation(
+            value_model=model,
+            batch_s=np.random.random((3, 2)),
+            batch_done=[False, False, False],
+            batch_r=np.random.random((3,)),
+            s_=np.random.random((2,)),
+            gamma=0.9,
+            lam=0.9
+        )
+        self.assertEqual((3,), returns.shape)
+        self.assertEqual((3,), adv.shape)
+
+    def test_discounted_reward_adv(self):
+        model = keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.Dense(1),
+        ])
+        bs = np.random.random((3, 2))
+        returns = tools.discounted_reward(
+            value_model=model,
+            batch_s=bs,
+            batch_done=[False, False, False],
+            batch_r=np.random.random((3,)),
+            s_=np.random.random((2,)),
+            gamma=0.9,
+        )
+        self.assertEqual((3,), returns.shape)
+
+        adv = tools.discounted_adv(value_model=model, batch_s=bs, reward=returns)
+        self.assertEqual((3,), adv.shape)
