@@ -4,7 +4,9 @@ from rlearn import type
 from rlearn import zoo
 from rlearn.config import TrainConfig, NetConfig, LayerConfig, ReplayBufferConfig, RandomNetworkDistillationConfig
 from rlearn.env_wrapper import EnvWrapper
-from rlearn.model import *
-from rlearn.replaybuf import *
-from rlearn.trainer import *
+from rlearn.model import DQN, DDPG, DuelingDQN, RND, PPODiscrete, SACDiscrete, \
+    ActorCriticDiscrete, ActorCriticContinue, SACContinue, PPOContinue, TD3
+from rlearn.replaybuf import RandomReplayBuffer, PrioritizedReplayBuffer
+from rlearn.trainer import DQNTrainer, DDPGTrainer, DuelingDQNTrainer, PPODiscreteTrainer, ActorCriticDiscreteTrainer, \
+    SACDiscreteTrainer, TD3Trainer, PPOContinueTrainer, SACContinueTrainer, ActorCriticContinueTrainer
 from rlearn.trainer.tools import get_trainer_by_name, set_config_to_trainer

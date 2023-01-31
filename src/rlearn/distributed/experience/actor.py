@@ -6,7 +6,6 @@ import random
 import string
 import tempfile
 import threading
-import time
 import typing as tp
 import uuid
 from concurrent import futures
@@ -22,6 +21,8 @@ from rlearn.trainer.tools import get_trainer_by_name, set_trainer_action_transfo
 
 # linus default is fork, force set to spawn
 mp = mp.get_context('spawn')
+_name = "".join([random.choice(string.ascii_lowercase) for _ in range(4)])
+logger = get_logger(f"actor-{_name}")
 
 
 class ActorProcess(mp.Process):
@@ -34,8 +35,6 @@ class ActorProcess(mp.Process):
     ):
         super().__init__()
         self.debug = debug
-        self.logger = None
-        self.logger_name = ""
         self.trainer_type = ""
         self.init_model_pb_path = ""
         self.trainer: tp.Optional[BaseTrainer] = None
@@ -85,7 +84,7 @@ class ActorProcess(mp.Process):
             set_trainer_action_transformer(self.trainer, self.action_transform)
 
         self.trainer.load_model(self.init_model_pb_path)
-        self.logger.debug("initial model is set from path='%s'", self.init_model_pb_path)
+        logger.debug("initial model is set from path='%s'", self.init_model_pb_path)
         os.remove(self.init_model_pb_path)
         self.model_loaded.set()
 
@@ -102,7 +101,7 @@ class ActorProcess(mp.Process):
                 os.remove(self.ns.new_model_path)
                 self.ns.new_model_path = ""
                 self.model_loaded.set()
-                self.logger.debug("model parameters replaced, version=%d", self.ns.version)
+                logger.debug("model parameters replaced, version=%d", self.ns.version)
 
     def send_data_to_remote_buffer(self, buf_stub):
         req = buffer_pb2.UploadDataReq(version=self.ns.version, requestId=self.training_request_id)
@@ -112,13 +111,13 @@ class ActorProcess(mp.Process):
             raise ValueError(f"grpc upload data to buffer err: {resp.err}")
 
     def run(self):
-        self.logger = get_logger(self.logger_name)
-        self.logger.setLevel(logging.DEBUG if self.debug else logging.ERROR)
+        logger.setLevel(logging.DEBUG if self.debug else logging.ERROR)
 
         episode_generator = tools.get_count_generator(self.max_episode)
 
         if self.buffer_address is None or self.buffer_address.strip() == "":
             buf_stub = None
+            channel = None
         else:
             channel = grpc.insecure_channel(self.buffer_address)
             buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
@@ -153,39 +152,28 @@ class ActorProcess(mp.Process):
                 if done:
                     break
 
-            self.logger.debug("ep=%d, total_step=%d", ep, step)
+            logger.debug("ep=%d, total_step=%d", ep, step)
+
+        if channel is not None:
+            channel.close()
 
 
 class ActorService(actor_pb2_grpc.ActorServicer):
     def __init__(self, actor: ActorProcess, stop_event: threading.Event, debug=False):
         self.actor = actor
         self.stop_event = stop_event
-        name = "".join([random.choice(string.ascii_lowercase) for _ in range(4)])
-        self.actor.logger_name = f"actorP-{name}"
-        self.logger = get_logger(f"actor-{name}")
-        self.logger.setLevel(logging.DEBUG if debug else logging.ERROR)
 
-        trail_count = 0
-        err = ""
-        while True:
-            if trail_count > 10:
-                raise TimeoutError(f"remote replay buffer connection timeout: {err}")
+        logger.setLevel(logging.DEBUG if debug else logging.ERROR)
+        with grpc.insecure_channel(self.actor.buffer_address) as channel:
+            timeout = 15
             try:
-                channel = grpc.insecure_channel(self.actor.buffer_address)
-                buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
-                resp = buf_stub.ServiceReady(buffer_pb2.ServiceReadyReq(requestId=str(uuid.uuid4())))
-                if resp.ready:
-                    break
-            except grpc.RpcError as e:
-                err = str(e)
-                self.logger.info("waiting for remote replay buffer (%s)", self.actor.buffer_address)
-                time.sleep(1)
-                trail_count += 1
-        self.logger.debug("connected to buffer %s", self.actor.buffer_address)
-        channel.close()
+                grpc.channel_ready_future(channel).result(timeout=timeout)
+            except grpc.FutureTimeoutError:
+                raise ValueError(f"connect replay buffer at {self.actor.buffer_address} timeout: {timeout}")
+        logger.debug("connected to buffer %s", self.actor.buffer_address)
 
     def ServiceReady(self, request, context):
-        self.logger.debug("""ServiceReady | {"reqId": "%s"}""", request.requestId)
+        logger.debug("""ServiceReady | {"reqId": "%s"}""", request.requestId)
         return actor_pb2.ServiceReadyResp(ready=True, requestId=request.requestId)
 
     def Start(self, request_iterator, context):
@@ -196,7 +184,7 @@ class ActorService(actor_pb2_grpc.ActorServicer):
         os.makedirs(tmp_dir)
         for req in request_iterator:
             if req.meta.filename != "":
-                self.logger.debug(
+                logger.debug(
                     'Start | '
                     '{"reqId": "%s", "trainerType": "%s","filename": "%s", "version": %d, '
                     '"maxEpisode": %d, "maxEpisodeStep": %d, "actionTransform": "%s"}',
@@ -256,7 +244,7 @@ class ActorService(actor_pb2_grpc.ActorServicer):
                 filepath = os.path.join(tmp_dir, req.meta.filename)
                 version = req.meta.version
                 request_id = req.meta.requestId
-                self.logger.debug(
+                logger.debug(
                     """ReplicateModel | {"reqId": "%s", "version": %d, "filename": "%s"}""",
                     req.meta.requestId, req.meta.version, req.meta.filename)
                 continue
@@ -281,7 +269,7 @@ class ActorService(actor_pb2_grpc.ActorServicer):
         return resp
 
     def Terminate(self, request, context):
-        self.logger.debug("""Terminate | {"reqId": "%s"}""", request.requestId)
+        logger.debug("""Terminate | {"reqId": "%s"}""", request.requestId)
         self.actor.terminate()
         self.stop_event.set()
         return actor_pb2.TerminateResp(done=True, err="", requestId=request.requestId)
@@ -300,7 +288,7 @@ def _start_server(
             max_workers=1,  # one for update, one for replicate
             thread_name_prefix="distActor"
         ), options=[
-            ('grpc.max_send_message_length', 1024 * 1024 * 20),
+            ('grpc.max_send_message_length', 1024 * 1024 * 100),
         ]
     )
 
@@ -319,7 +307,7 @@ def _start_server(
     actor_pb2_grpc.add_ActorServicer_to_server(service, server)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
-    service.logger.info("actor has started at http://localhost:%d", port)
+    logger.info("actor has started at http://localhost:%d", port)
     return server, stop_event
 
 
@@ -329,9 +317,9 @@ def start_actor_server(
         local_buffer_size: int,
         env: EnvWrapper,
         debug: bool = False
-) -> grpc.Server:
+):
     server, stop_event = _start_server(port, remote_buffer_address, local_buffer_size, env, debug)
     stop_event.wait()
     server.stop(None)
     server.wait_for_termination()
-    return server
+    logger.info("%s server is down", logger.name)

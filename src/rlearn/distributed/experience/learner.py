@@ -36,8 +36,9 @@ class Learner:
             address: actor_pb2_grpc.ActorStub(channel=channel)
             for address, channel in self.actors_channel.items()
         }
+        self.buffer_channel = grpc.insecure_channel(self.buffer_address)
         self.buffer_stub = buffer_pb2_grpc.ReplayBufferStub(
-            channel=grpc.insecure_channel(self.buffer_address)
+            channel=self.buffer_channel
         )
         self.version_count = 0
         self.keep_download_data = True
@@ -48,34 +49,23 @@ class Learner:
         self.result_dir = os.path.normpath(result_dir)
 
     def check_actors_buffer_ready(self):
-        for _ in range(10):
-            try:
-                resp = self.buffer_stub.ServiceReady(buffer_pb2.ServiceReadyReq(requestId=str(uuid4())))
-                if not resp.ready:
-                    raise ValueError(f"replay buffer at {self.buffer_address}"
-                                     f" not ready: {resp.err}, requestId='{resp.requestId}'")
-            except grpc.RpcError:
-                self.logger.debug("waiting for buffer (%s)", self.buffer_address)
-                time.sleep(1)
+        timeout = 15
+        try:
+            grpc.channel_ready_future(self.buffer_channel).result(timeout=timeout)
+        except grpc.FutureTimeoutError:
+            raise ValueError(f"connect replay buffer at {self.buffer_address} timeout: {timeout}")
         self.logger.debug("connected to buffer %s", self.buffer_address)
 
         for addr, stub in self.actors_stub.items():
-            for _ in range(10):
-                try:
-                    resp = stub.ServiceReady(actor_pb2.ServiceReadyReq(requestId=str(uuid4())))
-                    if not resp.ready:
-                        raise ValueError(f"actor at {addr} not ready: {resp.err}, requestId='{resp.requestId}'")
-                    self.logger.debug("connected to actor %s", addr)
-                    break
-                except grpc.RpcError:
-                    self.logger.debug("waiting for actor (%s)", addr)
-                    time.sleep(1)
+            try:
+                grpc.channel_ready_future(self.actors_channel[addr]).result(timeout=timeout)
+            except grpc.FutureTimeoutError:
+                raise ValueError(f"connect actor at {addr} timeout: {timeout}")
 
         self.logger.debug("actors server ready")
 
     def send_init_data(self):
         req_id = str(uuid4())
-
         resp = self.buffer_stub.LearnerSetModelType(
             buffer_pb2.LearnerSetModelTypeReq(
                 isOnPolicy=self.trainer.is_on_policy,
@@ -150,6 +140,7 @@ class Learner:
         resp = self.buffer_stub.Stop(buffer_pb2.StopReq(requestId=str(uuid4())))
         if not resp.done:
             raise ValueError("buffer not exits")
+        self.buffer_channel.close()
 
     def replicate_actor_model(self):
         t0 = time.perf_counter()

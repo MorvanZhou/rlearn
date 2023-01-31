@@ -283,7 +283,7 @@ class LearnerTest(unittest.TestCase):
             port=buf_port,
             max_size=1000,
             buf="RandomReplayBuffer",
-            # debug=True,
+            debug=True,
         ))
         p.start()
         cls.ps.append(p)
@@ -295,7 +295,7 @@ class LearnerTest(unittest.TestCase):
                 remote_buffer_address=buf_address,
                 local_buffer_size=10,
                 env=CartPoleSmoothReward(),
-                # debug=True,
+                debug=True,
             ))
             p.start()
             cls.ps.append(p)
