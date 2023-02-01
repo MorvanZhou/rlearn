@@ -179,6 +179,9 @@ class PrioritizedReplayBuffer(BaseReplayBuffer):
 
     def try_weighting_loss(self, target, evaluated):
         td = target - evaluated
+        loss = tf.reduce_mean(
+            tf.convert_to_tensor(self.cache_importance_sampling_weights) * tf.square(td)
+        )
 
         abs_errors = np.abs(td.numpy())
         abs_errors += self.epsilon  # convert to abs and avoid 0
@@ -188,14 +191,9 @@ class PrioritizedReplayBuffer(BaseReplayBuffer):
         for i, p in zip(self._cache_sample_indices, ps):
             self.tree.update(i, p)
 
-        sq_td = tf.square(td)
-        sq_td = tf.reduce_mean(
-            tf.convert_to_tensor(self.cache_importance_sampling_weights) * sq_td
-        )
-
         self._cache_sample_indices.clear()
         self._cache_sample_importance_sampling_weights.clear()
-        return tf.reduce_mean(sq_td)
+        return loss
 
     @property
     def current_loading_point(self):

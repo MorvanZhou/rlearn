@@ -147,7 +147,7 @@ class _PPOTrainer(BaseTrainer):
                 # critic
                 vs = self.model.models["critic"](batch["s"])
                 assert batch["returns"].ndim == 1, ValueError("batch['returns'].ndim != 1")
-                lc = self.loss(batch["returns"][:, None], vs)
+                lc = self.replay_buffer.try_weighting_loss(target=batch["returns"][:, None], evaluated=vs)
 
                 tv = self.model.models["critic"].trainable_variables
                 grads = tape.gradient(lc, tv)

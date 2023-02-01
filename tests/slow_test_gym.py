@@ -168,7 +168,7 @@ def train_arcobot(conf, render_mode="human", rnd=None):
 def train_mountain_car(conf, render_mode="human", rnd=None):
     trainer = rlearn.get_trainer_by_name(
         conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), f"test_{conf.trainer}"),
-        seed=2
+        seed=3
     )
     if rnd is not None:
         trainer.add_rnd(target=rnd, learning_rate=1e-4)
