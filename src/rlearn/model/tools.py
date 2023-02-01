@@ -1,4 +1,7 @@
+import json
+import os
 import typing as tp
+import zipfile
 
 from tensorflow import keras
 
@@ -102,3 +105,18 @@ def get_all() -> tp.Dict[str, tp.Type[BaseRLModel]]:
     if len(__MODEL_MAP) == 0:
         _set_model_map(BaseRLModel, __MODEL_MAP)
     return __MODEL_MAP
+
+
+def load_model(path: str) -> BaseRLModel:
+    if not path.endswith(".zip"):
+        path += ".zip"
+    dest_dir = os.path.normpath(path).rsplit(".zip")[0]
+    os.makedirs(dest_dir, exist_ok=True)
+    with zipfile.ZipFile(path, "r") as zip_ref:
+        zip_ref.extractall(dest_dir)
+    info_path = os.path.join(dest_dir, "info.json")
+    with open(info_path, "r", encoding="utf-8") as f:
+        info = json.load(f)
+    model = get_model_by_name(info["modelName"])
+    model.load(path)
+    return model

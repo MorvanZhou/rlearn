@@ -6,6 +6,7 @@ from rlearn.config import TrainConfig, NetConfig, LayerConfig, ReplayBufferConfi
 from rlearn.env_wrapper import EnvWrapper
 from rlearn.model import DQN, DDPG, DuelingDQN, RND, PPODiscrete, SACDiscrete, \
     ActorCriticDiscrete, ActorCriticContinue, SACContinue, PPOContinue, TD3
+from rlearn.model.tools import load_model
 from rlearn.replaybuf import RandomReplayBuffer, PrioritizedReplayBuffer
 from rlearn.trainer import DQNTrainer, DDPGTrainer, DuelingDQNTrainer, PPODiscreteTrainer, ActorCriticDiscreteTrainer, \
     SACDiscreteTrainer, TD3Trainer, PPOContinueTrainer, SACContinueTrainer, ActorCriticContinueTrainer

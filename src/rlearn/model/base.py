@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import typing as tp
@@ -45,6 +46,9 @@ def unzip_model(path, dest_dir=None):
         path += ".zip"
     if dest_dir is None:
         dest_dir = os.path.normpath(path).rsplit(".zip")[0]
+        if os.path.exists(dest_dir):
+            print(f"folder exist at {dest_dir}, use cached files")
+            return dest_dir
         os.makedirs(dest_dir, exist_ok=True)
     with zipfile.ZipFile(path, "r") as zip_ref:
         zip_ref.extractall(dest_dir)
@@ -143,6 +147,11 @@ class BaseRLModel(ABC):
             model_tmp_dir = path.rsplit(".zip")[0]
         for k, v in self.models.items():
             v.save(os.path.join(model_tmp_dir, k))
+        with open(os.path.join(model_tmp_dir, "info.json"), "w", encoding="utf-8") as f:
+            json.dump({
+                "modelName": self.name,
+            },
+                f, indent=2, ensure_ascii=False)
         zip_pb_model(model_tmp_dir)
         shutil.rmtree(model_tmp_dir, ignore_errors=True)
 
@@ -154,6 +163,10 @@ class BaseRLModel(ABC):
             os.path.join(unzipped_dir, self.predicted_model_name))
         if self.training:
             for filename in os.listdir(unzipped_dir):
+                if filename.endswith(".json"):
+                    continue
+                if os.path.isfile(os.path.join(unzipped_dir, filename)):
+                    continue
                 model_name = filename.rsplit(".zip", 1)[0]
                 self.models[model_name] = keras.models.load_model(os.path.join(unzipped_dir, model_name))
         shutil.rmtree(unzipped_dir, ignore_errors=True)

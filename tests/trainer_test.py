@@ -339,6 +339,20 @@ class TrainerTest(unittest.TestCase):
         self.assertEqual((3,), r.shape)
         self.assertIsInstance(r, np.ndarray)
 
+    def test_save_pb_load_directly(self):
+        trainer = rlearn.DQNTrainer()
+        trainer.set_model_encoder(keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.Dense(32),
+        ]), action_num=3)
+        path = "tmp_model0"
+        trainer.save_model(path)
+        self.assertTrue(os.path.exists(path + ".zip"))
+        m = rlearn.load_model(path)
+        self.assertFalse(os.path.exists(path))
+        self.assertIsInstance(m.predict(np.random.random((2,))), int)
+        os.remove(path + ".zip")
+
 
 class TrainerToolTest(unittest.TestCase):
     def test_parse_lr(self):

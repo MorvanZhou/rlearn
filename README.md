@@ -13,7 +13,7 @@
 
 # Usage
 
-## Classical pattern
+## Classical way
 
 ```python
 import gymnasium
@@ -119,6 +119,28 @@ learner = rlearn.distributed.experience.Learner(
   remote_actors_address=["localhost:50052", ],
 )
 learner.run(epoch=200)
+```
+
+## Save and reload
+
+```python
+import rlearn
+from tensorflow import keras
+import numpy as np
+
+# define and save a model
+trainer = rlearn.DQNTrainer()
+trainer.set_model_encoder(
+  keras.Sequential([
+    keras.layers.InputLayer(2),
+    keras.layers.Dense(32),
+  ]), action_num=3)
+path = "tmp_model0"
+trainer.save_model(path)
+
+# reload directory from path
+m = rlearn.load_model(path)
+action = m.predict(np.random.random((2,)))
 ```
 
 # Install
