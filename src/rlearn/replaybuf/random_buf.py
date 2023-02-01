@@ -1,6 +1,7 @@
 import typing as tp
 
 import numpy as np
+import tensorflow as tf
 
 from rlearn.replaybuf.base import BaseReplayBuffer
 
@@ -67,6 +68,10 @@ class RandomReplayBuffer(BaseReplayBuffer):
         self._is_full = False
         self._is_empty = True
         self.data.clear()
+
+    def try_weighting_loss(self, target, evaluated):
+        td = target - evaluated
+        return tf.reduce_mean(tf.square(td))
 
     @property
     def current_loading_point(self):

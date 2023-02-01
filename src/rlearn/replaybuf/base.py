@@ -70,6 +70,10 @@ class BaseReplayBuffer(ABC):
         pass
 
     @abstractmethod
+    def try_weighting_loss(self, target, evaluated):
+        pass
+
+    @abstractmethod
     def put_batch(self, **kwargs: np.ndarray) -> None:
         pass
 

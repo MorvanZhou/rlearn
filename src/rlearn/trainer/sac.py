@@ -105,7 +105,8 @@ class _SACTrainer(BaseTrainer):
                 q1_a = self.model.models["c1"]([batch["s"], batch["a"]])
                 q2_a = self.model.models["c2"]([batch["s"], batch["a"]])
 
-            lc = self.loss(q_, q1_a) + self.loss(q_, q2_a)
+            lc = self.replay_buffer.try_weighting_loss(target=q_, evaluated=q1_a)  # PR update only once
+            lc += self.loss(q_, q2_a)
 
             tv = self.model.models["c1"].trainable_variables + self.model.models["c2"].trainable_variables
             grads = tape.gradient(lc, tv)

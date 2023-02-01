@@ -5,7 +5,6 @@ from tensorflow import keras
 from rlearn.config import TrainConfig
 from rlearn.model.dqn import DQN
 from rlearn.model.tools import build_encoder_from_config
-from rlearn.replaybuf.prioritized_buf import PrioritizedReplayBuffer
 from rlearn.trainer.base import BaseTrainer, TrainResult
 
 
@@ -20,7 +19,6 @@ class DQNTrainer(BaseTrainer):
 
         self.model = DQN(training=True)
         self.opt = None
-        self.loss = keras.losses.MeanSquaredError()
 
     def _set_default_optimizer(self):
         if isinstance(self.learning_rate, (tuple, list)):
@@ -80,14 +78,7 @@ class DQNTrainer(BaseTrainer):
         with tf.GradientTape() as tape:
             q = self.model.models["q"](batch["s"])
             q_wrt_a = tf.gather_nd(params=q, indices=a_indices)
-            if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
-                td = q_target - q_wrt_a
-                loss = tf.reduce_mean(
-                    tf.convert_to_tensor(self.replay_buffer.cache_importance_sampling_weights) * tf.square(td)
-                )
-                self.replay_buffer.batch_update(np.abs(td.numpy()))
-            else:
-                loss = self.loss(q_target, q_wrt_a)
+            loss = self.replay_buffer.try_weighting_loss(q_target, q_wrt_a)
         tv = self.model.models["q"].trainable_variables
         grads = tape.gradient(loss, tv)
         self.opt.apply_gradients(zip(grads, tv))

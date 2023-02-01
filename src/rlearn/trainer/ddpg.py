@@ -19,7 +19,6 @@ class DDPGTrainer(BaseTrainer):
         super().__init__(log_dir)
         self.model = DDPG(training=True)
         self.opt_a, self.opt_c = None, None
-        self.loss = keras.losses.MeanSquaredError()
 
     def _set_default_optimizer(self):
         l1, l2 = parse_2_learning_rate(self.learning_rate)
@@ -86,7 +85,7 @@ class DDPGTrainer(BaseTrainer):
                 va_ = self.model.models["critic_"]([batch["s_"], a_])
                 q_ = total_reward[:, None] + self.gamma * va_ * non_terminal
             q = self.model.models["critic"]([batch["s"], batch["a"]])
-            lc = self.loss(q_, q)
+            lc = self.replay_buffer.try_weighting_loss(target=q_, evaluated=q)
 
             tv = self.model.models["critic"].trainable_variables
             grads = tape.gradient(lc, tv)

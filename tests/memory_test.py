@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import tensorflow as tf
 
 import rlearn
 
@@ -70,6 +71,5 @@ class MemoryTest(unittest.TestCase):
         self.assertEqual(2, m.tree.nodes[1])
         self.assertEqual(1, m.tree.nodes[2])
         _ = m.sample(3)
-        abs_error = np.array([0.1, 0.2, 0.3])
-        m.batch_update(abs_error)
-        self.assertAlmostEqual(np.power(abs_error, m.alpha).sum(), m.tree.nodes[0])
+        m.try_weighting_loss(tf.convert_to_tensor([0.1, 0.2, 0.3]), tf.convert_to_tensor([0., 0., 0.]))
+        self.assertAlmostEqual(np.power(np.array([0.1, 0.2, 0.3]) + m.epsilon, m.alpha).sum(), m.tree.nodes[0])

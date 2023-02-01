@@ -1,6 +1,7 @@
 import typing as tp
 
 import numpy as np
+import tensorflow as tf
 
 from rlearn.replaybuf.base import BaseReplayBuffer
 
@@ -176,15 +177,25 @@ class PrioritizedReplayBuffer(BaseReplayBuffer):
         self.tree = SumTree(max_size=self.max_size)
         self.data.clear()
 
-    def batch_update(self, abs_errors: np.ndarray):
+    def try_weighting_loss(self, target, evaluated):
+        td = target - evaluated
+
+        abs_errors = np.abs(td.numpy())
         abs_errors += self.epsilon  # convert to abs and avoid 0
         clipped_errors = np.minimum(abs_errors, self.upper_abs_err_bound)
         # how much prioritization is used, alpha=0 corresponding to uniform case
         ps = np.power(clipped_errors, self.alpha)
         for i, p in zip(self._cache_sample_indices, ps):
             self.tree.update(i, p)
+
+        sq_td = tf.square(td)
+        sq_td = tf.reduce_mean(
+            tf.convert_to_tensor(self.cache_importance_sampling_weights) * sq_td
+        )
+
         self._cache_sample_indices.clear()
         self._cache_sample_importance_sampling_weights.clear()
+        return tf.reduce_mean(sq_td)
 
     @property
     def current_loading_point(self):

@@ -91,7 +91,9 @@ class TD3Trainer(DDPGTrainer):
         with tf.GradientTape() as tape:
             q1 = self.model.models["c1"]([batch["s"], batch["a"]])
             q2 = self.model.models["c2"]([batch["s"], batch["a"]])
-            lc = self.loss(q_, q1) + self.loss(q_, q2)
+
+            lc = self.replay_buffer.try_weighting_loss(target=q_, evaluated=q1)  # PR update only once
+            lc += self.loss(q_, q2)
 
             tv = self.model.models["c1"].trainable_variables + self.model.models["c2"].trainable_variables
             grads = tape.gradient(lc, tv)
