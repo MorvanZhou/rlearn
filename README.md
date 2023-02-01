@@ -1,5 +1,3 @@
-[![GitHub stars](https://img.shields.io/github/stars/morvanzhou/rlearn)](https://github.com/MorvanZhou/rlearn/stargazers)
-[![Python package](https://github.com/MorvanZhou/rlearn/actions/workflows/python-package.yml/badge.svg)](https://github.com/MorvanZhou/rlearn/actions/workflows/python-package.yml)
 
 # Algorithms
 
