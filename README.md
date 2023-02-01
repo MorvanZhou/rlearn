@@ -1,5 +1,5 @@
 
-# Algorithms
+# Reinforcement learning Algorithms
 
 - On-Policy
   - A2C: Actor-Critic
