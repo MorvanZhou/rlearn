@@ -127,7 +127,7 @@ class PrioritizedReplayBuffer(BaseReplayBuffer):
         self.epsilon = 0.01  # small amount to avoid zero priority
         self.alpha = 0.6  # [0~1] convert the importance of TD error to priority
         self.beta = 0.4  # importance-sampling, from initial value increasing to 1
-        self.beta_increment_per_sampling = 0.001
+        self.beta_increment_per_sampling = 1e-4
         self.upper_abs_err_bound = 1.  # clipped abs error
 
         self.tree = SumTree(max_size=max_size)

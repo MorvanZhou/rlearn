@@ -168,7 +168,7 @@ def train_arcobot(conf, render_mode="human", rnd=None):
 def train_mountain_car(conf, render_mode="human", rnd=None):
     trainer = rlearn.get_trainer_by_name(
         conf.trainer, log_dir=os.path.join(tempfile.gettempdir(), f"test_{conf.trainer}"),
-        seed=3
+        seed=10
     )
     if rnd is not None:
         trainer.add_rnd(target=rnd, learning_rate=1e-4)
@@ -188,7 +188,9 @@ def train_mountain_car(conf, render_mode="human", rnd=None):
             _a = trainer.predict(s)
             a = action_transformer.transform(_a)
             s_, _, done, _, _ = env.step(a)
-            r = 1. if done else 0
+            r = 1. if done else -0.1
+            # if s_[0] > -0.4 and s_[0] < -0.3:
+            #     r += 0.2
             trainer.store_transition(s, a, r, s_, done)
             s = s_
             step += 1
@@ -200,7 +202,7 @@ def train_mountain_car(conf, render_mode="human", rnd=None):
                     trainer.load_model_weights(dir_)
                 break
 
-        mov = mov * 0.8 + step * 0.2
+        mov = mov * 0.9 + step * 0.1
         print(f"{ep} step={step} mov={mov}, value={res.value}")
         if mov < 700:
             break
@@ -331,7 +333,7 @@ class GymTest(unittest.TestCase):
                 )
             ],
             gamma=gamma,
-            learning_rates=(0.01,),
+            learning_rates=(0.01, 0.01),
             replay_buffer=rlearn.ReplayBufferConfig(buffer_size),
             replace_step=100,
             not_learn_epochs=2,
@@ -394,7 +396,18 @@ class GymTest(unittest.TestCase):
         self.assertLess(ep, 60)
 
     def test_prioritized_dqn(self):
-        # 10 step=174 mov=629.4898035712, value={'loss': 0.0005622931, 'q': 0.82957065}
+        """
+        0 step=1245 mov=1024.5, value={'loss': 3.6460406e-06, 'q': -0.71813154, 'reward': -0.1}
+        1 step=1291 mov=1051.15, value={'loss': 0.00012694724, 'q': -0.79347503, 'reward': -0.1}
+        2 step=855 mov=1031.535, value={'loss': 0.00011533336, 'q': -0.85960406, 'reward': -0.1}
+        3 step=492 mov=977.5815000000001, value={'loss': 0.0001661802, 'q': -0.89051133, 'reward': -0.1}
+        4 step=406 mov=920.4233500000001, value={'loss': 1.970715e-05, 'q': -0.8803128, 'reward': -0.1}
+        5 step=464 mov=874.7810150000001, value={'loss': 7.4631214e-05, 'q': -0.87904805, 'reward': -0.1}
+        6 step=644 mov=851.7029135000001, value={'loss': 7.646943e-05, 'q': -0.8932611, 'reward': -0.1}
+        7 step=242 mov=790.7326221500002, value={'loss': 9.9874014e-05, 'q': -0.8124712, 'reward': -0.1}
+        8 step=283 mov=739.9593599350002, value={'loss': 2.894851e-05, 'q': -0.90620947, 'reward': -0.1}
+        9 step=258 mov=691.7634239415002, value={'loss': 0.000222251, 'q': -0.8515924, 'reward': -0.1}
+        """
         self.mountain_car_conf.trainer = rlearn.DQNTrainer.name
         self.mountain_car_conf.replay_buffer = rlearn.ReplayBufferConfig(10000, buf="PrioritizedReplayBuffer")
         ep = train_mountain_car(self.mountain_car_conf, self.render_mode)
