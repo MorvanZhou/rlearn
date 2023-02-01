@@ -20,16 +20,16 @@ from tensorflow import keras
 
 import rlearn
 
-# define a environment
+# define an environment
 env = gymnasium.make('CartPole-v1', render_mode="human")
 
 # set reinforcement learning trainer
 trainer = rlearn.DQNTrainer()
 trainer.set_replay_buffer(max_size=1000)
 trainer.set_model_encoder(
-    q=keras.Sequential([
-        keras.layers.InputLayer(4),
-        keras.layers.Dense(32),
+  q=keras.Sequential([
+    keras.layers.InputLayer(4),  # state has dimension of 4
+    keras.layers.Dense(32),
         keras.layers.ReLU(),
     ]),
     action_num=env.action_space.n
