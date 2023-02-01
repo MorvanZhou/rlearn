@@ -10,7 +10,7 @@ on:
     branches: [ $default-branch ]
 
 jobs:
-  test_linux:
+  build:
 
     runs-on: ubuntu-latest
     strategy:
