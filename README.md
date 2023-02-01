@@ -126,8 +126,9 @@ learner.run(epoch=200)
 git clone https://git.woa.com/TIPE/rlearn.git
 cd rlearn
 
-python3 setup.py install
-
 # apple m1 silicon should use conda command:
 conda install -c apple tensorflow-deps
+########
+
+python3 setup.py install
 ```
