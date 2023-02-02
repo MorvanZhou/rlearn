@@ -7,7 +7,6 @@ import unittest
 import gymnasium
 from tensorflow import keras
 
-import gym_wrapper_test
 import rlearn
 from rlearn.distributed import tools
 

@@ -14,7 +14,7 @@ import rlearn
 from rlearn import distributed
 from rlearn.distributed import tools
 from rlearn.distributed.experience import buffer_pb2, buffer_pb2_grpc, actor_pb2_grpc, actor_pb2
-from tests.gym_wrapper_test import CartPoleSmoothReward
+from tests.test_gym_wrapper import CartPoleSmoothReward
 
 
 class BufferTest(unittest.TestCase):
