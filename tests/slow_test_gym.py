@@ -414,7 +414,19 @@ class GymTest(unittest.TestCase):
         self.assertLess(ep, 20)
 
     def test_rnd_dqn(self):
-        # 10 step=174 mov=629.4898035712, value={'loss': 0.0005622931, 'q': 0.82957065}
+        """
+        7 step=485 mov=1172.2693254199999, value={'loss': 0.0021709972, 'q': -0.15863785, 'reward': -0.066}
+        8 step=400 mov=1095.0423928779999, value={'loss': 0.029647397, 'q': -0.32791573, 'reward': -0.061211}
+        9 step=266 mov=1012.1381535902, value={'loss': 0.0018574481, 'q': -0.4594878, 'reward': -0.0758}
+        10 step=297 mov=940.62433823118, value={'loss': 0.0009715919, 'q': -0.45295817, 'reward': -0.08463}
+        11 step=448 mov=891.361904408062, value={'loss': 0.0012532326, 'q': -0.6123974, 'reward': -0.089437}
+        12 step=410 mov=843.2257139672557, value={'loss': 0.0017357648, 'q': -0.59601855, 'reward': -0.088186}
+        13 step=225 mov=781.4031425705301, value={'loss': 0.051998638, 'q': -0.54122704, 'reward': -0.042284}
+        14 step=290 mov=732.2628283134771, value={'loss': 0.00037228785, 'q': -0.6715888, 'reward': -0.09172700}
+        15 step=1094 mov=768.4365454821294, value={'loss': 0.00036614554, 'q': -0.8202636, 'reward': -0.095412}
+        16 step=309 mov=722.4928909339164, value={'loss': 0.0005202644, 'q': -0.797674, 'reward': -0.095827411}
+        17 step=493 mov=699.5436018405247, value={'loss': 0.00093113194, 'q': -0.8231554, 'reward': -0.097443217}
+        """
         self.mountain_car_conf.trainer = rlearn.DQNTrainer.name
         rnd = keras.Sequential([
             keras.layers.InputLayer(2),
