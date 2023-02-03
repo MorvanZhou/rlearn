@@ -15,7 +15,7 @@ import grpc
 from rlearn.distributed import tools
 from rlearn.distributed.experience import actor_pb2, actor_pb2_grpc, buffer_pb2_grpc, buffer_pb2
 from rlearn.distributed.logger import get_logger
-from rlearn.env_wrapper import EnvWrapper
+from rlearn.env.env_wrapper import EnvWrapper
 from rlearn.trainer.base import BaseTrainer
 from rlearn.trainer.tools import get_trainer_by_name, set_trainer_action_transformer
 

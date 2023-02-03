@@ -3,7 +3,7 @@ from rlearn import transformer
 from rlearn import type
 from rlearn import zoo
 from rlearn.config import TrainConfig, NetConfig, LayerConfig, ReplayBufferConfig, RandomNetworkDistillationConfig
-from rlearn.env_wrapper import EnvWrapper
+from rlearn.env.env_wrapper import EnvWrapper
 from rlearn.model import DQN, DDPG, DuelingDQN, RND, PPODiscrete, SACDiscrete, \
     ActorCriticDiscrete, ActorCriticContinue, SACContinue, PPOContinue, TD3
 from rlearn.model.tools import load_model
