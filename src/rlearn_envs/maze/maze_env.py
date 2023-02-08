@@ -3,11 +3,13 @@ import json
 import math
 import random
 import time
+import typing as tp
 
 import numpy as np
-import typing as tp
-from load import *
-from env_wrapper import EnvWrapper
+import pygame
+
+from rlearn import EnvWrapper
+from rlearn_envs.maze import load
 
 
 def game_over():
@@ -78,32 +80,32 @@ class Maze(EnvWrapper):
         self.screen_size = (self.limit_distance_x * self.row, self.limit_distance_y * self.col + 350)
         self.viewer = pygame.display.set_mode(self.screen_size, 0, 32)
         # 加载地图元素
-        self.bush = load_bush()
-        self.grass = load_grass()
-        self.land = load_land()
-        self.stone = load_stone()
-        self.tree = load_tree()
-        self.water1 = load_water1()
-        self.water2 = load_water2()
-        self.wood1 = load_wood1()
-        self.wood2 = load_wood2()
+        self.bush = load.bush()
+        self.grass = load.grass()
+        self.land = load.land()
+        self.stone = load.stone()
+        self.tree = load.tree()
+        self.water1 = load.water1()
+        self.water2 = load.water2()
+        self.wood1 = load.wood1()
+        self.wood2 = load.wood2()
         # 加载玩家元素
-        self.blue_player = load_blue_player()
-        self.green_player = load_green_player()
-        self.red_player = load_red_player()
-        self.yellow_player = load_yellow_player()
+        self.blue_player = load.blue_player()
+        self.green_player = load.green_player()
+        self.red_player = load.red_player()
+        self.yellow_player = load.yellow_player()
         # 加载终点元素
-        self.blue_exits = load_blue_exits()
-        self.green_exits = load_green_exits()
-        self.red_exits = load_red_exits()
-        self.yellow_exits = load_yellow_exits()
+        self.blue_exits = load.blue_exits()
+        self.green_exits = load.green_exits()
+        self.red_exits = load.red_exits()
+        self.yellow_exits = load.yellow_exits()
         # 加载宝石图片
-        self.pink_gem = load_pink_gem()
-        self.red_gem = load_red_gem()
-        self.blue_gem = load_blue_gem()
-        self.yellow_gem = load_yellow_gem()
-        self.purple_gem = load_purple_gem()
-        self.bonus = load_bonus()
+        self.pink_gem = load.pink_gem()
+        self.red_gem = load.red_gem()
+        self.blue_gem = load.blue_gem()
+        self.yellow_gem = load.yellow_gem()
+        self.purple_gem = load.purple_gem()
+        self.bonus = load.bonus()
 
         self.map_param = [self.bush, self.grass, self.tree, self.stone,
                           self.water1, self.water2, self.wood1, self.wood2]
