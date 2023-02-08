@@ -5,35 +5,35 @@ import os
 current_dir = os.path.split(os.path.realpath(__file__))[0]
 
 # 地图图片
-bush_file = current_dir + "/resources/map/bush.png"
-grass_file = current_dir + "/resources/map/grass.png"
-land_file = current_dir + "/resources/map/land.png"
-stone_file = current_dir + "/resources/map/stone.png"
-tree_file = current_dir + "/resources/map/tree.png"
-water1_file = current_dir + "/resources/map/water1.png"
-water2_file = current_dir + "/resources/map/water2.png"
-wood1_file = current_dir + "/resources/map/wood1.png"
-wood2_file = current_dir + "/resources/map/wood2.png"
+bush_file = current_dir + "/asserts/img/map/bush.png"
+grass_file = current_dir + "/asserts/img/map/grass.png"
+land_file = current_dir + "/asserts/img/map/land.png"
+stone_file = current_dir + "/asserts/img/map/stone.png"
+tree_file = current_dir + "/asserts/img/map/tree.png"
+water1_file = current_dir + "/asserts/img/map/water1.png"
+water2_file = current_dir + "/asserts/img/map/water2.png"
+wood1_file = current_dir + "/asserts/img/map/wood1.png"
+wood2_file = current_dir + "/asserts/img/map/wood2.png"
 
 # 玩家图片
-blue_player_file = current_dir + "/resources/penguin/blue.png"
-green_player_file = current_dir + "/resources/penguin/green.png"
-red_player_file = current_dir + "/resources/penguin/red.png"
-yellow_player_file = current_dir + "/resources/penguin/yellow.png"
+blue_player_file = current_dir + "/asserts/img/penguin/blue.png"
+green_player_file = current_dir + "/asserts/img/penguin/green.png"
+red_player_file = current_dir + "/asserts/img/penguin/red.png"
+yellow_player_file = current_dir + "/asserts/img/penguin/yellow.png"
 
 # 终点图片
-blue_flag_file = current_dir + "/resources/flag/blue.png"
-green_flag_file = current_dir + "/resources/flag/green.png"
-red_flag_file = current_dir + "/resources/flag/red.png"
-yellow_flag_file = current_dir + "/resources/flag/yellow.png"
+blue_flag_file = current_dir + "/asserts/img/flag/blue.png"
+green_flag_file = current_dir + "/asserts/img/flag/green.png"
+red_flag_file = current_dir + "/asserts/img/flag/red.png"
+yellow_flag_file = current_dir + "/asserts/img/flag/yellow.png"
 
 # 宝石图片
-blue_gem_file = current_dir + "/resources/gem/blue.png"
-red_gem_file = current_dir + "/resources/gem/red.png"
-yellow_gem_file = current_dir + "/resources/gem/yellow.png"
-pink_gem_file = current_dir + "/resources/gem/pink.png"
-purple_gem_file = current_dir + "/resources/gem/purple.png"
-bonus_file = current_dir + "/resources/gem/bonus.png"
+blue_gem_file = current_dir + "/asserts/img/gem/blue.png"
+red_gem_file = current_dir + "/asserts/img/gem/red.png"
+yellow_gem_file = current_dir + "/asserts/img/gem/yellow.png"
+pink_gem_file = current_dir + "/asserts/img/gem/pink.png"
+purple_gem_file = current_dir + "/asserts/img/gem/purple.png"
+bonus_file = current_dir + "/asserts/img/gem/bonus.png"
 
 
 # 得到地图

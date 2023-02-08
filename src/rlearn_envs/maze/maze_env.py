@@ -318,6 +318,4 @@ if __name__ == "__main__":
     actions = ["u", "d", "l", "r", "s"]
     while True:
         state, reward, finish = maze.step(actions[math.floor(random.random() * 5)])
-        print(state)
         maze.render()
-        break
