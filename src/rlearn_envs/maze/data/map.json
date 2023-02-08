@@ -1,0 +1,168 @@
+{
+  "mapData": [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  ],
+  "players": [
+    {
+      "id": 0,
+      "position": {
+        "x": 1,
+        "y": 1
+      },
+      "objectType": 0,
+      "direction": 3,
+      "team": 0,
+      "order": 0,
+      "actionPoints": 100
+    },
+    {
+      "id": 1,
+      "position": {
+        "x": 1,
+        "y": 8
+      },
+      "objectType": 0,
+      "direction": 3,
+      "team": 0,
+      "order": 0,
+      "actionPoints": 100
+    },
+    {
+      "id": 2,
+      "position": {
+        "x": 8,
+        "y": 8
+      },
+      "objectType": 0,
+      "direction": 3,
+      "team": 0,
+      "order": 0,
+      "actionPoints": 100
+    },
+        {
+      "id": 3,
+      "position": {
+        "x": 8,
+        "y": 1
+      },
+      "objectType": 0,
+      "direction": 3,
+      "team": 0,
+      "order": 0,
+      "actionPoints": 100
+    }
+  ],
+  "exits": [
+    {
+      "position": {
+        "x": 8,
+        "y": 9
+      },
+      "objectType": 1,
+      "direction": 0
+    },
+    {
+      "position": {
+        "x": 8,
+        "y": 0
+      },
+      "objectType": 1,
+      "direction": 0
+    },
+    {
+      "position": {
+        "x": 1,
+        "y": 0
+      },
+      "objectType": 1,
+      "direction": 0
+    },
+    {
+      "position": {
+        "x": 1,
+        "y": 9
+      },
+      "objectType": 1,
+      "direction": 0
+    }
+  ],
+  "mapWeights": {
+    "move": {
+      "0": 1
+    },
+    "stay": {
+      "0": 1
+    }
+  },
+  "items": [
+    {
+      "objectType": 101,
+      "position": {
+        "x": 2,
+        "y": 1
+      }
+    },
+    {
+      "objectType": 102,
+      "position": {
+        "x": 1,
+        "y": 6
+      }
+    },
+    {
+      "objectType": 103,
+      "position": {
+        "x": 3,
+        "y": 2
+      }
+    },
+    {
+      "objectType": 104,
+      "position": {
+        "x": 5,
+        "y": 5
+      }
+    },
+    {
+      "objectType": 105,
+      "position": {
+        "x": 7,
+        "y": 6
+      }
+    }
+  ],
+  "collectionsConfig": [
+    {
+      "items": [
+        {
+          "objectType": 101
+        },
+        {
+          "objectType": 102
+        },
+        {
+          "objectType": 103
+        },
+        {
+          "objectType": 104
+        },
+        {
+          "objectType": 105
+        }
+      ],
+      "effectType": 1,
+      "effectValues": [
+        10
+      ]
+    }
+  ]
+}
