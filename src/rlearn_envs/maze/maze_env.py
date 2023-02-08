@@ -174,12 +174,13 @@ class Maze(EnvWrapper):
         self.finish = False
         self.info = None
         self.reward = 0
-        return {"players_info": self.players_dict, "gem_info": self.gem_dict, "board": self.board}, \
-               self.reward, self.finish, self.info
+        return {"players_info": self.players_dict, "gem_info": self.gem_dict, "board": self.board}, self.reward, self.\
+            finish
 
     def step(self, action):
         if self.finish:
-            return (self.players_dict, self.gem_dict, self.board), self.reward, self.finish, self.info
+            return {"players_info": self.players_dict, "gem_info": self.gem_dict, "board": self.board}, self.reward, \
+                   self.finish
         player_id = self.cur_player % self.players_num
         player = self.players_dict[player_id]
         self.cur_player = player_id + 1
@@ -215,8 +216,8 @@ class Maze(EnvWrapper):
                     break
         if len(list(filter(lambda x: self.players_dict[x]["action_point"] > 0, self.players_dict))) == 0:
             self.finish = True
-        return {"players_info": self.players_dict, "gem_info": self.gem_dict, "board": self.board}, self.reward, \
-               self.finish
+        return {"players_info": self.players_dict, "gem_info": self.gem_dict, "board": self.board}, self.reward, self.\
+            finish
 
     def render(self):
         gem_width = 20
