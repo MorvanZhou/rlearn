@@ -171,6 +171,9 @@ class BaseRLModel(ABC):
                 self.models[model_name] = keras.models.load_model(os.path.join(unzipped_dir, model_name))
         shutil.rmtree(unzipped_dir, ignore_errors=True)
 
+    def get_model_for_prediction(self) -> keras.Model:
+        return self.models[self.predicted_model_name]
+
     @staticmethod
     def clone_model(model):
         try:

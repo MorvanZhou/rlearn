@@ -21,7 +21,14 @@ def set_trainer_action_transformer(trainer: BaseTrainer, action_transform_config
 def set_config_to_trainer(
         config: TrainConfig,
         trainer: BaseTrainer,
-):
+) -> None:
+    """
+    Set training parameters, model structure, action transformer, random network distillation, replay buffer
+
+    Args:
+        config (TrainConfig): training config
+        trainer (BaseTrainer): trainer object
+    """
     trainer.set_params(
         learning_rate=config.learning_rates,
         batch_size=config.batch_size,
