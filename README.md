@@ -87,7 +87,6 @@ class CartPole(rlearn.EnvWrapper):
 distributed.experience.start_actor_server(
   port=50052,
   remote_buffer_address="localhost:50051",
-  local_buffer_size=10,
   env=CartPole(),
 )
 ```
@@ -117,11 +116,14 @@ learner = rlearn.distributed.experience.Learner(
   trainer=trainer,
   remote_buffer_address="localhost:50051",
   remote_actors_address=["localhost:50052", ],
+  actor_buffer_size=10,
 )
 learner.run(epoch=200)
 ```
 
 ## Save and reload
+
+Save entire model
 
 ```python
 import rlearn
@@ -140,6 +142,42 @@ trainer.save_model(path)
 
 # reload directory from path
 m = rlearn.load_model(path)
+action = m.predict(np.random.random((2,)))
+```
+
+Save model parameters and reload to a new trainer or new model.
+
+```python
+import rlearn
+from tensorflow import keras
+import numpy as np
+
+# define and save a model
+trainer = rlearn.DQNTrainer()
+trainer.set_model_encoder(
+  keras.Sequential([
+    keras.layers.InputLayer(2),
+    keras.layers.Dense(32),
+  ]), action_num=3)
+path = "tmp_model_weights0"
+trainer.save_model_weights(path)
+
+# trainer load parameters from path
+trainer2 = rlearn.DQNTrainer()
+trainer2.set_model_encoder(
+  keras.Sequential([
+    keras.layers.InputLayer(2),
+    keras.layers.Dense(32),
+  ]), action_num=3)
+trainer2.load_model_weights(path)
+action = trainer2.predict(np.random.random((2,)))
+
+# model load parameters
+m = rlearn.DQN()
+m.set_encoder(encoder=keras.Sequential([
+  keras.layers.InputLayer(2),
+  keras.layers.Dense(32),
+]), action_num=3)
 action = m.predict(np.random.random((2,)))
 ```
 
