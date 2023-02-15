@@ -117,10 +117,9 @@ def read_pb_iterfile(
 #                 return
 
 
-def get_iter_shaped_values(
+def get_iter_values(
         req,
         meta,
-        shapes: tp.List[tp.List[tp.Tuple[int]]],
         values: np.ndarray,
         version: int,
         chunk_size: int = 1024,
@@ -129,7 +128,6 @@ def get_iter_shaped_values(
     if request_id is None:
         request_id = str(uuid.uuid4())
     yield req(meta=meta(
-        shapes=json.dumps(shapes),
         version=version,
         requestId=request_id
     ))
@@ -142,16 +140,15 @@ def get_iter_shaped_values(
 
 def replicate_model(request_iterator, logger, model_loaded_event, weights_conn, resp):
     data = bytearray()
-    shapes = []
     version = 0
-    request_id = ""
+    req_id = ""
+
     for req in request_iterator:
-        if req.meta.shapes != "":
-            shapes = json.loads(req.meta.shapes)
+        if req.meta.version >= 1:
             version = req.meta.version
-            request_id = req.meta.requestId
+            req_id = req.meta.requestId
             logger.debug(
-                """ReplicateModel | {"reqId": "%s", "version": %d}""",
+                """ReplicateModel | {"requestId": '%s', "version": %d}""",
                 req.meta.requestId, req.meta.version)
             continue
         data.extend(req.chunkData)
@@ -159,14 +156,14 @@ def replicate_model(request_iterator, logger, model_loaded_event, weights_conn, 
     weights = np.frombuffer(d_data, dtype=np.float32)
 
     model_loaded_event.clear()
-    weights_conn.send([version, shapes, weights])
+    weights_conn.send([version, weights])
     if model_loaded_event.wait(5):
         done = True
         err = ""
     else:
         done = False
         err = "model replicating timeout"
-    return resp(done=done, err=err, requestId=request_id)
+    return resp(done=done, err=err, requestId=req_id)
 
 
 def initialize_model(request_iterator, logger, process, resp):

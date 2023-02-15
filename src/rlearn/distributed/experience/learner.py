@@ -96,6 +96,7 @@ class Learner:
             at = self.trainer.model.action_transformer.params
 
         for addr, stub in self.actors_stub.items():
+            req_id = str(uuid4())
             try:
                 resp_future = stub.Start.future(
                     tools.read_pb_iterfile(
@@ -107,19 +108,19 @@ class Learner:
                         max_episode_step=0,
                         action_transform=at,
                         version=self.version_count,
-                        request_id=str(uuid4()),
+                        request_id=req_id,
                     )
                 )
                 futures[addr] = resp_future
             except grpc.RpcError as e:
-                self.logger.error("actor start err: %e, addr='%s', requestId='%s'", str(e), addr, resp.requestId)
+                self.logger.error("actor start err: %e, addr='%s', requestId='%s'", str(e), addr, req_id)
 
         for addr, resp_future in futures.items():
             resp = resp_future.result()
             if not resp.done:
                 raise ValueError(f"actor start err: {resp.err}, addr='{addr}', requestId='{resp.requestId}'")
 
-        self.logger.debug("init actors with version=%d, reqId='%s'", self.version_count, req_id)
+        self.logger.debug("init actors with version=%d", self.version_count)
         self.version_count += 1
 
     def download_data(self, lock, max_size=1000):
@@ -149,7 +150,7 @@ class Learner:
     def replicate_actor_model(self):
         t0 = time.perf_counter()
 
-        shapes, weights = self.trainer.model.get_shapes_weights()
+        weights = self.trainer.model.get_flat_weights()
 
         req_id = str(uuid4())
 
@@ -163,13 +164,13 @@ class Learner:
                 f"buffer set version err: {resp.err}, version={self.version_count}, requestId='{req_id}'")
 
         futures = {}
+        assert self.version_count >= 1, ValueError(f"self.version_count must >= 1, but got {self.version_count}")
         for addr, stub in self.actors_stub.items():
             try:
                 resp_future = stub.ReplicateModel.future(
-                    tools.get_iter_shaped_values(
+                    tools.get_iter_values(
                         req=actor_pb2.ReplicateModelReq,
                         meta=actor_pb2.ModelMeta,
-                        shapes=shapes,
                         values=weights,
                         version=self.version_count,
                         request_id=req_id

@@ -1,3 +1,5 @@
+import typing as tp
+
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -114,16 +116,17 @@ class _ActorCriticTrainer(BaseTrainer):
         self.buffer_r.clear()
         self.buffer_done.clear()
 
-    def train_batch(self) -> TrainResult:
-        if self.opt_a is None or self.opt_c is None:
-            self._set_default_optimizer()
-
+    def compute_gradients(self) -> tp.Tuple[TrainResult, tp.Optional[tp.Dict[str, tp.Dict[str, list]]]]:
         res = TrainResult(
             value={"actor_loss": 0., "critic_loss": 0., "reward": 0.},
             model_replaced=False,
         )
+        grads = {"actor": {"g": [], "v": []}, "critic": {"g": [], "v": []}}
         if self.replay_buffer.current_loading_point < self.batch_size:
-            return res
+            return res, None
+
+        if self.opt_a is None or self.opt_c is None:
+            self._set_default_optimizer()
 
         batch = self.replay_buffer.sample(self.batch_size)
         with tf.GradientTape() as tape:
@@ -134,8 +137,8 @@ class _ActorCriticTrainer(BaseTrainer):
             lc = tf.reduce_mean(tf.square(adv))
 
             tv = self.model.models["critic"].trainable_variables
-            grads = tape.gradient(lc, tv)
-            self.opt_c.apply_gradients(zip(grads, tv))
+            grads["critic"]["g"] = tape.gradient(lc, tv)
+            grads["critic"]["v"] = tv
 
         with tf.GradientTape() as tape:
             # actor
@@ -154,8 +157,8 @@ class _ActorCriticTrainer(BaseTrainer):
             la = - tf.reduce_mean(exp_v) - entropy
 
             tv = self.model.models["actor"].trainable_variables
-            grads = tape.gradient(la, tv)
-            self.opt_a.apply_gradients(zip(grads, tv))
+            grads["actor"]["g"] = tape.gradient(la, tv)
+            grads["actor"]["v"] = tv
 
         self.replay_buffer.clear()
         self.buffer_s.clear()
@@ -168,6 +171,16 @@ class _ActorCriticTrainer(BaseTrainer):
             "critic_loss": lc.numpy(),
             "reward": batch["returns"].mean(),
         })
+        return res, grads
+
+    def apply_distributed_gradients(self, grads: tp.List):
+        pass
+
+    def train_batch(self) -> TrainResult:
+        res, grads = self.compute_gradients()
+        if grads is not None:
+            self.opt_c.apply_gradients(zip(grads["critic"]["g"], grads["critic"]["v"]))
+            self.opt_a.apply_gradients(zip(grads["actor"]["g"], grads["actor"]["v"]))
         return res
 
 

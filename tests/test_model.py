@@ -246,17 +246,10 @@ class ModelTest(unittest.TestCase):
             ]),
             action_num=2
         )
-        shapes, weights = m.get_shapes_weights()
-        self.assertEqual(
-            [[(2, 3), (3,)],
-             [(3, 5), (5,)],
-             [(5, 2), (2,)],
-             [(2, 3), (3,)],
-             [(3, 5), (5,)],
-             [(5, 2), (2,)]], shapes)
+        weights = m.get_flat_weights()
         self.assertEqual(82, weights.size)
 
-        m.set_shapes_weights(shapes, weights)
+        m.set_flat_weights(weights)
 
         m = rlearn.DQN(training=False)
         m.set_encoder(
@@ -268,14 +261,10 @@ class ModelTest(unittest.TestCase):
             ]),
             action_num=2
         )
-        shapes, weights = m.get_shapes_weights()
-        self.assertEqual(
-            [[(2, 3), (3,)],
-             [(3, 5), (5,)],
-             [(5, 2), (2,)]], shapes)
+        weights = m.get_flat_weights()
         self.assertEqual(41, weights.size)
 
-        m.set_shapes_weights(shapes, weights)
+        m.set_flat_weights(weights)
 
         m = rlearn.DDPG(training=True)
         m.set_encoder(
@@ -293,27 +282,10 @@ class ModelTest(unittest.TestCase):
             ]),
             action_num=1
         )
-        shapes, weights = m.get_shapes_weights()
-        self.assertEqual(
-            [[(2, 3), (3,)],
-             [(3, 5), (5,)],
-             [(5, 1), (1,)],
-             [(2, 3), (3,)],
-             [(3, 5), (5,)],
-             [(5, 1), (1,)],
-             [(2, 3), (3,)],
-             [(3, 5), (5,)],
-             [(6, 16), (16,)],
-             [(16, 32), (32,)],
-             [(32, 1), (1,)],
-             [(2, 3), (3,)],
-             [(3, 5), (5,)],
-             [(6, 16), (16,)],
-             [(16, 32), (32,)],
-             [(32, 1), (1,)]], shapes)
+        weights = m.get_flat_weights()
         self.assertEqual(1506, weights.size)
 
-        m.set_shapes_weights(shapes, weights)
+        m.set_flat_weights(weights)
 
 
 class RNDTest(unittest.TestCase):

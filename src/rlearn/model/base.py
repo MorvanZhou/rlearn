@@ -141,8 +141,7 @@ class BaseRLModel(ABC):
                 v.load_weights(os.path.join(unzipped_dir, f"{k}.ckpt"))
         shutil.rmtree(unzipped_dir, ignore_errors=True)
 
-    def get_shapes_weights(self) -> tp.Tuple[tp.List[tp.List[tp.Tuple[int]]], np.ndarray]:
-        shapes = []
+    def get_flat_weights(self) -> np.ndarray:
         weights = np.array([], dtype=np.float32)
         keys = list(self.models.keys())
         keys.sort()
@@ -157,10 +156,9 @@ class BaseRLModel(ABC):
                 for w in layer.get_weights():
                     layer_shape.append(w.shape)
                     weights = np.concatenate((weights, w.ravel()), axis=0)
-                shapes.append(layer_shape)
-        return shapes, weights
+        return weights
 
-    def set_shapes_weights(self, shapes: tp.List[tp.List[tp.Tuple[int]]], weights: np.ndarray):
+    def set_flat_weights(self, weights: np.ndarray):
         p = 0
         keys = list(self.models.keys())
         keys.sort()
@@ -171,15 +169,11 @@ class BaseRLModel(ABC):
             for layer in model.layers:
                 if len(layer.weights) == 0:
                     continue
-                try:
-                    layer_shape = shapes.pop(0)
-                except IndexError:
-                    raise ValueError("shape mismatch in layers weight assignment")
                 layer_weights = []
-                for w_shape in layer_shape:
-                    p_ = p + np.prod(w_shape)
+                for lw in layer.weights:
+                    p_ = p + np.prod(lw.shape)
                     w = weights[p: p_]
-                    layer_weights.append(w.reshape(w_shape))
+                    layer_weights.append(w.reshape(lw.shape))
                     p = p_
                 layer.set_weights(layer_weights)
 

@@ -36,8 +36,8 @@ class ActorProcess(base.MulProcess):
 
     def try_replicate_model(self):
         if not self.weights_conn.closed and self.weights_conn.poll():
-            version, shapes, weights = self.weights_conn.recv()
-            self.trainer.model.set_shapes_weights(shapes=shapes, weights=weights)
+            version, weights = self.weights_conn.recv()
+            self.trainer.model.set_flat_weights(weights=weights)
             with self.lock:
                 self.ns.version = version
             self.logger.debug("model parameters replaced, version=%d", self.ns.version)

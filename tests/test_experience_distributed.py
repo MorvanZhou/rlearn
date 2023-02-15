@@ -222,7 +222,7 @@ class ActorServiceTest(unittest.TestCase):
 
     def setUp(self) -> None:
         model = rlearn.zoo.DQNSmall(4, 2)
-        self.model_shapes, self.model_weighs = model.get_shapes_weights()
+        self.model_weighs = model.get_flat_weights()
 
     def test_ready(self):
         resp = self.actor_stub.ServiceReady(actor_pb2.ServiceReadyReq(requestId="xx"))
@@ -255,10 +255,9 @@ class ActorServiceTest(unittest.TestCase):
         time.sleep(0.5)
         next_version = 1
         self.buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=next_version, requestId="bl"))
-        resp = self.actor_stub.ReplicateModel(tools.get_iter_shaped_values(
+        resp = self.actor_stub.ReplicateModel(tools.get_iter_values(
             req=actor_pb2.ReplicateModelReq,
             meta=actor_pb2.ModelMeta,
-            shapes=self.model_shapes,
             values=self.model_weighs,
             version=next_version,
             request_id="replicate"

@@ -36,12 +36,12 @@ class WorkerProcess(base.MulProcess):
 
     def try_sync(self):
         if self.ns.send_gradient:
-            shapes, gradients = self.trainer.get_shaped_gradients()
-            self.gradients_conn.send([self.ns.version, shapes, gradients])
+            gradients = self.trainer.get_gradients()
+            self.gradients_conn.send([self.ns.version, gradients])
             with self.lock:
                 self.ns.send_gradient = False
-            version, shapes, weights = self.weights_conn.recv()
-            self.trainer.model.set_shapes_weights(shapes=shapes, weights=weights)
+            version, weights = self.weights_conn.recv()
+            self.trainer.model.set_flat_weights(weights=weights)
             self.ns.version = version
             self.logger.debug("model parameters replaced, version=%d", version)
             self.model_loaded.set()
@@ -120,11 +120,10 @@ class WorkerService(worker_pb2_grpc.WorkerServicer):
 
     def GetGradients(self, request, context):
         self.worker.ns.send_gradient = True
-        version, shapes, gradients = self.gradients_conn.recv()
-        return tools.get_iter_shaped_values(
+        version, gradients = self.gradients_conn.recv()
+        return tools.get_iter_values(
             req=worker_pb2.ReplicateModelReq,
             meta=worker_pb2.ModelMeta,
-            shapes=shapes,
             values=gradients,
             version=version,
             chunk_size=1024,
