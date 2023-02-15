@@ -2,15 +2,16 @@ syntax = "proto3";
 
 option java_multiple_files = true;
 option java_package = "io.grpc.examples.env";
-option java_outer_classname = "ActorProto";
+option java_outer_classname = "WorkerProto";
 option objc_class_prefix = "HLW";
 
-package actor;
+package worker;
 
 // The greeting service definition.
-service Actor {
+service Worker {
   rpc ServiceReady (ServiceReadyReq) returns (ServiceReadyResp) {}
   rpc Start (stream StartReq) returns (StartResp) {}
+  rpc GetGradients (GetGradientsReq) returns (stream GetGradientsResp) {}
   rpc ReplicateModel (stream ReplicateModelReq) returns (ReplicateModelResp) {}
   rpc Terminate (TerminateReq) returns (TerminateResp) {}
 }
@@ -53,6 +54,17 @@ message ModelMeta {
   string shapes = 1;
   uint64 version = 2;
   string requestId = 3;
+}
+
+message GetGradientsReq {
+  string requestId = 1;
+}
+
+message GetGradientsResp {
+  oneof request {
+    ModelMeta meta = 1;
+    bytes chunkData = 2;
+  }
 }
 
 message ReplicateModelReq {

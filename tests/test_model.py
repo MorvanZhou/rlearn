@@ -235,6 +235,86 @@ class ModelTest(unittest.TestCase):
         m.load(path)
         os.remove(path)
 
+    def test_get_shape_weights(self):
+        m = rlearn.DQN()
+        m.set_encoder(
+            encoder=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(3),
+                keras.layers.ReLU(),
+                keras.layers.Dense(5)
+            ]),
+            action_num=2
+        )
+        shapes, weights = m.get_shapes_weights()
+        self.assertEqual(
+            [[(2, 3), (3,)],
+             [(3, 5), (5,)],
+             [(5, 2), (2,)],
+             [(2, 3), (3,)],
+             [(3, 5), (5,)],
+             [(5, 2), (2,)]], shapes)
+        self.assertEqual(82, weights.size)
+
+        m.set_shapes_weights(shapes, weights)
+
+        m = rlearn.DQN(training=False)
+        m.set_encoder(
+            encoder=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(3),
+                keras.layers.ReLU(),
+                keras.layers.Dense(5)
+            ]),
+            action_num=2
+        )
+        shapes, weights = m.get_shapes_weights()
+        self.assertEqual(
+            [[(2, 3), (3,)],
+             [(3, 5), (5,)],
+             [(5, 2), (2,)]], shapes)
+        self.assertEqual(41, weights.size)
+
+        m.set_shapes_weights(shapes, weights)
+
+        m = rlearn.DDPG(training=True)
+        m.set_encoder(
+            actor=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(3),
+                keras.layers.ReLU(),
+                keras.layers.Dense(5)
+            ]),
+            critic=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(3),
+                keras.layers.ReLU(),
+                keras.layers.Dense(5)
+            ]),
+            action_num=1
+        )
+        shapes, weights = m.get_shapes_weights()
+        self.assertEqual(
+            [[(2, 3), (3,)],
+             [(3, 5), (5,)],
+             [(5, 1), (1,)],
+             [(2, 3), (3,)],
+             [(3, 5), (5,)],
+             [(5, 1), (1,)],
+             [(2, 3), (3,)],
+             [(3, 5), (5,)],
+             [(6, 16), (16,)],
+             [(16, 32), (32,)],
+             [(32, 1), (1,)],
+             [(2, 3), (3,)],
+             [(3, 5), (5,)],
+             [(6, 16), (16,)],
+             [(16, 32), (32,)],
+             [(32, 1), (1,)]], shapes)
+        self.assertEqual(1506, weights.size)
+
+        m.set_shapes_weights(shapes, weights)
+
 
 class RNDTest(unittest.TestCase):
     def test_rnd(self):

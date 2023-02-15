@@ -132,7 +132,7 @@ class BaseRLModel(ABC):
         if not path.endswith(".zip"):
             path += ".zip"
         unzipped_dir = unzip_model(path)
-        self.models[self.predicted_model_name].load_weights(
+        self.get_model_for_prediction().load_weights(
             os.path.join(unzipped_dir, f"{self.predicted_model_name}.ckpt"))
         if self.training:
             for k, v in self.models.items():
@@ -140,6 +140,48 @@ class BaseRLModel(ABC):
                     continue
                 v.load_weights(os.path.join(unzipped_dir, f"{k}.ckpt"))
         shutil.rmtree(unzipped_dir, ignore_errors=True)
+
+    def get_shapes_weights(self) -> tp.Tuple[tp.List[tp.List[tp.Tuple[int]]], np.ndarray]:
+        shapes = []
+        weights = np.array([], dtype=np.float32)
+        keys = list(self.models.keys())
+        keys.sort()
+        for model_name in keys:
+            model = self.models[model_name]
+            if not self.training and model_name != self.predicted_model_name:
+                continue
+            for layer in model.layers:
+                if len(layer.weights) == 0:
+                    continue
+                layer_shape = []
+                for w in layer.get_weights():
+                    layer_shape.append(w.shape)
+                    weights = np.concatenate((weights, w.ravel()), axis=0)
+                shapes.append(layer_shape)
+        return shapes, weights
+
+    def set_shapes_weights(self, shapes: tp.List[tp.List[tp.Tuple[int]]], weights: np.ndarray):
+        p = 0
+        keys = list(self.models.keys())
+        keys.sort()
+        for model_name in keys:
+            model = self.models[model_name]
+            if not self.training and model_name != self.predicted_model_name:
+                continue
+            for layer in model.layers:
+                if len(layer.weights) == 0:
+                    continue
+                try:
+                    layer_shape = shapes.pop(0)
+                except IndexError:
+                    raise ValueError("shape mismatch in layers weight assignment")
+                layer_weights = []
+                for w_shape in layer_shape:
+                    p_ = p + np.prod(w_shape)
+                    w = weights[p: p_]
+                    layer_weights.append(w.reshape(w_shape))
+                    p = p_
+                layer.set_weights(layer_weights)
 
     def save(self, path: str):
         model_tmp_dir = path

@@ -18,6 +18,7 @@ class Learner:
             self,
             trainer: BaseTrainer,
             remote_buffer_address: str,
+            actor_buffer_size: int,
             remote_actors_address: tp.Sequence[str],
             result_dir: str = None,
             debug: bool = False,
@@ -28,6 +29,7 @@ class Learner:
 
         self.trainer: BaseTrainer = trainer
         self.buffer_address: str = remote_buffer_address
+        self.actor_buffer_size: int = actor_buffer_size
 
         self.actors_channel: tp.Dict[str, grpc.Channel] = {
             address: grpc.insecure_channel(address) for address in remote_actors_address
@@ -56,7 +58,7 @@ class Learner:
             raise ValueError(f"connect replay buffer at {self.buffer_address} timeout: {timeout}")
         self.logger.debug("connected to buffer %s", self.buffer_address)
 
-        for addr, stub in self.actors_stub.items():
+        for addr in self.actors_stub.keys():
             try:
                 grpc.channel_ready_future(self.actors_channel[addr]).result(timeout=timeout)
             except grpc.FutureTimeoutError:
@@ -99,6 +101,8 @@ class Learner:
                     tools.read_pb_iterfile(
                         filepath=path,
                         trainer_type=self.trainer.name,
+                        buffer_type="RandomReplayBuffer",
+                        buffer_size=self.actor_buffer_size,
                         max_episode=0,
                         max_episode_step=0,
                         action_transform=at,
@@ -145,8 +149,7 @@ class Learner:
     def replicate_actor_model(self):
         t0 = time.perf_counter()
 
-        weights_path = os.path.join(self.result_dir, f"params_v{self.version_count}.zip")
-        self.trainer.model.save_weights(weights_path)
+        shapes, weights = self.trainer.model.get_shapes_weights()
 
         req_id = str(uuid4())
 
@@ -163,8 +166,11 @@ class Learner:
         for addr, stub in self.actors_stub.items():
             try:
                 resp_future = stub.ReplicateModel.future(
-                    tools.read_weights_iterfile(
-                        weights_path,
+                    tools.get_iter_shaped_values(
+                        req=actor_pb2.ReplicateModelReq,
+                        meta=actor_pb2.ModelMeta,
+                        shapes=shapes,
+                        values=weights,
                         version=self.version_count,
                         request_id=req_id
                     ))
@@ -231,10 +237,7 @@ class Learner:
             t1 = time.perf_counter()
             self.logger.debug("trained %d times in ep=%d, spend=%.2fs", _ep_step, ep, t1 - t0)
 
-        # stop downloading data
-        self.keep_download_data = False
-        td.join()
-
+        # stop actors
         req_id = str(uuid4())
         for addr, stub in self.actors_stub.items():
             resp = stub.Terminate(actor_pb2.TerminateReq(requestId=req_id))
@@ -243,3 +246,7 @@ class Learner:
                     "actor not terminated, err: %s, addr='%s', reqId='%s'", resp.err, addr, resp.requestId)
         for c in self.actors_channel.values():
             c.close()
+
+        # stop downloading data
+        self.keep_download_data = False
+        td.join()

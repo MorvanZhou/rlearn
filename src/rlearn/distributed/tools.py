@@ -1,8 +1,10 @@
 import json
 import os
 import socket
+import tempfile
 import typing as tp
 import uuid
+import zlib
 
 import numpy as np
 
@@ -63,6 +65,8 @@ def pack_transitions(buffer, interface: DataInterface, max_size: int = None):
 def read_pb_iterfile(
         filepath: str,
         trainer_type: str,
+        buffer_size: int,
+        buffer_type: str,
         max_episode: int,
         max_episode_step: int,
         action_transform: list,
@@ -76,6 +80,8 @@ def read_pb_iterfile(
     yield exp_actor_pb2.StartReq(meta=exp_actor_pb2.StartMeta(
         filename=os.path.basename(filepath),
         trainerType=trainer_type,
+        bufferSize=buffer_size,
+        bufferType=buffer_type,
         maxEpisode=max_episode,
         version=version,
         maxEpisodeStep=max_episode_step,
@@ -93,22 +99,137 @@ def read_pb_iterfile(
                 return
 
 
-def read_weights_iterfile(filepath, version: int, chunk_size=1024, request_id: str = None):
+# def read_weights_iterfile(filepath, version: int, chunk_size=1024, request_id: str = None):
+#     if request_id is None:
+#         request_id = str(uuid.uuid4())
+#     yield exp_actor_pb2.ReplicateModelReq(meta=exp_actor_pb2.ModelMeta(
+#         filename=os.path.basename(filepath),
+#         version=version,
+#         requestId=request_id
+#     ))
+#     with open(filepath, mode="rb") as f:
+#         while True:
+#             chunk = f.read(chunk_size)
+#             if chunk:
+#                 entry_request = exp_actor_pb2.ReplicateModelReq(chunkData=chunk)
+#                 yield entry_request
+#             else:  # The chunk was empty, which means we're at the end of the file
+#                 return
+
+
+def get_iter_shaped_values(
+        req,
+        meta,
+        shapes: tp.List[tp.List[tp.Tuple[int]]],
+        values: np.ndarray,
+        version: int,
+        chunk_size: int = 1024,
+        request_id: str = None,
+):
     if request_id is None:
         request_id = str(uuid.uuid4())
-    yield exp_actor_pb2.ReplicateModelReq(meta=exp_actor_pb2.ReplicateModelMeta(
-        filename=os.path.basename(filepath),
+    yield req(meta=meta(
+        shapes=json.dumps(shapes),
         version=version,
         requestId=request_id
     ))
-    with open(filepath, mode="rb") as f:
-        while True:
-            chunk = f.read(chunk_size)
-            if chunk:
-                entry_request = exp_actor_pb2.ReplicateModelReq(chunkData=chunk)
-                yield entry_request
-            else:  # The chunk was empty, which means we're at the end of the file
-                return
+    b_weights = values.astype(np.float32).tobytes()
+    compressed_data = zlib.compress(b_weights)
+    for i in range(0, len(compressed_data), chunk_size):
+        entry_request = req(chunkData=compressed_data[i: i + chunk_size])
+        yield entry_request
+
+
+def replicate_model(request_iterator, logger, model_loaded_event, weights_conn, resp):
+    data = bytearray()
+    shapes = []
+    version = 0
+    request_id = ""
+    for req in request_iterator:
+        if req.meta.shapes != "":
+            shapes = json.loads(req.meta.shapes)
+            version = req.meta.version
+            request_id = req.meta.requestId
+            logger.debug(
+                """ReplicateModel | {"reqId": "%s", "version": %d}""",
+                req.meta.requestId, req.meta.version)
+            continue
+        data.extend(req.chunkData)
+    d_data = zlib.decompress(data)
+    weights = np.frombuffer(d_data, dtype=np.float32)
+
+    model_loaded_event.clear()
+    weights_conn.send([version, shapes, weights])
+    if model_loaded_event.wait(5):
+        done = True
+        err = ""
+    else:
+        done = False
+        err = "model replicating timeout"
+    return resp(done=done, err=err, requestId=request_id)
+
+
+def initialize_model(request_iterator, logger, process, resp):
+    data = bytearray()
+    filepath = ""
+    request_id = ""
+    tmp_dir = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
+    os.makedirs(tmp_dir)
+    for req in request_iterator:
+        if req.meta.filename != "":
+            logger.debug(
+                'Start | '
+                '{"reqId": "%s", "trainerType": "%s","filename": "%s", "version": %d, "bufferType": %s, '
+                '""bufferSize": %d, maxEpisode": %d, "maxEpisodeStep": %d, "actionTransform": "%s"}',
+                req.meta.requestId,
+                req.meta.trainerType,
+                req.meta.filename,
+                req.meta.version,
+                req.meta.bufferType,
+                req.meta.bufferSize,
+                req.meta.maxEpisode,
+                req.meta.maxEpisodeStep,
+                req.meta.actionTransform,
+            )
+
+            filepath = os.path.normpath(os.path.join(tmp_dir, req.meta.filename))
+            request_id = req.meta.requestId
+            try:
+                at = json.loads(req.meta.actionTransform)
+            except json.JSONDecodeError:
+                at = None
+            else:
+                if len(at) == 0:
+                    at = None
+
+            process.init_params(
+                trainer_type=req.meta.trainerType,
+                model_pb_path=filepath,
+                buffer_type=req.meta.bufferType,
+                buffer_size=req.meta.bufferSize,
+                init_version=req.meta.version,
+                request_id=request_id,
+                max_episode=req.meta.maxEpisode,
+                max_episode_step=req.meta.maxEpisodeStep,
+                action_transform=at,
+            )
+
+            continue
+        data.extend(req.chunkData)
+
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, 'wb') as f:
+        f.write(data)
+
+    process.start()
+    timeout = 15
+    if process.model_loaded.wait(timeout):
+        done = True
+        err = ""
+    else:
+        done = False
+        err = f"model load timeout ({timeout}s)"
+    return resp(done=done, err=err, requestId=request_id)
 
 
 def get_available_port():

@@ -9,6 +9,7 @@ from tensorflow import keras
 
 import rlearn
 from rlearn.distributed import tools
+from tests import test_gym_wrapper
 
 
 def cartpole_reward(s_, env):
@@ -498,14 +499,13 @@ class ExperienceDistributedGym(unittest.TestCase):
         [p.terminate() for p in self.ps]
         shutil.rmtree(self.result_dir, ignore_errors=True)
 
-    def set_actors(self, env: rlearn.EnvWrapper, n_actors=2, local_buffer_size=50):
+    def set_actors(self, env: rlearn.EnvWrapper, n_actors=2):
         actors_address = []
         for _ in range(n_actors):
             actor_port = tools.get_available_port()
             p = multiprocessing.Process(target=rlearn.distributed.experience.start_actor_server, kwargs=dict(
                 port=actor_port,
                 remote_buffer_address=self.buf_address,
-                local_buffer_size=local_buffer_size,
                 env=env,
                 # debug=True,
             ))
@@ -516,7 +516,7 @@ class ExperienceDistributedGym(unittest.TestCase):
         return actors_address
 
     def test_dqn(self):
-        env = gym_wrapper_test.CartPoleDiscreteReward(render_mode="human")
+        env = test_gym_wrapper.CartPoleDiscreteReward(render_mode="human")
         actors_address = self.set_actors(env, n_actors=2)
 
         trainer = rlearn.trainer.DQNTrainer()
@@ -538,13 +538,14 @@ class ExperienceDistributedGym(unittest.TestCase):
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,
+            actor_buffer_size=50,
             result_dir=self.result_dir,
             debug=True,
         )
-        learner.run(epoch=30, epoch_step=None, replicate_step=100)
+        learner.run(epoch=50, epoch_step=None, replicate_step=100)
 
     def test_ddpg(self):
-        env = gym_wrapper_test.Pendulum(render_mode="human")
+        env = test_gym_wrapper.Pendulum(render_mode="human")
         actors_address = self.set_actors(env, n_actors=2)
 
         trainer = rlearn.trainer.DDPGTrainer()
@@ -572,14 +573,15 @@ class ExperienceDistributedGym(unittest.TestCase):
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,
+            actor_buffer_size=50,
             result_dir=self.result_dir,
             debug=True,
         )
-        learner.run(epoch=50, epoch_step=None, replicate_step=100)
+        learner.run(epoch=100, epoch_step=None, replicate_step=100)
 
     def test_ppo_discrete(self):
-        env = gym_wrapper_test.CartPoleDiscreteReward(render_mode="human")
-        actors_address = self.set_actors(env, n_actors=2, local_buffer_size=100)
+        env = test_gym_wrapper.CartPoleDiscreteReward(render_mode="human")
+        actors_address = self.set_actors(env, n_actors=2)
 
         trainer = rlearn.trainer.PPODiscreteTrainer()
         trainer.set_replay_buffer(max_size=3000)
@@ -605,15 +607,15 @@ class ExperienceDistributedGym(unittest.TestCase):
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,
+            actor_buffer_size=50,
             result_dir=self.result_dir,
             debug=True,
         )
         learner.run(epoch=200, epoch_step=None)
 
     def test_ppo_continue(self):
-        env = gym_wrapper_test.Pendulum(render_mode="human")
-        actors_address = self.set_actors(
-            env, n_actors=2, local_buffer_size=100)
+        env = test_gym_wrapper.Pendulum(render_mode="human")
+        actors_address = self.set_actors(env, n_actors=5)
 
         trainer = rlearn.trainer.PPOContinueTrainer()
         trainer.set_replay_buffer(max_size=2000)
@@ -640,7 +642,8 @@ class ExperienceDistributedGym(unittest.TestCase):
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,
+            actor_buffer_size=100,
             result_dir=self.result_dir,
             debug=True,
         )
-        learner.run(epoch=200, epoch_step=None)
+        learner.run(epoch=500, epoch_step=None)

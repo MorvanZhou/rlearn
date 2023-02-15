@@ -71,6 +71,11 @@ class ActorProcessTest(unittest.TestCase):
         model = rlearn.zoo.DQNSmall(4, 2)
         model.save(self.model_pb_path)
         model.save_weights(self.model_ckpt_path)
+        self.recv_conn, self.send_conn = multiprocessing.Pipe(False)
+
+    def tearDown(self) -> None:
+        self.recv_conn.close()
+        self.send_conn.close()
 
     def test_rl_env(self):
         env = CartPoleSmoothReward(seed=1)
@@ -86,12 +91,14 @@ class ActorProcessTest(unittest.TestCase):
     def test_ep_step_generator(self):
         env = CartPoleSmoothReward()
         actor_p = distributed.experience.actor.ActorProcess(
-            local_buffer_size=500,
+            weights_conn=self.recv_conn,
             env=env,
             remote_buffer_address=None,
         )
         actor_p.init_params(
-            "DQN", self.model_pb_path, init_version=0, request_id="dqn_train", max_episode=2, max_episode_step=20)
+            "DQN", self.model_pb_path, init_version=0,
+            buffer_size=500,
+            request_id="dqn_train", max_episode=2, max_episode_step=20)
         g = tools.get_count_generator(-1)
         for i in range(10):
             step = next(g)
@@ -110,12 +117,13 @@ class ActorProcessTest(unittest.TestCase):
     def test_actor_process(self):
         env = CartPoleSmoothReward()
         actor = distributed.experience.actor.ActorProcess(
-            local_buffer_size=500,
+            weights_conn=self.recv_conn,
             env=env,
             remote_buffer_address=None,
         )
         actor.init_params(
             "DQNTrainer", self.model_pb_path, init_version=0,
+            buffer_size=500,
             request_id="dqn_train", max_episode=2, max_episode_step=5)
         actor.start()
         actor.join()
@@ -142,7 +150,7 @@ class ActorProcessTest(unittest.TestCase):
 
         env = CartPoleSmoothReward()
         actor_p = distributed.experience.actor.ActorProcess(
-            local_buffer_size=10,
+            weights_conn=self.recv_conn,
             env=env,
             remote_buffer_address=buf_address,
         )
@@ -150,6 +158,7 @@ class ActorProcessTest(unittest.TestCase):
             "DQNTrainer",
             self.model_pb_path,
             init_version=init_version,
+            buffer_size=10,
             request_id="dqn_train",
             max_episode=2,
             max_episode_step=20)
@@ -179,7 +188,6 @@ class ActorServiceTest(unittest.TestCase):
     actor_server = None
     actor_stub = None
     model_pb_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn_pb.zip")
-    model_ckpt_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn.zip")
     ps = []
 
     @classmethod
@@ -199,7 +207,6 @@ class ActorServiceTest(unittest.TestCase):
         cls.actor_server, _ = distributed.experience.actor._start_server(
             port=actor_port,
             remote_buffer_address=buf_address,
-            local_buffer_size=3,
             env=CartPoleSmoothReward(),
             debug=True,
         )
@@ -215,8 +222,7 @@ class ActorServiceTest(unittest.TestCase):
 
     def setUp(self) -> None:
         model = rlearn.zoo.DQNSmall(4, 2)
-        model.save(self.model_pb_path)
-        model.save_weights(self.model_ckpt_path)
+        self.model_shapes, self.model_weighs = model.get_shapes_weights()
 
     def test_ready(self):
         resp = self.actor_stub.ServiceReady(actor_pb2.ServiceReadyReq(requestId="xx"))
@@ -234,6 +240,8 @@ class ActorServiceTest(unittest.TestCase):
         resp = self.actor_stub.Start(tools.read_pb_iterfile(
             self.model_pb_path,
             trainer_type="DQNTrainer",
+            buffer_size=10,
+            buffer_type="RandomReplayBuffer",
             max_episode=0,
             max_episode_step=0,
             action_transform=[0, 1],
@@ -247,8 +255,11 @@ class ActorServiceTest(unittest.TestCase):
         time.sleep(0.5)
         next_version = 1
         self.buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=next_version, requestId="bl"))
-        resp = self.actor_stub.ReplicateModel(tools.read_weights_iterfile(
-            self.model_ckpt_path,
+        resp = self.actor_stub.ReplicateModel(tools.get_iter_shaped_values(
+            req=actor_pb2.ReplicateModelReq,
+            meta=actor_pb2.ModelMeta,
+            shapes=self.model_shapes,
+            values=self.model_weighs,
             version=next_version,
             request_id="replicate"
         ))
@@ -293,7 +304,6 @@ class LearnerTest(unittest.TestCase):
             p = multiprocessing.Process(target=distributed.experience.start_actor_server, kwargs=dict(
                 port=actor_port,
                 remote_buffer_address=buf_address,
-                local_buffer_size=10,
                 env=CartPoleSmoothReward(),
                 debug=True,
             ))
@@ -328,6 +338,7 @@ class LearnerTest(unittest.TestCase):
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=self.actors_address,
+            actor_buffer_size=10,
             result_dir=self.result_dir,
             debug=True,
         )
