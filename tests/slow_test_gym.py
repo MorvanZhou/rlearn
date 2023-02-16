@@ -487,8 +487,6 @@ class ExperienceDistributedGym(unittest.TestCase):
         self.buf_address = f'127.0.0.1:{buf_port}'
         p = multiprocessing.Process(target=rlearn.distributed.experience.start_replay_buffer_server, kwargs=dict(
             port=buf_port,
-            max_size=10000,
-            buf="RandomReplayBuffer",
             # debug=True,
         ))
         p.start()
@@ -538,6 +536,8 @@ class ExperienceDistributedGym(unittest.TestCase):
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,
+            remote_buffer_size=10000,
+            remote_buffer_type="RandomReplayBuffer",
             actor_buffer_size=50,
             result_dir=self.result_dir,
             debug=True,
@@ -573,6 +573,8 @@ class ExperienceDistributedGym(unittest.TestCase):
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,
+            remote_buffer_size=10000,
+            remote_buffer_type="RandomReplayBuffer",
             actor_buffer_size=50,
             result_dir=self.result_dir,
             debug=True,
@@ -607,6 +609,8 @@ class ExperienceDistributedGym(unittest.TestCase):
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,
+            remote_buffer_size=10000,
+            remote_buffer_type="RandomReplayBuffer",
             actor_buffer_size=50,
             result_dir=self.result_dir,
             debug=True,
@@ -642,6 +646,8 @@ class ExperienceDistributedGym(unittest.TestCase):
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=actors_address,
+            remote_buffer_size=10000,
+            remote_buffer_type="RandomReplayBuffer",
             actor_buffer_size=100,
             result_dir=self.result_dir,
             debug=True,
