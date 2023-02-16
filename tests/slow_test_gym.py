@@ -577,11 +577,11 @@ class ExperienceDistributedGym(unittest.TestCase):
             result_dir=self.result_dir,
             debug=True,
         )
-        learner.run(epoch=100, epoch_step=None, replicate_step=100)
+        learner.run(epoch=200, epoch_step=None, replicate_step=100)
 
     def test_ppo_discrete(self):
         env = test_gym_wrapper.CartPoleDiscreteReward(render_mode="human")
-        actors_address = self.set_actors(env, n_actors=2)
+        actors_address = self.set_actors(env, n_actors=4)
 
         trainer = rlearn.trainer.PPODiscreteTrainer()
         trainer.set_replay_buffer(max_size=3000)

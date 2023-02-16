@@ -353,6 +353,40 @@ class TrainerTest(unittest.TestCase):
         self.assertIsInstance(m.predict(np.random.random((2,))), int)
         os.remove(path + ".zip")
 
+    def test_compute_flat_grads(self):
+        trainer = rlearn.ActorCriticDiscreteTrainer()
+        trainer.set_model_encoder(
+            actor=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(3),
+                keras.layers.ReLU(),
+                keras.layers.Dense(5)
+            ]),
+            critic=keras.Sequential([
+                keras.layers.InputLayer(2),
+                keras.layers.Dense(3),
+                keras.layers.ReLU(),
+            ]),
+            action_num=2
+        )
+        trainer.set_params(batch_size=3)
+        trainer.set_replay_buffer()
+        for _ in range(5):
+            trainer.store_transition(
+                s=np.random.random((2,)),
+                a=np.random.randint(0, 2),
+                r=np.random.random(),
+                s_=np.random.random((2,)),
+                done=False
+            )
+        grads = trainer.compute_flat_gradients()
+        self.assertEqual(1, grads.ndim)
+        self.assertEqual(sum(
+            [w.size for w in trainer.model.models["actor"].get_weights()
+             + trainer.model.models["critic"].get_weights()]), grads.size)
+
+        trainer.apply_flat_gradients(grads)
+
 
 class TrainerToolTest(unittest.TestCase):
     def test_parse_lr(self):
@@ -408,3 +442,26 @@ class TrainerToolTest(unittest.TestCase):
 
         adv = tools.discounted_adv(value_model=model, batch_s=bs, reward=returns)
         self.assertEqual((3,), adv.shape)
+
+    def test_reshape_flat_gradients(self):
+        m1 = keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.Dense(1),
+        ])
+        m2 = keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.Dense(3),
+            keras.layers.Dense(1),
+        ])
+        m3 = keras.Sequential([
+            keras.layers.InputLayer(2),
+            keras.layers.Dense(4),
+        ])
+        s = sum([np.prod(p.shape) for p in m1.trainable_variables])
+        s += sum([np.prod(p.shape) for p in m2.trainable_variables])
+        s += sum([np.prod(p.shape) for p in m3.trainable_variables])
+        reshaped = tools.reshape_flat_gradients(
+            {"a": [m1, m2], "b": [m3]},
+            gradients=np.random.random(s))
+        self.assertEqual(6, len(reshaped["a"]))
+        self.assertEqual(2, len(reshaped["b"]))

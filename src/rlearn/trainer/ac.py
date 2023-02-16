@@ -173,14 +173,22 @@ class _ActorCriticTrainer(BaseTrainer):
         })
         return res, grads
 
-    def apply_distributed_gradients(self, grads: tp.List):
-        pass
+    def apply_flat_gradients(self, gradients: np.ndarray):
+        a = self.model.models["actor"]
+        c = self.model.models["critic"]
+        reshaped_grads = tools.reshape_flat_gradients(
+            grad_vars={"actor": [a], "critic": [c]},
+            gradients=gradients,
+        )
+
+        self.opt_a.apply_gradients(zip(reshaped_grads["actor"], a.trainable_variables))
+        self.opt_c.apply_gradients(zip(reshaped_grads["critic"], c.trainable_variables))
 
     def train_batch(self) -> TrainResult:
         res, grads = self.compute_gradients()
         if grads is not None:
-            self.opt_c.apply_gradients(zip(grads["critic"]["g"], grads["critic"]["v"]))
             self.opt_a.apply_gradients(zip(grads["actor"]["g"], grads["actor"]["v"]))
+            self.opt_c.apply_gradients(zip(grads["critic"]["g"], grads["critic"]["v"]))
         return res
 
 

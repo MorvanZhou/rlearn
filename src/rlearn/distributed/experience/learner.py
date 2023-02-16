@@ -8,6 +8,7 @@ from uuid import uuid4
 
 import grpc
 
+from rlearn import replaybuf
 from rlearn.distributed import logger, tools
 from rlearn.distributed.experience import actor_pb2_grpc, buffer_pb2_grpc, actor_pb2, buffer_pb2
 from rlearn.trainer.base import BaseTrainer
@@ -18,8 +19,10 @@ class Learner:
             self,
             trainer: BaseTrainer,
             remote_buffer_address: str,
+            remote_buffer_size: int,
             actor_buffer_size: int,
             remote_actors_address: tp.Sequence[str],
+            remote_buffer_type: str = "RandomReplayBuffer",
             result_dir: str = None,
             debug: bool = False,
     ):
@@ -29,6 +32,11 @@ class Learner:
 
         self.trainer: BaseTrainer = trainer
         self.buffer_address: str = remote_buffer_address
+        self.buffer_size = remote_buffer_size
+        if remote_buffer_type not in replaybuf.tools.get_all_buffers():
+            raise KeyError(f"replay buffer name '{remote_buffer_type}' is not found,"
+                           f" please use one of these {list(replaybuf.tools.get_all_buffers().keys())}")
+        self.buffer_type = remote_buffer_type
         self.actor_buffer_size: int = actor_buffer_size
 
         self.actors_channel: tp.Dict[str, grpc.Channel] = {
@@ -68,9 +76,11 @@ class Learner:
 
     def send_init_data(self):
         req_id = str(uuid4())
-        resp = self.buffer_stub.LearnerSetModelType(
-            buffer_pb2.LearnerSetModelTypeReq(
+        resp = self.buffer_stub.InitBuf(
+            buffer_pb2.InitBufReq(
                 isOnPolicy=self.trainer.is_on_policy,
+                bufferSize=self.buffer_size,
+                bufferType=self.buffer_type,
                 requestId=req_id
             ))
         if not resp.done:
@@ -128,12 +138,19 @@ class Learner:
             time.sleep(1)
             req_id = str(uuid4())
             t0 = time.perf_counter()
-            resp = self.buffer_stub.DownloadData(buffer_pb2.DownloadDataReq(
+            resp_iter = self.buffer_stub.DownloadData(buffer_pb2.DownloadDataReq(
                 maxSize=max_size,
                 requestId=req_id,
             ))
+            batch_size, batch, err, request_id = tools.unpack_downloaded_transitions(resp_iter=resp_iter)
+            if err != "":
+                self.logger.debug(
+                    'UploadData | {"reqId": "%s", "error": "%s"}',
+                    request_id,
+                    err,
+                )
+                continue
             t1 = time.perf_counter()
-            batch_size, batch = tools.unpack_transitions(resp)
             if batch_size == 0:
                 self.logger.debug("download empty data, retry")
                 continue

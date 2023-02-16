@@ -5,6 +5,7 @@ import shutil
 import time
 import typing as tp
 import unittest
+import zlib
 
 import grpc
 import numpy as np
@@ -26,12 +27,11 @@ class BufferTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.server, _ = distributed.experience.buffer._start_server(
             port=cls.port,
-            max_size=100,
-            buf="RandomReplayBuffer",
             debug=True,
         )
         channel = grpc.insecure_channel(f'localhost:{cls.port}')
         cls.stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
+        cls.stub.InitBuf(buffer_pb2.InitBufReq(isOnPolicy=False, bufferType="RandomReplayBuffer", bufferSize=100))
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -42,21 +42,37 @@ class BufferTest(unittest.TestCase):
         self.assertTrue(resp.ready)
 
     def test_put(self):
-        req = buffer_pb2.UploadDataReq()
-        req.data.values[:] = [1, 2, 3, 4, 5, 6, 7, 8]
-        req.data.attributes = json.dumps([
-            {"name": "s", "shape": [2, 2]},
-            {"name": "a", "shape": [2, 1]},
-            {"name": "r", "shape": [2, 1]}]
-        )
-        resp = self.stub.UploadData(req)
+        def iter_req():
+            req = buffer_pb2.UploadDataReq(
+                meta=buffer_pb2.UploadDataMeta(
+                    version=1,
+                    attributes=json.dumps([
+                        {"name": "s", "shape": [2, 2]},
+                        {"name": "a", "shape": [2, 1]},
+                        {"name": "r", "shape": [2, 1]}]
+                    ),
+                    requestId="xxx",
+                )
+            )
+            yield req
+            v = np.array([1, 2, 3, 4, 5, 6, 7, 8], dtype=np.float32)
+            bv = v.tobytes()
+            cbv = zlib.compress(bv)
+            for i in range(0, len(cbv), 1024):
+                req = buffer_pb2.UploadDataReq(
+                    chunkData=cbv[i: i + 1024]
+                )
+                yield req
+
+        resp = self.stub.UploadData(iter_req())
         self.assertTrue(resp.done)
         self.assertEqual("", resp.err)
 
     def test_download(self):
         self.test_put()
-        resp = self.stub.DownloadData(buffer_pb2.DownloadDataReq())
-        _, batch = tools.unpack_transitions(resp)
+        resp_iter = self.stub.DownloadData(buffer_pb2.DownloadDataReq())
+        _, batch, err, _ = tools.unpack_downloaded_transitions(resp_iter=resp_iter)
+        self.assertEqual("", err)
         self.assertEqual(2, batch["s"].shape[1])
         self.assertEqual(1, batch["a"].shape[1])
         self.assertEqual(1, batch["r"].shape[1])
@@ -134,13 +150,18 @@ class ActorProcessTest(unittest.TestCase):
         buf_port = tools.get_available_port()
         buf_server, _ = distributed.experience.buffer._start_server(
             port=buf_port,
-            max_size=100,
-            buf="RandomReplayBuffer",
             debug=True,
         )
         buf_address = f'localhost:{buf_port}'
         channel = grpc.insecure_channel(buf_address)
         buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=channel)
+
+        resp = buf_stub.InitBuf(buffer_pb2.InitBufReq(
+            bufferType="RandomReplayBuffer",
+            bufferSize=100,
+            isOnPolicy=True,
+        ))
+        self.assertTrue(resp.done)
 
         init_version = 0
         resp = buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=init_version, requestId="bl"))
@@ -168,9 +189,10 @@ class ActorProcessTest(unittest.TestCase):
 
         self.assertEqual(1, actor_p.ns.episode_num)
         self.assertLess(actor_p.ns.episode_step_num, 20)
-        resp = buf_stub.DownloadData(buffer_pb2.DownloadDataReq(maxSize=10, requestId="xx"))
-        self.assertEqual("xx", resp.requestId)
-        batch_size, batch = tools.unpack_transitions(resp)
+        resp_iter = buf_stub.DownloadData(buffer_pb2.DownloadDataReq(maxSize=10, requestId="xx"))
+        batch_size, batch, err, req_id = tools.unpack_downloaded_transitions(resp_iter=resp_iter)
+        self.assertEqual("xx", req_id)
+        self.assertEqual("", err)
         self.assertGreater(batch_size, 0)
         buf_server.stop(None)
 
@@ -196,8 +218,6 @@ class ActorServiceTest(unittest.TestCase):
         buf_address = f'localhost:{buf_port}'
         cls.buf_server, _ = distributed.experience.buffer._start_server(
             port=buf_port,
-            max_size=100,
-            buf="RandomReplayBuffer",
             debug=True,
         )
         buf_channel = grpc.insecure_channel(buf_address)
@@ -231,7 +251,11 @@ class ActorServiceTest(unittest.TestCase):
 
     def test_train(self):
         version = 0
-        self.buf_stub.LearnerSetModelType(buffer_pb2.LearnerSetModelTypeReq(isOnPolicy=False))
+        self.buf_stub.InitBuf(buffer_pb2.InitBufReq(
+            isOnPolicy=False,
+            bufferSize=100,
+            bufferType="RandomReplayBuffer",
+        ))
         resp = self.buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=version, requestId="bl"))
         self.assertEqual("bl", resp.requestId)
         self.assertTrue(resp.done)
@@ -266,8 +290,9 @@ class ActorServiceTest(unittest.TestCase):
         self.assertTrue(resp.done)
         self.assertEqual("", resp.err)
 
-        resp = self.buf_stub.DownloadData(buffer_pb2.DownloadDataReq(maxSize=3, requestId="bufDownload"))
-        batch_size, batch = tools.unpack_transitions(resp)
+        resp_iter = self.buf_stub.DownloadData(buffer_pb2.DownloadDataReq(maxSize=3, requestId="bufDownload"))
+        batch_size, batch, err, req_id = tools.unpack_downloaded_transitions(resp_iter=resp_iter)
+        self.assertEqual("", err)
         self.assertEqual(3, batch_size)
         self.assertIsInstance(batch["s"], np.ndarray)
         self.assertIsInstance(batch["a"], np.ndarray)
@@ -276,7 +301,7 @@ class ActorServiceTest(unittest.TestCase):
         self.assertIsInstance(batch["s_"], np.ndarray)
         self.assertEqual((3, 4), batch["s"].shape)
         self.assertEqual((3, 4), batch["s_"].shape)
-        self.assertEqual("bufDownload", resp.requestId)
+        self.assertEqual("bufDownload", req_id)
 
 
 class LearnerTest(unittest.TestCase):
@@ -291,8 +316,6 @@ class LearnerTest(unittest.TestCase):
         cls.buf_address = buf_address = f'localhost:{buf_port}'
         p = multiprocessing.Process(target=distributed.experience.start_replay_buffer_server, kwargs=dict(
             port=buf_port,
-            max_size=1000,
-            buf="RandomReplayBuffer",
             debug=True,
         ))
         p.start()
@@ -337,6 +360,8 @@ class LearnerTest(unittest.TestCase):
             trainer=trainer,
             remote_buffer_address=self.buf_address,
             remote_actors_address=self.actors_address,
+            remote_buffer_size=1000,
+            remote_buffer_type="RandomReplayBuffer",
             actor_buffer_size=10,
             result_dir=self.result_dir,
             debug=True,

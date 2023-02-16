@@ -9,7 +9,7 @@ from concurrent import futures
 import grpc
 
 from rlearn.distributed import tools, base
-from rlearn.distributed.experience import actor_pb2, actor_pb2_grpc, buffer_pb2_grpc, buffer_pb2
+from rlearn.distributed.experience import actor_pb2, actor_pb2_grpc, buffer_pb2_grpc
 from rlearn.distributed.logger import get_logger
 from rlearn.env.env_wrapper import EnvWrapper
 
@@ -44,9 +44,12 @@ class ActorProcess(base.MulProcess):
             self.model_loaded.set()
 
     def send_data_to_remote_buffer(self, buf_stub):
-        req = buffer_pb2.UploadDataReq(version=self.ns.version, requestId=self.training_request_id)
-        tools.pack_transitions(self.trainer.replay_buffer, req)
-        resp = buf_stub.UploadData(req)
+        req_iter = tools.pack_transitions_for_uploading(
+            buffer=self.trainer.replay_buffer,
+            version=self.ns.version,
+            request_id=self.training_request_id,
+        )
+        resp = buf_stub.UploadData(req_iter)
         if not resp.done:
             raise ValueError(f"grpc upload data to buffer err: {resp.err}")
 

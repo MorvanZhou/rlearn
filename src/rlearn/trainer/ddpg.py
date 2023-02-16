@@ -1,3 +1,5 @@
+import typing as tp
+
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -5,8 +7,8 @@ from tensorflow import keras
 from rlearn.config import TrainConfig
 from rlearn.model.ddpg import DDPG
 from rlearn.model.tools import build_encoder_from_config
+from rlearn.trainer import tools
 from rlearn.trainer.base import BaseTrainer, TrainResult
-from rlearn.trainer.tools import parse_2_learning_rate
 
 
 class DDPGTrainer(BaseTrainer):
@@ -21,7 +23,7 @@ class DDPGTrainer(BaseTrainer):
         self.opt_a, self.opt_c = None, None
 
     def _set_default_optimizer(self):
-        l1, l2 = parse_2_learning_rate(self.learning_rate)
+        l1, l2 = tools.parse_2_learning_rate(self.learning_rate)
 
         self.opt_a = keras.optimizers.Adam(
             learning_rate=l1,
@@ -44,7 +46,7 @@ class DDPGTrainer(BaseTrainer):
         critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
         self.set_model_encoder(actor=actor_encoder, critic=critic_encoder, action_num=action_num)
 
-    def train_batch(self) -> TrainResult:
+    def compute_gradients(self) -> tp.Tuple[TrainResult, tp.Optional[tp.Dict[str, tp.Dict[str, list]]]]:
         if self.opt_a is None or self.opt_c is None:
             self._set_default_optimizer()
 
@@ -56,9 +58,11 @@ class DDPGTrainer(BaseTrainer):
             },
             model_replaced=False,
         )
-        if self.replay_buffer.is_empty():
-            return res
 
+        if self.replay_buffer.is_empty():
+            return res, None
+
+        grads = {"actor": {"g": [], "v": []}, "critic": {"g": [], "v": []}}
         batch = self.replay_buffer.sample(self.batch_size)
 
         res.model_replaced = self.try_replace_params(
@@ -71,8 +75,8 @@ class DDPGTrainer(BaseTrainer):
             la = tf.reduce_mean(-q)
 
             tv = self.model.models["actor"].trainable_variables
-            grads = tape.gradient(la, tv)
-            self.opt_a.apply_gradients(zip(grads, tv))
+            grads["actor"]["g"] = tape.gradient(la, tv)
+            grads["actor"]["v"] = tv
 
         with tf.GradientTape() as tape:
             with tape.stop_recording():
@@ -88,14 +92,32 @@ class DDPGTrainer(BaseTrainer):
             lc = self.replay_buffer.try_weighting_loss(target=q_, evaluated=q)
 
             tv = self.model.models["critic"].trainable_variables
-            grads = tape.gradient(lc, tv)
-            self.opt_c.apply_gradients(zip(grads, tv))
+            grads["critic"]["g"] = tape.gradient(lc, tv)
+            grads["critic"]["v"] = tv
 
         res.value.update({
             "actor_loss": la.numpy(),
             "critic_loss": lc.numpy(),
             "reward": total_reward.mean(),
         })
+        return res, grads
+
+    def apply_flat_gradients(self, gradients: np.ndarray):
+        a = self.model.models["actor"]
+        c = self.model.models["critic"]
+        reshaped_grads = tools.reshape_flat_gradients(
+            models={"actor": a, "critic": c},
+            gradients=gradients,
+        )
+
+        self.opt_a.apply_gradients(zip(reshaped_grads["actor"], a.trainable_variables))
+        self.opt_c.apply_gradients(zip(reshaped_grads["critic"], c.trainable_variables))
+
+    def train_batch(self) -> TrainResult:
+        res, grads = self.compute_gradients()
+        if grads is not None:
+            self.opt_a.apply_gradients(zip(grads["actor"]["g"], grads["actor"]["v"]))
+            self.opt_c.apply_gradients(zip(grads["critic"]["g"], grads["critic"]["v"]))
         return res
 
     def predict(self, s: np.ndarray) -> np.ndarray:

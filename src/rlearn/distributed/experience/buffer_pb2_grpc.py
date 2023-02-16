@@ -20,22 +20,22 @@ class ReplayBufferStub(object):
             request_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.ServiceReadyReq.SerializeToString,
             response_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.ServiceReadyResp.FromString,
         )
-        self.LearnerSetModelType = channel.unary_unary(
-            '/replayBuffer.ReplayBuffer/LearnerSetModelType',
-            request_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.LearnerSetModelTypeReq.SerializeToString,
-            response_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.LearnerSetModelTypeResp.FromString,
+        self.InitBuf = channel.unary_unary(
+            '/replayBuffer.ReplayBuffer/InitBuf',
+            request_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.InitBufReq.SerializeToString,
+            response_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.InitBufResp.FromString,
         )
         self.LearnerSetVersion = channel.unary_unary(
             '/replayBuffer.ReplayBuffer/LearnerSetVersion',
             request_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.LearnerSetVersionReq.SerializeToString,
             response_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.LearnerSetVersionResp.FromString,
         )
-        self.UploadData = channel.unary_unary(
+        self.UploadData = channel.stream_unary(
             '/replayBuffer.ReplayBuffer/UploadData',
             request_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.UploadDataReq.SerializeToString,
             response_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.UploadDataResp.FromString,
         )
-        self.DownloadData = channel.unary_unary(
+        self.DownloadData = channel.unary_stream(
             '/replayBuffer.ReplayBuffer/DownloadData',
             request_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.DownloadDataReq.SerializeToString,
             response_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.DownloadDataResp.FromString,
@@ -57,7 +57,7 @@ class ReplayBufferServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def LearnerSetModelType(self, request, context):
+    def InitBuf(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -69,7 +69,7 @@ class ReplayBufferServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def UploadData(self, request, context):
+    def UploadData(self, request_iterator, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -95,22 +95,22 @@ def add_ReplayBufferServicer_to_server(servicer, server):
             request_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.ServiceReadyReq.FromString,
             response_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.ServiceReadyResp.SerializeToString,
         ),
-        'LearnerSetModelType': grpc.unary_unary_rpc_method_handler(
-            servicer.LearnerSetModelType,
-            request_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.LearnerSetModelTypeReq.FromString,
-            response_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.LearnerSetModelTypeResp.SerializeToString,
+        'InitBuf': grpc.unary_unary_rpc_method_handler(
+            servicer.InitBuf,
+            request_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.InitBufReq.FromString,
+            response_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.InitBufResp.SerializeToString,
         ),
         'LearnerSetVersion': grpc.unary_unary_rpc_method_handler(
             servicer.LearnerSetVersion,
             request_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.LearnerSetVersionReq.FromString,
             response_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.LearnerSetVersionResp.SerializeToString,
         ),
-        'UploadData': grpc.unary_unary_rpc_method_handler(
+        'UploadData': grpc.stream_unary_rpc_method_handler(
             servicer.UploadData,
             request_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.UploadDataReq.FromString,
             response_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.UploadDataResp.SerializeToString,
         ),
-        'DownloadData': grpc.unary_unary_rpc_method_handler(
+        'DownloadData': grpc.unary_stream_rpc_method_handler(
             servicer.DownloadData,
             request_deserializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.DownloadDataReq.FromString,
             response_serializer=rlearn_dot_distributed_dot_experience_dot_buffer__pb2.DownloadDataResp.SerializeToString,
@@ -149,19 +149,19 @@ class ReplayBuffer(object):
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def LearnerSetModelType(request,
-                            target,
-                            options=(),
-                            channel_credentials=None,
-                            call_credentials=None,
-                            insecure=False,
-                            compression=None,
-                            wait_for_ready=None,
-                            timeout=None,
-                            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/LearnerSetModelType',
-                                             rlearn_dot_distributed_dot_experience_dot_buffer__pb2.LearnerSetModelTypeReq.SerializeToString,
-                                             rlearn_dot_distributed_dot_experience_dot_buffer__pb2.LearnerSetModelTypeResp.FromString,
+    def InitBuf(request,
+                target,
+                options=(),
+                channel_credentials=None,
+                call_credentials=None,
+                insecure=False,
+                compression=None,
+                wait_for_ready=None,
+                timeout=None,
+                metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/InitBuf',
+                                             rlearn_dot_distributed_dot_experience_dot_buffer__pb2.InitBufReq.SerializeToString,
+                                             rlearn_dot_distributed_dot_experience_dot_buffer__pb2.InitBufResp.FromString,
                                              options, channel_credentials,
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -183,7 +183,7 @@ class ReplayBuffer(object):
                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def UploadData(request,
+    def UploadData(request_iterator,
                    target,
                    options=(),
                    channel_credentials=None,
@@ -193,11 +193,12 @@ class ReplayBuffer(object):
                    wait_for_ready=None,
                    timeout=None,
                    metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/UploadData',
-                                             rlearn_dot_distributed_dot_experience_dot_buffer__pb2.UploadDataReq.SerializeToString,
-                                             rlearn_dot_distributed_dot_experience_dot_buffer__pb2.UploadDataResp.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+        return grpc.experimental.stream_unary(request_iterator, target, '/replayBuffer.ReplayBuffer/UploadData',
+                                              rlearn_dot_distributed_dot_experience_dot_buffer__pb2.UploadDataReq.SerializeToString,
+                                              rlearn_dot_distributed_dot_experience_dot_buffer__pb2.UploadDataResp.FromString,
+                                              options, channel_credentials,
+                                              insecure, call_credentials, compression, wait_for_ready, timeout,
+                                              metadata)
 
     @staticmethod
     def DownloadData(request,
@@ -210,11 +211,12 @@ class ReplayBuffer(object):
                      wait_for_ready=None,
                      timeout=None,
                      metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/replayBuffer.ReplayBuffer/DownloadData',
-                                             rlearn_dot_distributed_dot_experience_dot_buffer__pb2.DownloadDataReq.SerializeToString,
-                                             rlearn_dot_distributed_dot_experience_dot_buffer__pb2.DownloadDataResp.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+        return grpc.experimental.unary_stream(request, target, '/replayBuffer.ReplayBuffer/DownloadData',
+                                              rlearn_dot_distributed_dot_experience_dot_buffer__pb2.DownloadDataReq.SerializeToString,
+                                              rlearn_dot_distributed_dot_experience_dot_buffer__pb2.DownloadDataResp.FromString,
+                                              options, channel_credentials,
+                                              insecure, call_credentials, compression, wait_for_ready, timeout,
+                                              metadata)
 
     @staticmethod
     def Stop(request,

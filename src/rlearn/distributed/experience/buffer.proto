@@ -10,10 +10,10 @@ package replayBuffer;
 // The greeting service definition.
 service ReplayBuffer {
   rpc ServiceReady (ServiceReadyReq) returns (ServiceReadyResp) {}
-  rpc LearnerSetModelType (LearnerSetModelTypeReq) returns (LearnerSetModelTypeResp) {}
+  rpc InitBuf (InitBufReq) returns (InitBufResp) {}
   rpc LearnerSetVersion (LearnerSetVersionReq) returns (LearnerSetVersionResp) {}
-  rpc UploadData (UploadDataReq) returns (UploadDataResp) {}
-  rpc DownloadData (DownloadDataReq) returns (DownloadDataResp) {}
+  rpc UploadData (stream UploadDataReq) returns (UploadDataResp) {}
+  rpc DownloadData (DownloadDataReq) returns (stream DownloadDataResp) {}
   rpc Stop(StopReq) returns (StopResp) {}
 }
 
@@ -26,12 +26,14 @@ message ServiceReadyResp {
   string requestId = 2;
 }
 
-message LearnerSetModelTypeReq {
+message InitBufReq {
   bool isOnPolicy = 1;
-  string requestId = 2;
+  string bufferType = 2;
+  uint64 bufferSize = 3;
+  string requestId = 4;
 }
 
-message LearnerSetModelTypeResp {
+message InitBufResp {
   bool done = 1;
   string err = 2;
   string requestId = 3;
@@ -48,15 +50,17 @@ message LearnerSetVersionResp {
   string requestId = 3;
 }
 
-message Data {
-  repeated float values = 1;
+message UploadDataMeta {
+  uint64 version = 1;
   string attributes = 2;  // 包含 shape 和其他信息
+  string requestId = 3;
 }
 
 message UploadDataReq {
-  Data data = 1;
-  uint64 version = 2;
-  string requestId = 3;
+  oneof request {
+    UploadDataMeta meta = 1;
+    bytes chunkData = 2;
+  }
 }
 
 message UploadDataResp {
@@ -70,10 +74,17 @@ message DownloadDataReq {
   string requestId = 2;
 }
 
-message DownloadDataResp {
-  Data data = 1;
+message DownloadDataMeta {
+  string attributes = 1;
   string err = 2;
   string requestId = 3;
+}
+
+message DownloadDataResp {
+  oneof request {
+    DownloadDataMeta meta = 1;
+    bytes chunkData = 2;
+  }
 }
 
 message StopReq {

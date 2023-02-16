@@ -1,3 +1,5 @@
+import typing as tp
+
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -5,6 +7,7 @@ from tensorflow import keras
 from rlearn.config import TrainConfig
 from rlearn.model.dqn import DQN
 from rlearn.model.tools import build_encoder_from_config
+from rlearn.trainer import tools
 from rlearn.trainer.base import BaseTrainer, TrainResult
 
 
@@ -51,14 +54,15 @@ class DQNTrainer(BaseTrainer):
     def store_transition(self, s, a, r, s_, done=False, *args, **kwargs):
         self.replay_buffer.put_one(s=s, a=a, r=r, s_=s_, done=done)
 
-    def train_batch(self) -> TrainResult:
+    def compute_gradients(self) -> tp.Tuple[TrainResult, tp.Optional[tp.Dict[str, tp.Dict[str, list]]]]:
         if self.opt is None:
             self._set_default_optimizer()
 
         res = TrainResult(value={"loss": 0, "q": 0, "reward": 0}, model_replaced=False)
         if self.replay_buffer.is_empty():
-            return res
+            return res, None
 
+        grads = {"q": {"g": [], "v": []}}
         batch = self.replay_buffer.sample(self.batch_size)
         ba = batch["a"]
 
@@ -80,12 +84,27 @@ class DQNTrainer(BaseTrainer):
             q_wrt_a = tf.gather_nd(params=q, indices=a_indices)
             loss = self.replay_buffer.try_weighting_loss(q_target, q_wrt_a)
         tv = self.model.models["q"].trainable_variables
-        grads = tape.gradient(loss, tv)
-        self.opt.apply_gradients(zip(grads, tv))
+        grads["q"]["g"] = tape.gradient(loss, tv)
+        grads["q"]["v"] = tv
 
         res.value.update({
             "loss": loss.numpy(),
             "q": q_wrt_a.numpy().ravel().mean(),
             "reward": total_reward.mean(),
         })
+        return res, grads
+
+    def apply_flat_gradients(self, gradients: np.ndarray):
+        q = self.model.models["q"]
+        reshaped_grads = tools.reshape_flat_gradients(
+            grad_vars={"q": [q]},
+            gradients=gradients,
+        )
+
+        self.opt.apply_gradients(zip(reshaped_grads["q"], q.trainable_variables))
+
+    def train_batch(self) -> TrainResult:
+        res, grads = self.compute_gradients()
+        if grads is not None:
+            self.opt.apply_gradients(zip(grads["q"]["g"], grads["q"]["v"]))
         return res

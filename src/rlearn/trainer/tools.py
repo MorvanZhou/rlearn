@@ -163,3 +163,23 @@ def discounted_adv(
     adv = reward - value_model.predict(batch_s, verbose=0).ravel()
     adv = (adv - adv.mean()) / (adv.std() + 1e-4)
     return adv
+
+
+def reshape_flat_gradients(
+        grad_vars: tp.Dict[str, tp.Sequence[keras.Model]],
+        gradients: np.ndarray,
+) -> tp.Dict[str, tp.List[np.ndarray]]:
+    assert gradients.ndim == 1, ValueError("grads must be 1d array")
+    p = 0
+    grads = {name: [] for name in grad_vars.keys()}
+    keys = list(grads.keys())
+    keys.sort()
+
+    for g_key in keys:
+        for model in grad_vars[g_key]:
+            for w in model.weights:
+                p_ = np.prod(w.shape) + p
+                g = gradients[p: p_]
+                grads[g_key].append(g.reshape(w.shape))
+                p = p_
+    return grads

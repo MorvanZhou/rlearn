@@ -1,3 +1,5 @@
+import typing as tp
+
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -5,8 +7,8 @@ from tensorflow import keras
 from rlearn.config import TrainConfig
 from rlearn.model.sac import SACContinue, SACDiscrete
 from rlearn.model.tools import build_encoder_from_config
+from rlearn.trainer import tools
 from rlearn.trainer.base import BaseTrainer, TrainResult
-from rlearn.trainer.tools import parse_2_learning_rate
 
 
 class _SACTrainer(BaseTrainer):
@@ -25,7 +27,7 @@ class _SACTrainer(BaseTrainer):
         self.loss = keras.losses.MeanSquaredError()
 
     def _set_default_optimizer(self):
-        l1, l2 = parse_2_learning_rate(self.learning_rate)
+        l1, l2 = tools.parse_2_learning_rate(self.learning_rate)
 
         self.opt_a = keras.optimizers.Adam(
             learning_rate=l1,
@@ -48,7 +50,7 @@ class _SACTrainer(BaseTrainer):
         critic_encoder = build_encoder_from_config(config.nets[1], trainable=True)
         self.set_model_encoder(actor=actor_encoder, critic=critic_encoder, action_num=action_num)
 
-    def train_batch(self) -> TrainResult:
+    def compute_gradients(self) -> tp.Tuple[TrainResult, tp.Optional[tp.Dict[str, tp.Dict[str, list]]]]:
         if self.opt_a is None or self.opt_c is None:
             self._set_default_optimizer()
 
@@ -61,7 +63,11 @@ class _SACTrainer(BaseTrainer):
             model_replaced=False,
         )
         if self.replay_buffer.is_empty():
-            return res
+            return res, None
+
+        grads = {"critic": {"g": [], "v": []}, "actor": {"g": [], "v": []}}
+        grads["actor"]["v"] = self.model.models["actor"].trainable_variables
+        grads["critic"]["v"] = self.model.models["c1"].trainable_variables + self.model.models["c2"].trainable_variables
 
         batch = self.replay_buffer.sample(self.batch_size)
 
@@ -107,10 +113,7 @@ class _SACTrainer(BaseTrainer):
 
             lc = self.replay_buffer.try_weighting_loss(target=q_, evaluated=q1_a)  # PR update only once
             lc += self.loss(q_, q2_a)
-
-            tv = self.model.models["c1"].trainable_variables + self.model.models["c2"].trainable_variables
-            grads = tape.gradient(lc, tv)
-            self.opt_c.apply_gradients(zip(grads, tv))
+            grads["critic"]["g"] = tape.gradient(lc, grads["critic"]["v"])
 
         with tf.GradientTape() as tape:
             # kl divergence
@@ -131,15 +134,32 @@ class _SACTrainer(BaseTrainer):
                 q_a_min = tf.minimum(q1_a, q2_a)
                 la = tf.reduce_mean(self.alpha * log_prob - q_a_min)
 
-            tv = self.model.models["actor"].trainable_variables
-            grads = tape.gradient(la, tv)
-            self.opt_a.apply_gradients(zip(grads, tv))
+            grads["actor"]["g"] = tape.gradient(la, grads["actor"]["v"])
 
         res.value.update({
             "actor_loss": la.numpy(),
             "critic_loss": lc.numpy(),
             "reward": total_r.mean(),
         })
+        return res, grads
+
+    def apply_flat_gradients(self, gradients: np.ndarray):
+        a = self.model.models["actor"]
+        c1 = self.model.models["c1"]
+        c2 = self.model.models["c2"]
+        reshaped_grads = tools.reshape_flat_gradients(
+            grad_vars={"actor": [a], "critic": [c1, c2]},
+            gradients=gradients,
+        )
+
+        self.opt_a.apply_gradients(zip(reshaped_grads["actor"], a.trainable_variables))
+        self.opt_c.apply_gradients(zip(reshaped_grads["critic"], c1.trainable_variables + c2.trainable_variables))
+
+    def train_batch(self) -> TrainResult:
+        res, grads = self.compute_gradients()
+        if grads is not None:
+            self.opt_c.apply_gradients(zip(grads["critic"]["g"], grads["critic"]["v"]))
+            self.opt_a.apply_gradients(zip(grads["actor"]["g"], grads["actor"]["v"]))
         return res
 
     def predict(self, s: np.ndarray) -> np.ndarray:

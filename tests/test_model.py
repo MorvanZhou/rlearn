@@ -235,7 +235,7 @@ class ModelTest(unittest.TestCase):
         m.load(path)
         os.remove(path)
 
-    def test_get_shape_weights(self):
+    def test_get_flat_weights(self):
         m = rlearn.DQN()
         m.set_encoder(
             encoder=keras.Sequential([

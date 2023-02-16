@@ -36,7 +36,7 @@ class WorkerProcess(base.MulProcess):
 
     def try_sync(self):
         if self.ns.send_gradient:
-            gradients = self.trainer.get_gradients()
+            gradients = self.trainer.compute_flat_gradients()
             self.gradients_conn.send([self.ns.version, gradients])
             with self.lock:
                 self.ns.send_gradient = False

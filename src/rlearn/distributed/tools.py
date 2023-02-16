@@ -9,25 +9,63 @@ import zlib
 import numpy as np
 
 from rlearn.distributed.experience import actor_pb2 as exp_actor_pb2
+from rlearn.distributed.experience import buffer_pb2
 
 
-class PackedData(tp.Protocol):
-    values: tp.List[float]
+class DataMeta(tp.Protocol):
+    version: int
+    requestId: str
     attributes: str
 
 
 class DataInterface(tp.Protocol):
-    data: PackedData
-    requestId: str
+    meta: DataMeta
+    chunkData: bytes
 
 
-def unpack_transitions(interface: DataInterface) -> tp.Tuple[int, tp.Dict[str, np.ndarray]]:
-    data, attributes = interface.data.values[:], interface.data.attributes
+def unpack_downloaded_transitions(
+        resp_iter: buffer_pb2.DownloadDataResp
+) -> tp.Tuple[int, tp.Dict[str, np.ndarray], str, str]:
+    data = bytearray()
+    err = ""
+    attributes = ""
+    request_id = ""
+    for req in resp_iter:
+        if req.meta.attributes != "":
+            request_id = req.meta.requestId
+            err = req.meta.err
+            attributes = req.meta.attributes
+            continue
+        data.extend(req.chunkData)
+    batch_size, batch = _unpack_flat_transitions(attributes_str=attributes, data_bytes=data)
+    return batch_size, batch, err, request_id
+
+
+def unpack_uploaded_transitions(
+        request_iterator: buffer_pb2.UploadDataReq,
+) -> tp.Tuple[int, tp.Dict[str, np.ndarray], int, str]:
+    data = bytearray()
+    attributes = ""
+    request_id = ""
+    version = 0
+    for req in request_iterator:
+        if req.meta.attributes != "":
+            request_id = req.meta.requestId
+            attributes = req.meta.attributes
+            version = req.meta.version
+            continue
+        data.extend(req.chunkData)
+    batch_size, batch = _unpack_flat_transitions(attributes_str=attributes, data_bytes=data)
+    return batch_size, batch, version, request_id
+
+
+def _unpack_flat_transitions(attributes_str: str, data_bytes: bytes) -> tp.Tuple[int, tp.Dict[str, np.ndarray]]:
     try:
-        attr = json.loads(attributes)
+        attr = json.loads(attributes_str)
     except json.JSONDecodeError:
         return 0, {}
-
+    d_data = zlib.decompress(data_bytes)
+    data = np.frombuffer(d_data, dtype=np.float32)
     batch = {}
     p = 0
     batch_size = None
@@ -45,7 +83,61 @@ def unpack_transitions(interface: DataInterface) -> tp.Tuple[int, tp.Dict[str, n
     return batch_size, batch
 
 
-def pack_transitions(buffer, interface: DataInterface, max_size: int = None):
+def pack_transitions_for_uploading(
+        buffer, version: int, max_size: int = None, chunk_size: int = 1024, request_id: str = None
+) -> buffer_pb2.UploadDataReq:
+    data, keys = _get_data_and_keys(buffer=buffer, max_size=max_size)
+    req = buffer_pb2.UploadDataReq(
+        meta=buffer_pb2.UploadDataMeta(
+            attributes=json.dumps([{"name": k, "shape": data[k].shape} for k in keys]),
+            version=version,
+            requestId=request_id if request_id is not None else str(uuid.uuid4())
+        )
+    )
+    yield req
+
+    v = np.concatenate([data[k].ravel() for k in keys])
+    v_bytes = v.astype(np.float32).tobytes()
+    v_compressed = zlib.compress(v_bytes)
+    for i in range(0, len(v_compressed), chunk_size):
+        req = buffer_pb2.UploadDataReq(chunkData=v_compressed[i: i + chunk_size])
+        yield req
+
+
+def pack_transitions_for_downloading(
+        buffer, max_size: int, request_id: str, chunk_size: int = 1024,
+) -> buffer_pb2.DownloadDataResp:
+    if buffer.is_empty():
+        yield buffer_pb2.DownloadDataResp(
+            meta=buffer_pb2.DownloadDataMeta(
+                attributes="",
+                err="no data",
+                requestId=request_id
+            )
+        )
+        return
+
+    data, keys = _get_data_and_keys(buffer=buffer, max_size=max_size)
+
+    resp = buffer_pb2.DownloadDataResp(
+        meta=buffer_pb2.DownloadDataMeta(
+            attributes=json.dumps([{"name": k, "shape": data[k].shape} for k in keys]),
+            err="",
+            requestId=request_id
+        )
+    )
+    yield resp
+
+    v = np.concatenate([data[k].ravel() for k in keys])
+    v_bytes = v.astype(np.float32).tobytes()
+    v_compressed = zlib.compress(v_bytes)
+    for i in range(0, len(v_compressed), chunk_size):
+        resp = buffer_pb2.DownloadDataResp(chunkData=v_compressed[i: i + chunk_size])
+        yield resp
+    buffer.clear()
+
+
+def _get_data_and_keys(buffer, max_size):
     if max_size is None or max_size > buffer.current_loading_point:
         data = buffer.get_current_loading()
     else:
@@ -54,12 +146,8 @@ def pack_transitions(buffer, interface: DataInterface, max_size: int = None):
             data[k] = v[:max_size]
 
     keys = list(data.keys())
-    v = np.concatenate([data[k].ravel() for k in keys])
-    interface.data.values[:] = v
-    interface.data.attributes = json.dumps([{"name": k, "shape": data[k].shape} for k in keys])
-    if interface.requestId == "":
-        interface.requestId = str(uuid.uuid4())
-    return interface
+    keys.sort()
+    return data, keys
 
 
 def read_pb_iterfile(
@@ -177,7 +265,7 @@ def initialize_model(request_iterator, logger, process, resp):
             logger.debug(
                 'Start | '
                 '{"reqId": "%s", "trainerType": "%s","filename": "%s", "version": %d, "bufferType": %s, '
-                '""bufferSize": %d, maxEpisode": %d, "maxEpisodeStep": %d, "actionTransform": "%s"}',
+                '"bufferSize": %d, maxEpisode": %d, "maxEpisodeStep": %d, "actionTransform": "%s"}',
                 req.meta.requestId,
                 req.meta.trainerType,
                 req.meta.filename,

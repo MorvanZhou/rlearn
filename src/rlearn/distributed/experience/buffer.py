@@ -1,4 +1,3 @@
-import inspect
 import logging
 import threading
 import time
@@ -15,37 +14,33 @@ from rlearn.replaybuf.base import BaseReplayBuffer
 
 logger = get_logger("buf")
 
+
 class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
+
     def __init__(
             self,
             stop_event: threading.Event,
-            max_size: int,
-            buf: tp.Union[str, tp.Type[BaseReplayBuffer]] = "RandomReplayBuffer",
             debug=False
     ):
         self.stop_event = stop_event
-        if inspect.isclass(buf):
-            name = buf.name
-        else:
-            name = buf
-
         logger.setLevel(logging.DEBUG if debug else logging.ERROR)
 
         self.version = 0
         self.is_on_policy = False
-        self.replay_buffer = replaybuf.get_buffer_by_name(name=name, max_size=max_size)
         self.is_uploading = False
-        self.is_downloading = False
+        self.replay_buffer: tp.Optional[BaseReplayBuffer] = None
 
     def ServiceReady(self, request, context):
         logger.debug("""ServiceReady | {"reqId": "%s"}""", request.requestId)
         return buffer_pb2.ServiceReadyResp(ready=True, requestId=request.requestId)
 
-    def LearnerSetModelType(self, request, context):
+    def InitBuf(self, request, context):
         logger.debug(
-            """LearnerSetModelType | {"reqId": "%s", "isOnPolicy": "%s"}""", request.requestId, request.isOnPolicy)
+            """InitBuf | {"reqId": "%s", "isOnPolicy": %s, "bufferType": "%s", "bufferSize": %d}""",
+            request.requestId, request.isOnPolicy, request.bufferType, request.bufferSize)
         self.is_on_policy = request.isOnPolicy
-        return buffer_pb2.LearnerSetVersionResp(done=True, err="", requestId=request.requestId)
+        self.replay_buffer = replaybuf.get_buffer_by_name(name=request.bufferType, max_size=request.bufferSize)
+        return buffer_pb2.InitBufResp(done=True, err="", requestId=request.requestId)
 
     def LearnerSetVersion(self, request, context):
         logger.debug(
@@ -53,36 +48,30 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
         self.version = request.version
         return buffer_pb2.LearnerSetVersionResp(done=True, err="", requestId=request.requestId)
 
-    def UploadData(self, request, context):
-        logger.debug("""UploadData | {"reqId": "%s", "version": %d}""", request.requestId, request.version)
+    def UploadData(self, request_iterator, context):
+        batch_size, batch, version, request_id = tools.unpack_uploaded_transitions(request_iterator=request_iterator)
 
         # reject invalided version
-        if self.is_on_policy and request.version < self.version:
+        if self.is_on_policy and version < self.version:
             logger.debug(
                 "model isOnPolicy, request version=%d is not equal to last version=%d",
-                request.version, self.version)
+                version, self.version)
             return buffer_pb2.UploadDataResp(
                 done=True,
-                err=f"version='{request.version}' is not aline with learner's '{self.version}'",
-                requestId=request.requestId,
+                err=f"version='{version}' is not aline with learner's '{self.version}'",
+                requestId=request_id,
             )
-        while True:
-            if not self.is_downloading:
-                break
-            logger.debug("waiting data downloading and clear")
-            time.sleep(0.05)
 
-        batch_size, batch = tools.unpack_transitions(request)
         if batch_size == 0:
-            return buffer_pb2.UploadDataResp(done=False, err="no data uploaded", requestId=request.requestId)
+            return buffer_pb2.UploadDataResp(done=False, err="no data uploaded", requestId=request_id)
         try:
             self.is_uploading = True
             self.replay_buffer.put_batch(**batch)
         except (ValueError, TypeError) as e:
             logger.error("UpdateData err: %s", str(e).replace("\n", "\\n"))
-            resp = buffer_pb2.UploadDataResp(done=False, err=str(e), requestId=request.requestId)
+            resp = buffer_pb2.UploadDataResp(done=False, err=str(e), requestId=request_id)
         else:
-            resp = buffer_pb2.UploadDataResp(done=True, err="", requestId=request.requestId)
+            resp = buffer_pb2.UploadDataResp(done=True, err="", requestId=request_id)
         finally:
             self.is_uploading = False
         return resp
@@ -95,18 +84,16 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
             logger.debug("waiting data uploading")
             time.sleep(0.05)
 
-        if self.replay_buffer.is_empty():
-            return buffer_pb2.DownloadDataResp(err="no data", requestId=request.requestId)
-
         max_size = request.maxSize
         if max_size <= 0:
             max_size = None
-        self.is_downloading = True
-        resp = buffer_pb2.DownloadDataResp(err="", requestId=request.requestId)
-        tools.pack_transitions(buffer=self.replay_buffer, interface=resp, max_size=max_size)
-        self.replay_buffer.clear()
-        self.is_downloading = False
-        return resp
+        resp_iter = tools.pack_transitions_for_downloading(
+            buffer=self.replay_buffer,
+            max_size=max_size,
+            request_id=request.requestId,
+            chunk_size=1024,
+        )
+        return resp_iter
 
     def Stop(self, request, context):
         logger.debug("""Stop | {"reqId": "%s"}""", request.requestId)
@@ -116,8 +103,6 @@ class ReplayBufferService(buffer_pb2_grpc.ReplayBufferServicer):
 
 def _start_server(
         port: int,
-        max_size: int,
-        buf: tp.Union[str, tp.Type[BaseReplayBuffer]] = "RandomReplayBuffer",
         debug: bool = False,
 ) -> tp.Tuple[grpc.Server, threading.Event]:
     stop_event = threading.Event()
@@ -129,7 +114,7 @@ def _start_server(
             ('grpc.max_send_message_length', 1024 * 1024 * 20),
         ]
     )
-    service = ReplayBufferService(stop_event, max_size, buf, debug)
+    service = ReplayBufferService(stop_event=stop_event, debug=debug)
     buffer_pb2_grpc.add_ReplayBufferServicer_to_server(service, server)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
@@ -139,11 +124,9 @@ def _start_server(
 
 def start_replay_buffer_server(
         port: int,
-        max_size: int,
-        buf: tp.Union[str, tp.Type[BaseReplayBuffer]] = "RandomReplayBuffer",
         debug: bool = False,
 ):
-    server, stop_event = _start_server(port, max_size, buf, debug)
+    server, stop_event = _start_server(port=port, debug=debug)
     stop_event.wait()
     server.stop(None)
     server.wait_for_termination()

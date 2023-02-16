@@ -1,3 +1,5 @@
+import typing as tp
+
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -130,7 +132,7 @@ class _PPOTrainer(BaseTrainer):
         self.buffer_r.clear()
         self.buffer_done.clear()
 
-    def train_batch(self) -> TrainResult:
+    def compute_gradients(self) -> tp.Tuple[TrainResult, tp.Optional[tp.Dict[str, tp.Dict[str, list]]]]:
         if self.opt_a is None or self.opt_c is None:
             self._set_default_optimizer()
 
@@ -139,7 +141,11 @@ class _PPOTrainer(BaseTrainer):
             model_replaced=False,
         )
         if self.replay_buffer.current_loading_point < self.batch_size:
-            return res
+            return res, None
+
+        grads = {"critic": {"g": [], "v": []}, "pi": {"g": [], "v": []}}
+        grads["pi"]["v"] = self.model.models["pi"].trainable_variables
+        grads["critic"]["v"] = self.model.models["critic"].trainable_variables
 
         for _ in range(self.update_time):
             batch = self.replay_buffer.sample(self.batch_size)
@@ -148,10 +154,16 @@ class _PPOTrainer(BaseTrainer):
                 vs = self.model.models["critic"](batch["s"])
                 assert batch["returns"].ndim == 1, ValueError("batch['returns'].ndim != 1")
                 lc = self.replay_buffer.try_weighting_loss(target=batch["returns"][:, None], evaluated=vs)
-
-                tv = self.model.models["critic"].trainable_variables
-                grads = tape.gradient(lc, tv)
-                self.opt_c.apply_gradients(zip(grads, tv))
+                new_gs = tape.gradient(lc, grads["critic"]["v"])
+                if len(grads["critic"]["g"]) == 0:
+                    if self.update_time == 1:
+                        grads["critic"]["g"] = new_gs
+                    else:
+                        grads["critic"]["g"] = [g / self.update_time for g in new_gs]
+                else:
+                    grads["critic"]["g"] = [g / self.update_time + g_ for g, g_ in zip(
+                        new_gs, grads["critic"]["g"]
+                    )]
 
             with tf.GradientTape() as tape:
                 # actor
@@ -176,10 +188,16 @@ class _PPOTrainer(BaseTrainer):
                     entropy = tf.reduce_mean(dist.entropy()) * self.entropy_coef
 
                 la = - tf.reduce_mean(tf.minimum(surrogate, clipped_surrogate)) - entropy
-
-                tv = self.model.models["pi"].trainable_variables
-                grads = tape.gradient(la, tv)
-                self.opt_a.apply_gradients(zip(grads, tv))
+                new_gs = tape.gradient(la, grads["pi"]["v"])
+                if len(grads["pi"]["g"]) == 0:
+                    if self.update_time == 1:
+                        grads["pi"]["g"] = new_gs
+                    else:
+                        grads["pi"]["g"] = [g / self.update_time for g in new_gs]
+                else:
+                    grads["pi"]["g"] = [g / self.update_time + g_ for g, g_ in zip(
+                        new_gs, grads["pi"]["g"]
+                    )]
 
         res.model_replaced = self.try_replace_params(
             source=[self.model.models["pi"]], target=[self.model.models["pi_"]], ratio=1.)
@@ -195,6 +213,24 @@ class _PPOTrainer(BaseTrainer):
             "critic_loss": lc.numpy(),
             "reward": batch["returns"].mean(),
         })
+        return res, grads
+
+    def apply_flat_gradients(self, gradients: np.ndarray):
+        a = self.model.models["pi"]
+        c = self.model.models["critic"]
+        reshaped_grads = tools.reshape_flat_gradients(
+            grad_vars={"pi": [a], "critic": [c]},
+            gradients=gradients,
+        )
+
+        self.opt_a.apply_gradients(zip(reshaped_grads["pi"], a.trainable_variables))
+        self.opt_c.apply_gradients(zip(reshaped_grads["critic"], c.trainable_variables))
+
+    def train_batch(self) -> TrainResult:
+        res, grads = self.compute_gradients()
+        if grads is not None:
+            self.opt_c.apply_gradients(zip(grads["critic"]["g"], grads["critic"]["v"]))
+            self.opt_a.apply_gradients(zip(grads["pi"]["g"], grads["pi"]["v"]))
         return res
 
 

@@ -13,18 +13,19 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
-    b'\n*rlearn/distributed/experience/buffer.proto\x12\x0creplayBuffer\"$\n\x0fServiceReadyReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"4\n\x10ServiceReadyResp\x12\r\n\x05ready\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t\"?\n\x16LearnerSetModelTypeReq\x12\x12\n\nisOnPolicy\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t\"G\n\x17LearnerSetModelTypeResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\":\n\x14LearnerSetVersionReq\x12\x0f\n\x07version\x18\x01 \x01(\x04\x12\x11\n\trequestId\x18\x02 \x01(\t\"E\n\x15LearnerSetVersionResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"*\n\x04\x44\x61ta\x12\x0e\n\x06values\x18\x01 \x03(\x02\x12\x12\n\nattributes\x18\x02 \x01(\t\"U\n\rUploadDataReq\x12 \n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x12.replayBuffer.Data\x12\x0f\n\x07version\x18\x02 \x01(\x04\x12\x11\n\trequestId\x18\x03 \x01(\t\">\n\x0eUploadDataResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"5\n\x0f\x44ownloadDataReq\x12\x0f\n\x07maxSize\x18\x01 \x01(\x05\x12\x11\n\trequestId\x18\x02 \x01(\t\"T\n\x10\x44ownloadDataResp\x12 \n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x12.replayBuffer.Data\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"\x1c\n\x07StopReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"+\n\x08StopResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t2\xfa\x03\n\x0cReplayBuffer\x12O\n\x0cServiceReady\x12\x1d.replayBuffer.ServiceReadyReq\x1a\x1e.replayBuffer.ServiceReadyResp\"\x00\x12\x64\n\x13LearnerSetModelType\x12$.replayBuffer.LearnerSetModelTypeReq\x1a%.replayBuffer.LearnerSetModelTypeResp\"\x00\x12^\n\x11LearnerSetVersion\x12\".replayBuffer.LearnerSetVersionReq\x1a#.replayBuffer.LearnerSetVersionResp\"\x00\x12I\n\nUploadData\x12\x1b.replayBuffer.UploadDataReq\x1a\x1c.replayBuffer.UploadDataResp\"\x00\x12O\n\x0c\x44ownloadData\x12\x1d.replayBuffer.DownloadDataReq\x1a\x1e.replayBuffer.DownloadDataResp\"\x00\x12\x37\n\x04Stop\x12\x15.replayBuffer.StopReq\x1a\x16.replayBuffer.StopResp\"\x00\x42\x31\n\x14io.grpc.examples.envB\x11ReplayBufferProtoP\x01\xa2\x02\x03HLWb\x06proto3')
+    b'\n*rlearn/distributed/experience/buffer.proto\x12\x0creplayBuffer\"$\n\x0fServiceReadyReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"4\n\x10ServiceReadyResp\x12\r\n\x05ready\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t\"[\n\nInitBufReq\x12\x12\n\nisOnPolicy\x18\x01 \x01(\x08\x12\x12\n\nbufferType\x18\x02 \x01(\t\x12\x12\n\nbufferSize\x18\x03 \x01(\x04\x12\x11\n\trequestId\x18\x04 \x01(\t\";\n\x0bInitBufResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\":\n\x14LearnerSetVersionReq\x12\x0f\n\x07version\x18\x01 \x01(\x04\x12\x11\n\trequestId\x18\x02 \x01(\t\"E\n\x15LearnerSetVersionResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"H\n\x0eUploadDataMeta\x12\x0f\n\x07version\x18\x01 \x01(\x04\x12\x12\n\nattributes\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"]\n\rUploadDataReq\x12,\n\x04meta\x18\x01 \x01(\x0b\x32\x1c.replayBuffer.UploadDataMetaH\x00\x12\x13\n\tchunkData\x18\x02 \x01(\x0cH\x00\x42\t\n\x07request\">\n\x0eUploadDataResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"5\n\x0f\x44ownloadDataReq\x12\x0f\n\x07maxSize\x18\x01 \x01(\x05\x12\x11\n\trequestId\x18\x02 \x01(\t\"F\n\x10\x44ownloadDataMeta\x12\x12\n\nattributes\x18\x01 \x01(\t\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"b\n\x10\x44ownloadDataResp\x12.\n\x04meta\x18\x01 \x01(\x0b\x32\x1e.replayBuffer.DownloadDataMetaH\x00\x12\x13\n\tchunkData\x18\x02 \x01(\x0cH\x00\x42\t\n\x07request\"\x1c\n\x07StopReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"+\n\x08StopResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t2\xda\x03\n\x0cReplayBuffer\x12O\n\x0cServiceReady\x12\x1d.replayBuffer.ServiceReadyReq\x1a\x1e.replayBuffer.ServiceReadyResp\"\x00\x12@\n\x07InitBuf\x12\x18.replayBuffer.InitBufReq\x1a\x19.replayBuffer.InitBufResp\"\x00\x12^\n\x11LearnerSetVersion\x12\".replayBuffer.LearnerSetVersionReq\x1a#.replayBuffer.LearnerSetVersionResp\"\x00\x12K\n\nUploadData\x12\x1b.replayBuffer.UploadDataReq\x1a\x1c.replayBuffer.UploadDataResp\"\x00(\x01\x12Q\n\x0c\x44ownloadData\x12\x1d.replayBuffer.DownloadDataReq\x1a\x1e.replayBuffer.DownloadDataResp\"\x00\x30\x01\x12\x37\n\x04Stop\x12\x15.replayBuffer.StopReq\x1a\x16.replayBuffer.StopResp\"\x00\x42\x31\n\x14io.grpc.examples.envB\x11ReplayBufferProtoP\x01\xa2\x02\x03HLWb\x06proto3')
 
 _SERVICEREADYREQ = DESCRIPTOR.message_types_by_name['ServiceReadyReq']
 _SERVICEREADYRESP = DESCRIPTOR.message_types_by_name['ServiceReadyResp']
-_LEARNERSETMODELTYPEREQ = DESCRIPTOR.message_types_by_name['LearnerSetModelTypeReq']
-_LEARNERSETMODELTYPERESP = DESCRIPTOR.message_types_by_name['LearnerSetModelTypeResp']
+_INITBUFREQ = DESCRIPTOR.message_types_by_name['InitBufReq']
+_INITBUFRESP = DESCRIPTOR.message_types_by_name['InitBufResp']
 _LEARNERSETVERSIONREQ = DESCRIPTOR.message_types_by_name['LearnerSetVersionReq']
 _LEARNERSETVERSIONRESP = DESCRIPTOR.message_types_by_name['LearnerSetVersionResp']
-_DATA = DESCRIPTOR.message_types_by_name['Data']
+_UPLOADDATAMETA = DESCRIPTOR.message_types_by_name['UploadDataMeta']
 _UPLOADDATAREQ = DESCRIPTOR.message_types_by_name['UploadDataReq']
 _UPLOADDATARESP = DESCRIPTOR.message_types_by_name['UploadDataResp']
 _DOWNLOADDATAREQ = DESCRIPTOR.message_types_by_name['DownloadDataReq']
+_DOWNLOADDATAMETA = DESCRIPTOR.message_types_by_name['DownloadDataMeta']
 _DOWNLOADDATARESP = DESCRIPTOR.message_types_by_name['DownloadDataResp']
 _STOPREQ = DESCRIPTOR.message_types_by_name['StopReq']
 _STOPRESP = DESCRIPTOR.message_types_by_name['StopResp']
@@ -42,19 +43,19 @@ ServiceReadyResp = _reflection.GeneratedProtocolMessageType('ServiceReadyResp', 
 })
 _sym_db.RegisterMessage(ServiceReadyResp)
 
-LearnerSetModelTypeReq = _reflection.GeneratedProtocolMessageType('LearnerSetModelTypeReq', (_message.Message,), {
-    'DESCRIPTOR': _LEARNERSETMODELTYPEREQ,
+InitBufReq = _reflection.GeneratedProtocolMessageType('InitBufReq', (_message.Message,), {
+    'DESCRIPTOR': _INITBUFREQ,
     '__module__': 'rlearn.distributed.experience.buffer_pb2'
-    # @@protoc_insertion_point(class_scope:replayBuffer.LearnerSetModelTypeReq)
+    # @@protoc_insertion_point(class_scope:replayBuffer.InitBufReq)
 })
-_sym_db.RegisterMessage(LearnerSetModelTypeReq)
+_sym_db.RegisterMessage(InitBufReq)
 
-LearnerSetModelTypeResp = _reflection.GeneratedProtocolMessageType('LearnerSetModelTypeResp', (_message.Message,), {
-    'DESCRIPTOR': _LEARNERSETMODELTYPERESP,
+InitBufResp = _reflection.GeneratedProtocolMessageType('InitBufResp', (_message.Message,), {
+    'DESCRIPTOR': _INITBUFRESP,
     '__module__': 'rlearn.distributed.experience.buffer_pb2'
-    # @@protoc_insertion_point(class_scope:replayBuffer.LearnerSetModelTypeResp)
+    # @@protoc_insertion_point(class_scope:replayBuffer.InitBufResp)
 })
-_sym_db.RegisterMessage(LearnerSetModelTypeResp)
+_sym_db.RegisterMessage(InitBufResp)
 
 LearnerSetVersionReq = _reflection.GeneratedProtocolMessageType('LearnerSetVersionReq', (_message.Message,), {
     'DESCRIPTOR': _LEARNERSETVERSIONREQ,
@@ -70,12 +71,12 @@ LearnerSetVersionResp = _reflection.GeneratedProtocolMessageType('LearnerSetVers
 })
 _sym_db.RegisterMessage(LearnerSetVersionResp)
 
-Data = _reflection.GeneratedProtocolMessageType('Data', (_message.Message,), {
-    'DESCRIPTOR': _DATA,
+UploadDataMeta = _reflection.GeneratedProtocolMessageType('UploadDataMeta', (_message.Message,), {
+    'DESCRIPTOR': _UPLOADDATAMETA,
     '__module__': 'rlearn.distributed.experience.buffer_pb2'
-    # @@protoc_insertion_point(class_scope:replayBuffer.Data)
+    # @@protoc_insertion_point(class_scope:replayBuffer.UploadDataMeta)
 })
-_sym_db.RegisterMessage(Data)
+_sym_db.RegisterMessage(UploadDataMeta)
 
 UploadDataReq = _reflection.GeneratedProtocolMessageType('UploadDataReq', (_message.Message,), {
     'DESCRIPTOR': _UPLOADDATAREQ,
@@ -97,6 +98,13 @@ DownloadDataReq = _reflection.GeneratedProtocolMessageType('DownloadDataReq', (_
     # @@protoc_insertion_point(class_scope:replayBuffer.DownloadDataReq)
 })
 _sym_db.RegisterMessage(DownloadDataReq)
+
+DownloadDataMeta = _reflection.GeneratedProtocolMessageType('DownloadDataMeta', (_message.Message,), {
+    'DESCRIPTOR': _DOWNLOADDATAMETA,
+    '__module__': 'rlearn.distributed.experience.buffer_pb2'
+    # @@protoc_insertion_point(class_scope:replayBuffer.DownloadDataMeta)
+})
+_sym_db.RegisterMessage(DownloadDataMeta)
 
 DownloadDataResp = _reflection.GeneratedProtocolMessageType('DownloadDataResp', (_message.Message,), {
     'DESCRIPTOR': _DOWNLOADDATARESP,
@@ -127,28 +135,30 @@ if _descriptor._USE_C_DESCRIPTORS == False:
     _SERVICEREADYREQ._serialized_end = 96
     _SERVICEREADYRESP._serialized_start = 98
     _SERVICEREADYRESP._serialized_end = 150
-    _LEARNERSETMODELTYPEREQ._serialized_start = 152
-    _LEARNERSETMODELTYPEREQ._serialized_end = 215
-    _LEARNERSETMODELTYPERESP._serialized_start = 217
-    _LEARNERSETMODELTYPERESP._serialized_end = 288
-    _LEARNERSETVERSIONREQ._serialized_start = 290
-    _LEARNERSETVERSIONREQ._serialized_end = 348
-    _LEARNERSETVERSIONRESP._serialized_start = 350
-    _LEARNERSETVERSIONRESP._serialized_end = 419
-    _DATA._serialized_start = 421
-    _DATA._serialized_end = 463
-    _UPLOADDATAREQ._serialized_start = 465
-    _UPLOADDATAREQ._serialized_end = 550
-    _UPLOADDATARESP._serialized_start = 552
-    _UPLOADDATARESP._serialized_end = 614
-    _DOWNLOADDATAREQ._serialized_start = 616
-    _DOWNLOADDATAREQ._serialized_end = 669
-    _DOWNLOADDATARESP._serialized_start = 671
-    _DOWNLOADDATARESP._serialized_end = 755
-    _STOPREQ._serialized_start = 757
-    _STOPREQ._serialized_end = 785
-    _STOPRESP._serialized_start = 787
-    _STOPRESP._serialized_end = 830
-    _REPLAYBUFFER._serialized_start = 833
-    _REPLAYBUFFER._serialized_end = 1339
+    _INITBUFREQ._serialized_start = 152
+    _INITBUFREQ._serialized_end = 243
+    _INITBUFRESP._serialized_start = 245
+    _INITBUFRESP._serialized_end = 304
+    _LEARNERSETVERSIONREQ._serialized_start = 306
+    _LEARNERSETVERSIONREQ._serialized_end = 364
+    _LEARNERSETVERSIONRESP._serialized_start = 366
+    _LEARNERSETVERSIONRESP._serialized_end = 435
+    _UPLOADDATAMETA._serialized_start = 437
+    _UPLOADDATAMETA._serialized_end = 509
+    _UPLOADDATAREQ._serialized_start = 511
+    _UPLOADDATAREQ._serialized_end = 604
+    _UPLOADDATARESP._serialized_start = 606
+    _UPLOADDATARESP._serialized_end = 668
+    _DOWNLOADDATAREQ._serialized_start = 670
+    _DOWNLOADDATAREQ._serialized_end = 723
+    _DOWNLOADDATAMETA._serialized_start = 725
+    _DOWNLOADDATAMETA._serialized_end = 795
+    _DOWNLOADDATARESP._serialized_start = 797
+    _DOWNLOADDATARESP._serialized_end = 895
+    _STOPREQ._serialized_start = 897
+    _STOPREQ._serialized_end = 925
+    _STOPRESP._serialized_start = 927
+    _STOPRESP._serialized_end = 970
+    _REPLAYBUFFER._serialized_start = 973
+    _REPLAYBUFFER._serialized_end = 1447
 # @@protoc_insertion_point(module_scope)

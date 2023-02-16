@@ -1,8 +1,11 @@
+import typing as tp
+
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
 from rlearn.model.td3 import TD3
+from rlearn.trainer import tools
 from rlearn.trainer.base import TrainResult
 from rlearn.trainer.ddpg import DDPGTrainer
 
@@ -37,7 +40,7 @@ class TD3Trainer(DDPGTrainer):
         self.model.set_model(actor=actor, critic=critic)
         self._set_tensorboard([self.model.models["actor"], self.model.models["c1"]])
 
-    def train_batch(self) -> TrainResult:
+    def compute_gradients(self) -> tp.Tuple[TrainResult, tp.Optional[tp.Dict[str, tp.Dict[str, list]]]]:
         if self.opt_a is None or self.opt_c is None:
             self._set_default_optimizer()
 
@@ -50,7 +53,11 @@ class TD3Trainer(DDPGTrainer):
             model_replaced=False,
         )
         if self.replay_buffer.is_empty():
-            return res
+            return res, None
+
+        grads = {"actor": {"g": [], "v": []}, "critic": {"g": [], "v": []}}
+        grads["actor"]["v"] = self.model.models["actor"].trainable_variables
+        grads["critic"]["v"] = self.model.models["c1"].trainable_variables + self.model.models["c2"].trainable_variables
 
         batch = self.replay_buffer.sample(self.batch_size)
 
@@ -68,10 +75,7 @@ class TD3Trainer(DDPGTrainer):
                 a = self.model.models["actor"](batch["s"])
                 q = self.model.models["c1"]([batch["s"], a])
                 la = tf.reduce_mean(-q)
-
-                tv = self.model.models["actor"].trainable_variables
-                grads = tape.gradient(la, tv)
-                self.opt_a.apply_gradients(zip(grads, tv))
+                grads["actor"]["g"] = tape.gradient(la, grads["actor"]["v"])
 
         # update critic
         a_ = self.model.models["actor_"](batch["s_"])
@@ -95,15 +99,33 @@ class TD3Trainer(DDPGTrainer):
             lc = self.replay_buffer.try_weighting_loss(target=q_, evaluated=q1)  # PR update only once
             lc += self.loss(q_, q2)
 
-            tv = self.model.models["c1"].trainable_variables + self.model.models["c2"].trainable_variables
-            grads = tape.gradient(lc, tv)
-            self.opt_c.apply_gradients(zip(grads, tv))
+            grads["critic"]["g"] = tape.gradient(lc, grads["critic"]["v"])
 
         res.value.update({
             "actor_loss": la.numpy(),
             "critic_loss": lc.numpy(),
             "reward": total_reward.mean(),
         })
+        return res, grads
+
+    def apply_flat_gradients(self, gradients: np.ndarray):
+        a = self.model.models["actor"]
+        c1 = self.model.models["c1"]
+        c2 = self.model.models["c2"]
+        reshaped_grads = tools.reshape_flat_gradients(
+            grad_vars={"actor": [a], "critic": [c1, c2]},
+            gradients=gradients,
+        )
+
+        self.opt_a.apply_gradients(zip(reshaped_grads["actor"], a.trainable_variables))
+        self.opt_c.apply_gradients(zip(reshaped_grads["critic"], c1.trainable_variables + c2.trainable_variables))
+
+    def train_batch(self) -> TrainResult:
+        res, grads = self.compute_gradients()
+        if grads is not None:
+            if len(grads["actor"]["g"]) != 0:
+                self.opt_a.apply_gradients(zip(grads["actor"]["g"], grads["actor"]["v"]))
+            self.opt_c.apply_gradients(zip(grads["critic"]["g"], grads["critic"]["v"]))
         return res
 
     def predict(self, s: np.ndarray) -> np.ndarray:

@@ -82,6 +82,25 @@ class BaseTrainer(ABC):
     def set_model(self, *args, **kwargs):
         pass
 
+    @abstractmethod
+    def compute_gradients(self) -> tp.Tuple[TrainResult, tp.Optional[tp.Dict[str, tp.Dict[str, list]]]]:
+        pass
+
+    @abstractmethod
+    def apply_flat_gradients(self, gradients: np.ndarray):
+        pass
+
+    def compute_flat_gradients(self) -> np.ndarray:
+        _, grads = self.compute_gradients()
+        flat_grads = []
+        keys = list(grads.keys())
+        keys.sort()
+        for gd_key in keys:
+            for g in grads[gd_key]["g"]:
+                flat_grads.append(g.numpy().ravel())
+        flat_grads = np.concatenate(flat_grads)
+        return flat_grads
+
     def save_model_weights(self, path: str):
         self.model.save_weights(path)
 
