@@ -69,6 +69,7 @@ class Maze(EnvWrapper):
         }
         self.finish = False
         self.info = None
+        self.exits_pos_set = set()
         self.reward = 0
 
         # 用于render渲染
@@ -126,6 +127,7 @@ class Maze(EnvWrapper):
         # 默认先手玩家为id = 0的玩家
         self.cur_player = 0
         self.copy_board = copy.deepcopy(self.board)
+        self.exits_pos_set = set()
         # 重置玩家初始信息
         for player, exits in zip(self.players_info, self.exits_info):
             player_id = player.get("id", None)
@@ -150,9 +152,10 @@ class Maze(EnvWrapper):
             if exits_position["x"] < 0 or exits_position["x"] >= self.row or exits_position["y"] < 0 or \
                     exits_position["y"] >= self.col:
                 raise ValueError("终点初始坐标值不在地图范围内，请检查json文件中的exits参数！")
+            self.exits_pos_set.add((exits_position["x"], exits_position["y"]))
             self.players_dict[player_id] = dict()
             self.players_dict[player_id]["id"] = player_id
-            self.players_dict[player_id]["position"] = player_position
+            self.players_dict[player_id]["position"] = {"x": player_position["x"], "y": player_position["y"]}
             self.players_dict[player_id]["action_point"] = player_action_point
             self.players_dict[player_id]["exits_position"] = exits_position
             self.players_dict[player_id]["score"] = 0
@@ -171,7 +174,7 @@ class Maze(EnvWrapper):
             if gem_position["x"] < 0 or gem_position["x"] >= self.row or gem_position["y"] < 0 or \
                     gem_position["y"] >= self.col:
                 raise ValueError("宝石初始坐标值不在地图范围内，请检查json文件中的items参数！")
-            self.gem_dict[gem_type] = gem_position
+            self.gem_dict[gem_type] = {"x": gem_position["x"], "y": gem_position["y"]}
             self.copy_board[gem_position["x"]][gem_position["y"]] = 1
         self.finish = False
         self.info = None
@@ -203,7 +206,7 @@ class Maze(EnvWrapper):
                 if gem_pos_x == target_x and gem_pos_y == target_y:
                     self.players_dict[player_id]["score"] += self.effect_value
                     self.players_dict[player_id]["gem"][gem] += 1
-                    while self.copy_board[gem_pos_x][gem_pos_y] != 0:
+                    while self.copy_board[gem_pos_x][gem_pos_y] != 0 or (gem_pos_x, gem_pos_y) in self.exits_pos_set:
                         gem_pos_x = math.floor(random.random() * self.row)
                         gem_pos_y = math.floor(random.random() * self.col)
                     self.copy_board[gem_pos_x][gem_pos_y] = 1
@@ -228,14 +231,14 @@ class Maze(EnvWrapper):
         self.viewer.fill(pygame.Color("white"))
 
         # 画直线
-        for i in range(self.col):
+        for c in range(self.col):
             pygame.draw.lines(self.viewer, (255, 255, 255), True,
-                              ((self.limit_distance_x * i, 0),
-                               (self.limit_distance_x * i, self.col * self.limit_distance_x)), 1)
-        for i in range(self.row):
+                              ((self.limit_distance_x * c, 0),
+                               (self.limit_distance_x * c, self.col * self.limit_distance_x)), 1)
+        for r in range(self.row):
             pygame.draw.lines(self.viewer, (255, 255, 255), True,
-                              ((0, self.limit_distance_y * i),
-                               (self.row * self.limit_distance_y, self.limit_distance_y * i)), 1)
+                              ((0, self.limit_distance_y * r),
+                               (self.row * self.limit_distance_y, self.limit_distance_y * r)), 1)
 
         for x in range(self.row):
             for y in range(self.col):
@@ -307,7 +310,7 @@ class Maze(EnvWrapper):
         pygame.display.update()
         game_over()
         time.sleep(0)  # 控制每帧渲染持续时间
-        self.FPS_CLOCK.tick(4)  # 控制刷新速度，值越大刷新越快
+        self.FPS_CLOCK.tick(20)  # 控制刷新速度，值越大刷新越快
 
     def load(self, map_json: tp.Any):
         with open(map_json) as file:
@@ -317,8 +320,11 @@ class Maze(EnvWrapper):
 
 if __name__ == "__main__":
     maze = Maze()
-    maze.reset()
     actions = ["u", "d", "l", "r", "s"]
-    while True:
-        state, reward, finish = maze.step(actions[math.floor(random.random() * 5)])
-        maze.render()
+    for _ in range(10):
+        maze.reset()
+        while True:
+            state, reward, done = maze.step(actions[math.floor(random.random() * 5)])
+            maze.render()
+            if done:
+                break
