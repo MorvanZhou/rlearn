@@ -58,8 +58,6 @@ from rlearn import distributed
 
 distributed.experience.start_replay_buffer_server(
   port=50051,
-  max_size=1000,
-  buf="RandomReplayBuffer",
 )
 ```
 
@@ -117,6 +115,8 @@ learner = rlearn.distributed.experience.Learner(
   remote_buffer_address="localhost:50051",
   remote_actors_address=["localhost:50052", ],
   actor_buffer_size=10,
+  remote_buffer_size=1000,
+  remote_buffer_type="RandomReplayBuffer",
 )
 learner.run(epoch=200)
 ```
