@@ -13,8 +13,8 @@ from tensorflow import keras
 
 import rlearn
 from rlearn import distributed
-from rlearn.distributed import tools
-from rlearn.distributed.experience import buffer_pb2, buffer_pb2_grpc, actor_pb2_grpc, actor_pb2
+from rlearn.distributed import tools, actor_pb2_grpc, actor_pb2
+from rlearn.distributed.experience import buffer_pb2, buffer_pb2_grpc
 from tests.test_gym_wrapper import CartPoleSmoothReward
 
 

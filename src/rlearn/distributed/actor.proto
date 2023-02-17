@@ -11,6 +11,7 @@ package actor;
 service Actor {
   rpc ServiceReady (ServiceReadyReq) returns (ServiceReadyResp) {}
   rpc Start (stream StartReq) returns (StartResp) {}
+  rpc GetGradients (GetGradientsReq) returns (stream GetGradientsResp) {}
   rpc ReplicateModel (stream ReplicateModelReq) returns (ReplicateModelResp) {}
   rpc Terminate (TerminateReq) returns (TerminateResp) {}
 }
@@ -52,6 +53,17 @@ message StartResp {
 message ModelMeta {
   uint64 version = 1;
   string requestId = 2;
+}
+
+message GetGradientsReq {
+  string requestId = 1;
+}
+
+message GetGradientsResp {
+  oneof request {
+    ModelMeta meta = 1;
+    bytes chunkData = 2;
+  }
 }
 
 message ReplicateModelReq {

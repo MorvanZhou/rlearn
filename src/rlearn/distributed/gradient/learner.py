@@ -1,16 +1,16 @@
-import datetime
 import logging
 import os
-import threading
+import tempfile
 import time
 import typing as tp
+import zlib
 from uuid import uuid4
 
 import grpc
+import numpy as np
 
-from rlearn import replaybuf
-from rlearn.distributed import logger, tools, actor_pb2_grpc, actor_pb2
-from rlearn.distributed.experience import buffer_pb2_grpc, buffer_pb2
+from rlearn.distributed import logger, tools
+from rlearn.distributed.gradient import worker_pb2_grpc, worker_pb2
 from rlearn.trainer.base import BaseTrainer
 
 
@@ -18,54 +18,30 @@ class Learner:
     def __init__(
             self,
             trainer: BaseTrainer,
-            remote_buffer_address: str,
-            remote_buffer_size: int,
-            actor_buffer_size: int,
             remote_actors_address: tp.Sequence[str],
-            remote_buffer_type: str = "RandomReplayBuffer",
-            result_dir: str = None,
+            actor_buffer_size: int,
+            actor_buffer_type: str = "RandomReplayBuffer",
             debug: bool = False,
     ):
-        self.debug = debug
-        self.logger = logger.get_logger("learner")
+        self.trainer: BaseTrainer = trainer
+        self.debug: bool = debug
+        self.logger = logger.get_logger("PS")
         self.logger.setLevel(logging.DEBUG if self.debug else logging.ERROR)
 
-        self.trainer: BaseTrainer = trainer
-        self.buffer_address: str = remote_buffer_address
-        self.buffer_size = remote_buffer_size
-        if remote_buffer_type not in replaybuf.tools.get_all_buffers():
-            raise KeyError(f"replay buffer name '{remote_buffer_type}' is not found,"
-                           f" please use one of these {list(replaybuf.tools.get_all_buffers().keys())}")
-        self.buffer_type = remote_buffer_type
         self.actor_buffer_size: int = actor_buffer_size
+        self.actor_buffer_type: str = actor_buffer_type
 
         self.actors_channel: tp.Dict[str, grpc.Channel] = {
             address: grpc.insecure_channel(address) for address in remote_actors_address
         }
-        self.actors_stub: tp.Dict[str, actor_pb2_grpc.ActorStub] = {
-            address: actor_pb2_grpc.ActorStub(channel=channel)
+        self.actors_stub: tp.Dict[str, worker_pb2_grpc.WorkerStub] = {
+            address: worker_pb2_grpc.WorkerStub(channel=channel)
             for address, channel in self.actors_channel.items()
         }
-        self.buffer_channel = grpc.insecure_channel(self.buffer_address)
-        self.buffer_stub = buffer_pb2_grpc.ReplayBufferStub(
-            channel=self.buffer_channel
-        )
         self.version_count = 0
-        self.keep_download_data = True
 
-        if result_dir is None:
-            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")
-            result_dir = os.path.join("training_results", current_time)
-        self.result_dir = os.path.normpath(result_dir)
-
-    def check_actors_buffer_ready(self):
+    def check_workers_ready(self):
         timeout = 15
-        try:
-            grpc.channel_ready_future(self.buffer_channel).result(timeout=timeout)
-        except grpc.FutureTimeoutError:
-            raise ValueError(f"connect replay buffer at {self.buffer_address} timeout: {timeout}")
-        self.logger.debug("connected to buffer %s", self.buffer_address)
-
         for addr in self.actors_stub.keys():
             try:
                 grpc.channel_ready_future(self.actors_channel[addr]).result(timeout=timeout)
@@ -75,29 +51,7 @@ class Learner:
         self.logger.debug("actors server ready")
 
     def send_init_data(self):
-        req_id = str(uuid4())
-        resp = self.buffer_stub.InitBuf(
-            buffer_pb2.InitBufReq(
-                isOnPolicy=self.trainer.is_on_policy,
-                bufferSize=self.buffer_size,
-                bufferType=self.buffer_type,
-                requestId=req_id
-            ))
-        if not resp.done:
-            raise ValueError(f"buffer set modelType err: {resp.err}, requestId='{resp.requestId}'")
-
-        resp = self.buffer_stub.LearnerSetVersion(
-            buffer_pb2.LearnerSetVersionReq(
-                version=self.version_count,
-                requestId=req_id
-            ))
-        if not resp.done:
-            raise ValueError(f"buffer set init version err: {resp.err}, requestId='{resp.requestId}'")
-        self.logger.debug(
-            "init buffer with version=%d, modelTypeOnPolicy=%s, reqId='%s'",
-            self.version_count, self.trainer.is_on_policy, req_id)
-
-        path = os.path.join(self.result_dir, f"params_v{self.version_count}.zip")
+        path = os.path.join(tempfile.gettempdir(), f"params_v{self.version_count}.zip")
         self.trainer.save_model(path)
         futures = {}
         if self.trainer.model.action_transformer is None:
@@ -112,7 +66,7 @@ class Learner:
                     tools.read_pb_iterfile(
                         filepath=path,
                         trainer_type=self.trainer.name,
-                        buffer_type="RandomReplayBuffer",
+                        buffer_type=self.actor_buffer_type,
                         buffer_size=self.actor_buffer_size,
                         max_episode=0,
                         max_episode_step=0,
@@ -133,61 +87,51 @@ class Learner:
         self.logger.debug("init actors with version=%d", self.version_count)
         self.version_count += 1
 
-    def download_data(self, lock, max_size=1000):
-        while self.keep_download_data:
-            time.sleep(1)
-            req_id = str(uuid4())
-            t0 = time.perf_counter()
-            resp_iter = self.buffer_stub.DownloadData(buffer_pb2.DownloadDataReq(
-                maxSize=max_size,
-                requestId=req_id,
-            ))
-            batch_size, batch, err, request_id = tools.unpack_downloaded_transitions(resp_iter=resp_iter)
-            if err != "":
-                self.logger.debug(
-                    'UploadData | {"reqId": "%s", "error": "%s"}',
-                    request_id,
-                    err,
-                )
-                continue
-            t1 = time.perf_counter()
-            if batch_size == 0:
-                self.logger.debug("download empty data, retry")
-                continue
-            with lock:
-                self.trainer.replay_buffer.put_batch(**batch)
-            t2 = time.perf_counter()
-            self.logger.debug("downloaded size=%d, request=%.3fs, unpack=%.3fs, reqId='%s'",
-                              batch_size, t1 - t0, t2 - t1, req_id)
-        resp = self.buffer_stub.Stop(buffer_pb2.StopReq(requestId=str(uuid4())))
-        if not resp.done:
-            raise ValueError("buffer not exits")
-        self.buffer_channel.close()
+    def apply_gradients(self):
+        req_id = str(uuid4())
+        futures = {}
+        for addr, stub in self.actors_stub.items():
+            try:
+                resp_future = stub.GetGradients.future(worker_pb2.GetGradientsReq(requestId=req_id))
+                futures[addr] = resp_future
+            except grpc.RpcError as e:
+                self.logger.error(
+                    "actor get gradients err: %e, addr='%s', "
+                    "version=%d, requestId='%s'", str(e), addr, self.version_count, req_id)
+
+        cum_grads = None
+        for addr, resp_future in futures.items():
+            resp_iter = resp_future.result()
+            data = bytearray()
+            # version = 0
+            # request_id = ""
+            for resp in resp_iter:
+                if resp.meta.version >= 1:
+                    # version = resp.meta.version
+                    # request_id = resp.meta.requestId
+                    continue
+                data.extend(resp.chunkData)
+            d_data = zlib.decompress(data)
+            gradients = np.frombuffer(d_data, dtype=np.float32)
+            if cum_grads is None:
+                cum_grads = gradients
+            else:
+                cum_grads += gradients
+        self.trainer.apply_flat_gradients(cum_grads / len(self.actors_stub))
 
     def replicate_actor_model(self):
         t0 = time.perf_counter()
 
         weights = self.trainer.model.get_flat_weights()
-
         req_id = str(uuid4())
-
-        resp = self.buffer_stub.LearnerSetVersion(
-            buffer_pb2.LearnerSetVersionReq(
-                version=self.version_count,
-                requestId=req_id
-            ))
-        if not resp.done:
-            raise ValueError(
-                f"buffer set version err: {resp.err}, version={self.version_count}, requestId='{req_id}'")
-
         futures = {}
         assert self.version_count >= 1, ValueError(f"self.version_count must >= 1, but got {self.version_count}")
         for addr, stub in self.actors_stub.items():
             try:
                 resp_future = stub.ReplicateModel.future(
                     tools.get_iter_values(
-                        req=actor_pb2.ReplicateModelReq,
-                        meta=actor_pb2.ModelMeta,
+                        req=worker_pb2.ReplicateModelReq,
+                        meta=worker_pb2.ModelMeta,
                         values=weights,
                         version=self.version_count,
                         request_id=req_id
@@ -195,7 +139,7 @@ class Learner:
                 futures[addr] = resp_future
             except grpc.RpcError as e:
                 self.logger.error(
-                    "actor replicate params err: %e, addr='%s', "
+                    "worker replicate params err: %e, addr='%s', "
                     "version=%d, requestId='%s'", str(e), addr, self.version_count, req_id)
 
         for addr, resp_future in futures.items():
@@ -213,10 +157,7 @@ class Learner:
 
     def run(
             self,
-            epoch: tp.Optional[int] = None,
-            epoch_step: tp.Optional[int] = None,
-            download_max_size: int = 1000,
-            replicate_step: tp.Optional[int] = None,
+            sync_time
     ):
         self.check_actors_buffer_ready()
         self.send_init_data()

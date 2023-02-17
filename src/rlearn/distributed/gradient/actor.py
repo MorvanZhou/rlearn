@@ -8,8 +8,7 @@ from concurrent import futures
 
 import grpc
 
-from rlearn.distributed import tools, base
-from rlearn.distributed.gradient import worker_pb2, worker_pb2_grpc
+from rlearn.distributed import tools, base, actor_pb2, actor_pb2_grpc
 from rlearn.distributed.logger import get_logger
 from rlearn.env.env_wrapper import EnvWrapper
 
@@ -17,7 +16,7 @@ _name = "".join([random.choice(string.ascii_lowercase) for _ in range(4)])
 _logger = get_logger(f"actor-{_name}")
 
 
-class WorkerProcess(base.MulProcess):
+class ActorProcess(base.MulProcess):
     def __init__(
             self,
             env: EnvWrapper,
@@ -82,15 +81,15 @@ class WorkerProcess(base.MulProcess):
             self.logger.debug("ep=%d, total_step=%d", ep, step)
 
 
-class WorkerService(worker_pb2_grpc.WorkerServicer):
+class ActorService(actor_pb2_grpc.ActorServicer):
     def __init__(
             self,
-            worker: WorkerProcess,
+            actor: ActorProcess,
             weights_conn: mp.connection.Connection,
             gradients_conn: mp.connection.Connection,
             stop_event: threading.Event,
             debug=False):
-        self.worker = worker
+        self.actor = actor
         self.stop_event = stop_event
         self.weights_conn = weights_conn
         self.gradients_conn = gradients_conn
@@ -99,31 +98,31 @@ class WorkerService(worker_pb2_grpc.WorkerServicer):
 
     def ServiceReady(self, request, context):
         _logger.debug("""ServiceReady | {"reqId": "%s"}""", request.requestId)
-        return worker_pb2.ServiceReadyResp(ready=True, requestId=request.requestId)
+        return actor_pb2.ServiceReadyResp(ready=True, requestId=request.requestId)
 
     def Start(self, request_iterator, context):
         tools.initialize_model(
             request_iterator=request_iterator,
             logger=_logger,
-            process=self.worker,
-            resp=worker_pb2.StartResp,
+            process=self.actor,
+            resp=actor_pb2.StartResp,
         )
 
     def ReplicateModel(self, request_iterator, context):
         return tools.replicate_model(
             request_iterator=request_iterator,
             logger=_logger,
-            model_loaded_event=self.worker.model_loaded,
+            model_loaded_event=self.actor.model_loaded,
             weights_conn=self.weights_conn,
-            resp=worker_pb2.ReplicateModelResp,
+            resp=actor_pb2.ReplicateModelResp,
         )
 
     def GetGradients(self, request, context):
-        self.worker.ns.send_gradient = True
+        self.actor.ns.send_gradient = True
         version, gradients = self.gradients_conn.recv()
         return tools.get_iter_values(
-            req=worker_pb2.ReplicateModelReq,
-            meta=worker_pb2.ModelMeta,
+            req=actor_pb2.ReplicateModelReq,
+            meta=actor_pb2.ModelMeta,
             values=gradients,
             version=version,
             chunk_size=1024,
@@ -132,9 +131,9 @@ class WorkerService(worker_pb2_grpc.WorkerServicer):
 
     def Terminate(self, request, context):
         _logger.debug("""Terminate | {"reqId": "%s"}""", request.requestId)
-        self.worker.terminate()
+        self.actor.terminate()
         self.stop_event.set()
-        return worker_pb2.TerminateResp(done=True, err="", requestId=request.requestId)
+        return actor_pb2.TerminateResp(done=True, err="", requestId=request.requestId)
 
 
 def _start_server(
@@ -153,21 +152,21 @@ def _start_server(
     )
     recv_weights_conn, send_weights_conn = base.mp.Pipe(duplex=False)
     recv_gradients_conn, send_gradients_conn = base.mp.Pipe(duplex=False)
-    worker_p = WorkerProcess(
+    actor_p = ActorProcess(
         env=env,
         weights_conn=recv_weights_conn,
         gradients_conn=send_gradients_conn,
         debug=debug,
     )
-    service = WorkerService(
-        worker=worker_p,
+    service = ActorService(
+        actor=actor_p,
         weights_conn=send_weights_conn,
         gradients_conn=recv_gradients_conn,
         stop_event=stop_event,
         debug=debug
     )
 
-    worker_pb2_grpc.add_WorkerServicer_to_server(service, server)
+    actor_pb2_grpc.add_ActorServicer_to_server(service, server)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
     _logger.info("actor has started at http://localhost:%d", port)

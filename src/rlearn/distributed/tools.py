@@ -8,7 +8,7 @@ import zlib
 
 import numpy as np
 
-from rlearn.distributed.experience import actor_pb2 as exp_actor_pb2
+from rlearn.distributed import actor_pb2
 from rlearn.distributed.experience import buffer_pb2
 
 
@@ -161,11 +161,11 @@ def read_pb_iterfile(
         version: int,
         chunk_size=1024,
         request_id: tp.Optional[str] = None,
-) -> exp_actor_pb2.StartReq:
+) -> actor_pb2.StartReq:
     if request_id is None:
         request_id = str(uuid.uuid4())
 
-    yield exp_actor_pb2.StartReq(meta=exp_actor_pb2.StartMeta(
+    yield actor_pb2.StartReq(meta=actor_pb2.StartMeta(
         filename=os.path.basename(filepath),
         trainerType=trainer_type,
         bufferSize=buffer_size,
@@ -181,7 +181,7 @@ def read_pb_iterfile(
         while True:
             chunk = f.read(chunk_size)
             if chunk:
-                entry_request = exp_actor_pb2.StartReq(chunkData=chunk)
+                entry_request = actor_pb2.StartReq(chunkData=chunk)
                 yield entry_request
             else:  # The chunk was empty, which means we're at the end of the file
                 return
@@ -190,7 +190,7 @@ def read_pb_iterfile(
 # def read_weights_iterfile(filepath, version: int, chunk_size=1024, request_id: str = None):
 #     if request_id is None:
 #         request_id = str(uuid.uuid4())
-#     yield exp_actor_pb2.ReplicateModelReq(meta=exp_actor_pb2.ModelMeta(
+#     yield actor_pb2.ReplicateModelReq(meta=actor_pb2.ModelMeta(
 #         filename=os.path.basename(filepath),
 #         version=version,
 #         requestId=request_id
@@ -199,7 +199,7 @@ def read_pb_iterfile(
 #         while True:
 #             chunk = f.read(chunk_size)
 #             if chunk:
-#                 entry_request = exp_actor_pb2.ReplicateModelReq(chunkData=chunk)
+#                 entry_request = actor_pb2.ReplicateModelReq(chunkData=chunk)
 #                 yield entry_request
 #             else:  # The chunk was empty, which means we're at the end of the file
 #                 return

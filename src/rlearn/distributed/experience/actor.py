@@ -8,8 +8,8 @@ from concurrent import futures
 
 import grpc
 
-from rlearn.distributed import tools, base
-from rlearn.distributed.experience import actor_pb2, actor_pb2_grpc, buffer_pb2_grpc
+from rlearn.distributed import tools, base, actor_pb2, actor_pb2_grpc
+from rlearn.distributed.experience import buffer_pb2_grpc
 from rlearn.distributed.logger import get_logger
 from rlearn.env.env_wrapper import EnvWrapper
 
