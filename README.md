@@ -49,6 +49,23 @@ for _ in range(100):
       break
 ```
 
+set training hyper parameters
+
+```python
+import rlearn
+
+trainer = rlearn.DQNTrainer()
+trainer.set_params(
+  learning_rate=0.01,
+  batch_size=32,
+  gamma=0.9,
+  replace_ratio=1.,
+  replace_step=0,
+  min_epsilon=0.1,
+  epsilon_decay=1e-3,
+)
+```
+
 ## Parallel training
 
 Remote buffer:
