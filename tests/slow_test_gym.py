@@ -656,11 +656,15 @@ class ExperienceDistributedGym(unittest.TestCase):
 
 
 class GradientDistributedGym(unittest.TestCase):
+    def setUp(self) -> None:
+        self.ps = []
+
+    def tearDown(self) -> None:
+        [p.join() for p in self.ps]
+        [p.terminate() for p in self.ps]
 
     def test_dqn(self):
-        ps = []
         trainer = rlearn.trainer.DQNTrainer()
-        trainer.set_replay_buffer(max_size=5000)
         trainer.set_model_encoder(
             q=keras.Sequential([
                 keras.layers.InputLayer(4),
@@ -687,7 +691,7 @@ class GradientDistributedGym(unittest.TestCase):
             debug=True,
         ))
         p.start()
-        ps.append(p)
+        self.ps.append(p)
 
         env = test_gym_wrapper.CartPoleDiscreteReward(render_mode="human")
         for _ in range(4):
@@ -697,7 +701,49 @@ class GradientDistributedGym(unittest.TestCase):
                 debug=True,
             ))
             p.start()
-            ps.append(p)
+            self.ps.append(p)
 
-        [p.join() for p in ps]
-        [p.terminate() for p in ps]
+    def test_ddpg(self):
+        trainer = rlearn.trainer.DDPGTrainer()
+        trainer.set_model_encoder(
+            actor=keras.Sequential([
+                keras.layers.InputLayer(3),
+                keras.layers.Dense(32),
+                keras.layers.ReLU(),
+            ]),
+            critic=keras.Sequential([
+                keras.layers.InputLayer(3),
+                keras.layers.Dense(32),
+                keras.layers.ReLU(),
+            ]),
+            action_num=1
+        )
+        trainer.set_params(
+            learning_rate=0.01,
+            batch_size=32,
+            replace_step=100,
+        )
+        trainer.set_action_transformer(rlearn.transformer.ContinuousAction([-2, 2]))
+        port = tools.get_available_port()
+
+        p = multiprocessing.Process(target=rlearn.distributed.gradient.start_param_server, kwargs=dict(
+            port=port,
+            trainer=trainer,
+            sync_step=5,
+            worker_buffer_type="RandomReplayBuffer",
+            worker_buffer_size=1000,
+            max_train_time=120,
+            # debug=True,
+        ))
+        p.start()
+        self.ps.append(p)
+
+        env = test_gym_wrapper.Pendulum(render_mode="human")
+        for _ in range(2):
+            p = multiprocessing.Process(target=rlearn.distributed.gradient.worker.run, kwargs=dict(
+                env=env,
+                params_server_address=f"localhost:{port}",
+                # debug=True,
+            ))
+            p.start()
+            self.ps.append(p)
