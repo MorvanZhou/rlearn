@@ -22,7 +22,8 @@ class RandomReplayBuffer(BaseReplayBuffer):
             self.__all_indices = np.arange(self.max_size)
 
         if self.is_full():
-            indices = np.random.choice(self.__all_indices, size=batch_size, replace=False)
+            replace = batch_size > self.max_size
+            indices = np.random.choice(self.__all_indices, size=batch_size, replace=replace)
         else:
             if self.__pointer < batch_size:
                 replace = True

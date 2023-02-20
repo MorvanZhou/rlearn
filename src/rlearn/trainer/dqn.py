@@ -55,9 +55,6 @@ class DQNTrainer(BaseTrainer):
         self.replay_buffer.put_one(s=s, a=a, r=r, s_=s_, done=done)
 
     def compute_gradients(self) -> tp.Tuple[TrainResult, tp.Optional[tp.Dict[str, tp.Dict[str, list]]]]:
-        if self.opt is None:
-            self._set_default_optimizer()
-
         res = TrainResult(value={"loss": 0, "q": 0, "reward": 0}, model_replaced=False)
         if self.replay_buffer.is_empty():
             return res, None
@@ -65,9 +62,6 @@ class DQNTrainer(BaseTrainer):
         grads = {"q": {"g": [], "v": []}}
         batch = self.replay_buffer.sample(self.batch_size)
         ba = batch["a"]
-
-        res.model_replaced = self.try_replace_params(
-            source=self.model.models["q"], target=self.model.models["q_"])
 
         q_ = self.model.models["q_"].predict(batch["s_"], verbose=0)
         total_reward = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
@@ -95,16 +89,26 @@ class DQNTrainer(BaseTrainer):
         return res, grads
 
     def apply_flat_gradients(self, gradients: np.ndarray):
+        assert gradients.dtype == np.float32, TypeError(f"gradients must be np.float32, but got {gradients.dtype}")
         q = self.model.models["q"]
         reshaped_grads = tools.reshape_flat_gradients(
             grad_vars={"q": [q]},
             gradients=gradients,
         )
-
+        if self.opt is None:
+            self._set_default_optimizer()
         self.opt.apply_gradients(zip(reshaped_grads["q"], q.trainable_variables))
+        self.try_replace_params(
+            source=self.model.models["q"], target=self.model.models["q_"]
+        )
 
     def train_batch(self) -> TrainResult:
         res, grads = self.compute_gradients()
         if grads is not None:
+            if self.opt is None:
+                self._set_default_optimizer()
             self.opt.apply_gradients(zip(grads["q"]["g"], grads["q"]["v"]))
+            res.model_replaced = self.try_replace_params(
+                source=self.model.models["q"], target=self.model.models["q_"]
+            )
         return res

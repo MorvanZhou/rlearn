@@ -3,57 +3,47 @@ from tensorflow import keras
 from rlearn import model
 
 
-class DQNSmall(model.DQN):
-    def __init__(self, state_dim: int, action_dim: int, training: bool = True):
-        super().__init__(training=training)
-        self.state_dim = state_dim
-        self.action_dim = action_dim
-        net = keras.Sequential([
-            keras.layers.InputLayer(self.state_dim),
+def smallDQN(state_dim: int, action_dim: int, training: bool = True):
+    m = model.DQN(training=training)
+    m.set_encoder(
+        encoder=keras.Sequential([
+            keras.layers.InputLayer(state_dim),
             keras.layers.Dense(32),
             keras.layers.ReLU(),
             keras.layers.Dense(32),
             keras.layers.ReLU(),
-        ])
-        self.set_encoder(net, self.action_dim)
+        ]),
+        action_num=action_dim)
+    return m
 
 
-class DQNMiddle(model.DQN):
-    def __init__(self, state_dim: int, action_dim: int, training: bool = True):
-        super().__init__(training=training)
-        self.state_dim = state_dim
-        self.action_dim = action_dim
-        net = keras.Sequential([
-            keras.layers.InputLayer(self.state_dim),
+def middleDQN(state_dim: int, action_dim: int, training: bool = True):
+    m = model.DQN(training=training)
+    m.set_encoder(
+        encoder=keras.Sequential([
+            keras.layers.InputLayer(state_dim),
             keras.layers.Dense(128),
             keras.layers.ReLU(),
             keras.layers.Dense(128),
             keras.layers.ReLU(),
             keras.layers.Dense(128),
             keras.layers.ReLU(),
-            keras.layers.Dense(self.action_dim)
-        ])
-        self.set_encoder(net, self.action_dim)
+        ]),
+        action_num=action_dim)
+    return m
 
 
-class DQNLarge(model.DQN):
-    def __init__(self, state_dim: int, action_dim: int, training: bool = True):
-        super().__init__(training=training)
-        self.state_dim = state_dim
-        self.action_dim = action_dim
-        net = keras.Sequential([
-            keras.layers.InputLayer(self.state_dim),
+def largeDQN(state_dim: int, action_dim: int, training: bool = True):
+    m = model.DQN(training=training)
+    m.set_encoder(
+        encoder=keras.Sequential([
+            keras.layers.InputLayer(state_dim),
             keras.layers.Dense(256),
             keras.layers.ReLU(),
             keras.layers.Dense(256),
             keras.layers.ReLU(),
             keras.layers.Dense(256),
             keras.layers.ReLU(),
-            keras.layers.Dense(256),
-            keras.layers.ReLU(),
-            keras.layers.Dense(self.action_dim)
-        ])
-        self.set_encoder(net, self.action_dim)
-
-
-__all__ = ["DQNLarge", "DQNSmall", "DQNMiddle"]
+        ]),
+        action_num=action_dim)
+    return m

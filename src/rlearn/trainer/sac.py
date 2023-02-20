@@ -51,9 +51,6 @@ class _SACTrainer(BaseTrainer):
         self.set_model_encoder(actor=actor_encoder, critic=critic_encoder, action_num=action_num)
 
     def compute_gradients(self) -> tp.Tuple[TrainResult, tp.Optional[tp.Dict[str, tp.Dict[str, list]]]]:
-        if self.opt_a is None or self.opt_c is None:
-            self._set_default_optimizer()
-
         res = TrainResult(
             value={
                 "actor_loss": 0,
@@ -70,10 +67,6 @@ class _SACTrainer(BaseTrainer):
         grads["critic"]["v"] = self.model.models["c1"].trainable_variables + self.model.models["c2"].trainable_variables
 
         batch = self.replay_buffer.sample(self.batch_size)
-
-        res.model_replaced = self.try_replace_params(
-            [self.model.models["c1"], self.model.models["c2"]],
-            [self.model.models["c1_"], self.model.models["c2_"]])
 
         with tf.GradientTape() as tape:
             total_r = self.try_combine_int_ext_reward(batch["r"], batch["s_"])
@@ -144,6 +137,7 @@ class _SACTrainer(BaseTrainer):
         return res, grads
 
     def apply_flat_gradients(self, gradients: np.ndarray):
+        assert gradients.dtype == np.float32, TypeError(f"gradients must be np.float32, but got {gradients.dtype}")
         a = self.model.models["actor"]
         c1 = self.model.models["c1"]
         c2 = self.model.models["c2"]
@@ -151,15 +145,26 @@ class _SACTrainer(BaseTrainer):
             grad_vars={"actor": [a], "critic": [c1, c2]},
             gradients=gradients,
         )
-
+        if self.opt_a is None or self.opt_c is None:
+            self._set_default_optimizer()
         self.opt_a.apply_gradients(zip(reshaped_grads["actor"], a.trainable_variables))
         self.opt_c.apply_gradients(zip(reshaped_grads["critic"], c1.trainable_variables + c2.trainable_variables))
+        self.try_replace_params(
+            [self.model.models["c1"], self.model.models["c2"]],
+            [self.model.models["c1_"], self.model.models["c2_"]]
+        )
 
     def train_batch(self) -> TrainResult:
         res, grads = self.compute_gradients()
         if grads is not None:
+            if self.opt_a is None or self.opt_c is None:
+                self._set_default_optimizer()
             self.opt_c.apply_gradients(zip(grads["critic"]["g"], grads["critic"]["v"]))
             self.opt_a.apply_gradients(zip(grads["actor"]["g"], grads["actor"]["v"]))
+            res.model_replaced = self.try_replace_params(
+                [self.model.models["c1"], self.model.models["c2"]],
+                [self.model.models["c1_"], self.model.models["c2_"]]
+            )
         return res
 
     def predict(self, s: np.ndarray) -> np.ndarray:

@@ -130,7 +130,7 @@ trainer.set_action_transformer(rlearn.transformer.DiscreteAction([0, 1]))
 learner = rlearn.distributed.experience.Learner(
   trainer=trainer,
   remote_buffer_address="localhost:50051",
-  remote_actors_address=["localhost:50052", ],
+  actors_address=["localhost:50052", ],
   actor_buffer_size=10,
   remote_buffer_size=1000,
   remote_buffer_type="RandomReplayBuffer",

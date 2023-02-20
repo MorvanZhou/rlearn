@@ -487,7 +487,7 @@ class ExperienceDistributedGym(unittest.TestCase):
         self.buf_address = f'127.0.0.1:{buf_port}'
         p = multiprocessing.Process(target=rlearn.distributed.experience.start_replay_buffer_server, kwargs=dict(
             port=buf_port,
-            # debug=True,
+            debug=True,
         ))
         p.start()
         self.ps.append(p)
@@ -505,7 +505,7 @@ class ExperienceDistributedGym(unittest.TestCase):
                 port=actor_port,
                 remote_buffer_address=self.buf_address,
                 env=env,
-                # debug=True,
+                debug=True,
             ))
             p.start()
             self.ps.append(p)
@@ -535,7 +535,7 @@ class ExperienceDistributedGym(unittest.TestCase):
         learner = rlearn.distributed.experience.Learner(
             trainer=trainer,
             remote_buffer_address=self.buf_address,
-            remote_actors_address=actors_address,
+            actors_address=actors_address,
             remote_buffer_size=10000,
             remote_buffer_type="RandomReplayBuffer",
             actor_buffer_size=50,
@@ -572,7 +572,7 @@ class ExperienceDistributedGym(unittest.TestCase):
         learner = rlearn.distributed.experience.Learner(
             trainer=trainer,
             remote_buffer_address=self.buf_address,
-            remote_actors_address=actors_address,
+            actors_address=actors_address,
             remote_buffer_size=10000,
             remote_buffer_type="RandomReplayBuffer",
             actor_buffer_size=50,
@@ -608,7 +608,7 @@ class ExperienceDistributedGym(unittest.TestCase):
         learner = rlearn.distributed.experience.Learner(
             trainer=trainer,
             remote_buffer_address=self.buf_address,
-            remote_actors_address=actors_address,
+            actors_address=actors_address,
             remote_buffer_size=10000,
             remote_buffer_type="RandomReplayBuffer",
             actor_buffer_size=50,
@@ -645,7 +645,7 @@ class ExperienceDistributedGym(unittest.TestCase):
         learner = rlearn.distributed.experience.Learner(
             trainer=trainer,
             remote_buffer_address=self.buf_address,
-            remote_actors_address=actors_address,
+            actors_address=actors_address,
             remote_buffer_size=10000,
             remote_buffer_type="RandomReplayBuffer",
             actor_buffer_size=100,
@@ -653,3 +653,51 @@ class ExperienceDistributedGym(unittest.TestCase):
             debug=True,
         )
         learner.run(epoch=500, epoch_step=None)
+
+
+class GradientDistributedGym(unittest.TestCase):
+
+    def test_dqn(self):
+        ps = []
+        trainer = rlearn.trainer.DQNTrainer()
+        trainer.set_replay_buffer(max_size=5000)
+        trainer.set_model_encoder(
+            q=keras.Sequential([
+                keras.layers.InputLayer(4),
+                keras.layers.Dense(20),
+                keras.layers.ReLU(),
+            ]),
+            action_num=2
+        )
+        trainer.set_params(
+            learning_rate=0.01,
+            batch_size=32,
+            replace_step=100,
+        )
+        trainer.set_action_transformer(rlearn.transformer.DiscreteAction([0, 1]))
+        port = tools.get_available_port()
+
+        p = multiprocessing.Process(target=rlearn.distributed.gradient.start_param_server, kwargs=dict(
+            port=port,
+            trainer=trainer,
+            sync_step=5,
+            worker_buffer_type="RandomReplayBuffer",
+            worker_buffer_size=1000,
+            max_train_time=60,
+            debug=True,
+        ))
+        p.start()
+        ps.append(p)
+
+        env = test_gym_wrapper.CartPoleDiscreteReward(render_mode="human")
+        for _ in range(4):
+            p = multiprocessing.Process(target=rlearn.distributed.gradient.worker.run, kwargs=dict(
+                env=env,
+                params_server_address=f"localhost:{port}",
+                debug=True,
+            ))
+            p.start()
+            ps.append(p)
+
+        [p.join() for p in ps]
+        [p.terminate() for p in ps]

@@ -6,10 +6,10 @@ import typing as tp
 import uuid
 import zlib
 
+import grpc
 import numpy as np
 
-from rlearn.distributed import actor_pb2
-from rlearn.distributed.experience import buffer_pb2
+from rlearn.distributed.experience import buffer_pb2, actor_pb2
 
 
 class DataMeta(tp.Protocol):
@@ -96,8 +96,8 @@ def pack_transitions_for_uploading(
     )
     yield req
 
-    v = np.concatenate([data[k].ravel() for k in keys])
-    v_bytes = v.astype(np.float32).tobytes()
+    v = np.concatenate([data[k].ravel() for k in keys], dtype=np.float32)
+    v_bytes = v.tobytes()
     v_compressed = zlib.compress(v_bytes)
     for i in range(0, len(v_compressed), chunk_size):
         req = buffer_pb2.UploadDataReq(chunkData=v_compressed[i: i + chunk_size])
@@ -128,8 +128,8 @@ def pack_transitions_for_downloading(
     )
     yield resp
 
-    v = np.concatenate([data[k].ravel() for k in keys])
-    v_bytes = v.astype(np.float32).tobytes()
+    v = np.concatenate([data[k].ravel() for k in keys], dtype=np.float32)
+    v_bytes = v.tobytes()
     v_compressed = zlib.compress(v_bytes)
     for i in range(0, len(v_compressed), chunk_size):
         resp = buffer_pb2.DownloadDataResp(chunkData=v_compressed[i: i + chunk_size])
@@ -206,8 +206,7 @@ def read_pb_iterfile(
 
 
 def get_iter_values(
-        req,
-        meta,
+        msg_handler,
         values: np.ndarray,
         version: int,
         chunk_size: int = 1024,
@@ -215,24 +214,38 @@ def get_iter_values(
 ):
     if request_id is None:
         request_id = str(uuid.uuid4())
-    yield req(meta=meta(
+    yield msg_handler(meta=actor_pb2.ModelMeta(
         version=version,
         requestId=request_id
     ))
     b_weights = values.astype(np.float32).tobytes()
     compressed_data = zlib.compress(b_weights)
     for i in range(0, len(compressed_data), chunk_size):
-        entry_request = req(chunkData=compressed_data[i: i + chunk_size])
-        yield entry_request
+        yield msg_handler(chunkData=compressed_data[i: i + chunk_size])
 
 
-def replicate_model(request_iterator, logger, model_loaded_event, weights_conn, resp):
+def parse_resp_to_flat_gradients(resp_iter) -> tp.Tuple[np.ndarray, int, str]:
+    data = bytearray()
+    version = 0
+    request_id = ""
+    for resp in resp_iter:
+        if resp.chunkData == b"":
+            version = resp.meta.version
+            request_id = resp.meta.requestId
+            continue
+        data.extend(resp.chunkData)
+    d_data = zlib.decompress(data)
+    gradients = np.frombuffer(d_data, dtype=np.float32)
+    return gradients, version, request_id
+
+
+def replicate_model(request_iterator, logger, model_loaded_event, weights_conn):
     data = bytearray()
     version = 0
     req_id = ""
 
     for req in request_iterator:
-        if req.meta.version >= 1:
+        if req.chunkData == b"":
             version = req.meta.version
             req_id = req.meta.requestId
             logger.debug(
@@ -251,7 +264,7 @@ def replicate_model(request_iterator, logger, model_loaded_event, weights_conn, 
     else:
         done = False
         err = "model replicating timeout"
-    return resp(done=done, err=err, requestId=req_id)
+    return actor_pb2.ReplicateModelResp(done=done, err=err, requestId=req_id)
 
 
 def initialize_model(request_iterator, logger, process, resp):
@@ -315,6 +328,44 @@ def initialize_model(request_iterator, logger, process, resp):
         done = False
         err = f"model load timeout ({timeout}s)"
     return resp(done=done, err=err, requestId=request_id)
+
+
+def learner_init_actors(self):
+    path = os.path.join(tempfile.gettempdir(), f"params_v{self.version_count}.zip")
+    self.trainer.save_model(path)
+    futures = {}
+    if self.trainer.model.action_transformer is None:
+        at = []
+    else:
+        at = self.trainer.model.action_transformer.params
+
+    for addr, stub in self.actors_stub.items():
+        req_id = str(uuid.uuid4())
+        try:
+            resp_future = stub.Start.future(
+                read_pb_iterfile(
+                    filepath=path,
+                    trainer_type=self.trainer.name,
+                    buffer_type=self.actor_buffer_type,
+                    buffer_size=self.actor_buffer_size,
+                    max_episode=0,
+                    max_episode_step=0,
+                    action_transform=at,
+                    version=self.version_count,
+                    request_id=req_id,
+                )
+            )
+            futures[addr] = resp_future
+        except grpc.RpcError as e:
+            self.logger.error("actor start err: %e, addr='%s', requestId='%s'", str(e), addr, req_id)
+
+    for addr, resp_future in futures.items():
+        resp = resp_future.result()
+        if not resp.done:
+            raise ValueError(f"actor start err: {resp.err}, addr='{addr}', requestId='{resp.requestId}'")
+
+    self.logger.debug("init actors with version=%d", self.version_count)
+    self.version_count += 1
 
 
 def get_available_port():

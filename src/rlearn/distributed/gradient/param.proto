@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.examples.env";
+option java_outer_classname = "ParamProto";
+option objc_class_prefix = "HLW";
+
+package params;
+
+// The greeting service definition.
+service Params {
+  rpc ServiceReady (ServiceReadyReq) returns (ServiceReadyResp) {}
+  rpc Start (StartReq) returns (stream StartResp) {}
+  rpc Sync (stream SyncReq) returns (stream SyncResp) {}
+  rpc Terminate (TerminateReq) returns (TerminateResp) {}
+}
+
+message ServiceReadyReq {
+  string requestId = 1;
+}
+
+message ServiceReadyResp {
+  bool ready = 1;
+  string requestId = 2;
+}
+
+message StartMeta {
+  uint32 syncStep = 1;
+  string trainerType = 2;
+  string bufferType = 3;
+  uint64 bufferSize = 4;
+  int64 maxEpisodeStep = 5;
+  string actionTransform = 6;
+  string requestId = 7;
+  uint32 batchSize = 8;
+  float gamma = 9;
+}
+
+message StartReq {
+  string requestId = 1;
+}
+
+message StartResp {
+  oneof request {
+    StartMeta meta = 1;
+    bytes chunkData = 2;
+  }
+}
+
+message SyncReq {
+  oneof request {
+    string requestId = 1;
+    bytes chunkData = 2;    // gradients
+  }
+}
+
+message WeightsMeta {
+  string requestId = 1;
+  bool stop = 2;
+}
+
+message SyncResp {
+  oneof request {
+    WeightsMeta meta = 1;
+    bytes chunkData = 2;    // weights
+  }
+}
+
+message TerminateReq {
+  string requestId = 1;
+}
+
+message TerminateResp {
+  bool done = 1;
+  string err = 2;
+  string requestId = 3;
+}

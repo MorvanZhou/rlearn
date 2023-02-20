@@ -90,6 +90,11 @@ class BaseTrainer(ABC):
     def apply_flat_gradients(self, gradients: np.ndarray):
         pass
 
+    def set_rl_model(self, model: BaseRLModel):
+        if not isinstance(model, self.model.__class__):
+            raise TypeError(f"model must be {self.model.__class__}, but got {type(model)}")
+        self.model = model
+
     def compute_flat_gradients(self) -> np.ndarray:
         _, grads = self.compute_gradients()
         flat_grads = []
@@ -98,7 +103,7 @@ class BaseTrainer(ABC):
         for gd_key in keys:
             for g in grads[gd_key]["g"]:
                 flat_grads.append(g.numpy().ravel())
-        flat_grads = np.concatenate(flat_grads)
+        flat_grads = np.concatenate(flat_grads, dtype=np.float32)
         return flat_grads
 
     def save_model_weights(self, path: str):

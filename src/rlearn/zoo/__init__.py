@@ -1,1 +1,1 @@
-from rlearn.zoo.dqn import *
+from rlearn.zoo.dqn import smallDQN, middleDQN, largeDQN

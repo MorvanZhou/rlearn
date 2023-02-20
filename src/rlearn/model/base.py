@@ -155,10 +155,11 @@ class BaseRLModel(ABC):
                 layer_shape = []
                 for w in layer.get_weights():
                     layer_shape.append(w.shape)
-                    weights = np.concatenate((weights, w.ravel()), axis=0)
+                    weights = np.concatenate((weights, w.ravel()), dtype=np.float32, axis=0)
         return weights
 
     def set_flat_weights(self, weights: np.ndarray):
+        assert weights.dtype == np.float32, TypeError(f"gradients must be np.float32, but got {weights.dtype}")
         p = 0
         keys = list(self.models.keys())
         keys.sort()

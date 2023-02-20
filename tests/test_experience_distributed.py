@@ -79,19 +79,19 @@ class BufferTest(unittest.TestCase):
         self.assertTrue("s_" not in batch)
 
 
-class ActorProcessTest(unittest.TestCase):
+class ExperienceActorProcessTest(unittest.TestCase):
     model_pb_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn_pb.zip")
-    model_ckpt_path = os.path.join(os.path.dirname(__file__), os.pardir, "tmp", "test_distribute_dqn.zip")
+    recv_conn, send_conn = multiprocessing.Pipe(False)
 
     def setUp(self) -> None:
-        model = rlearn.zoo.DQNSmall(4, 2)
+        model = rlearn.zoo.smallDQN(4, 2)
         model.save(self.model_pb_path)
-        model.save_weights(self.model_ckpt_path)
-        self.recv_conn, self.send_conn = multiprocessing.Pipe(False)
 
-    def tearDown(self) -> None:
-        self.recv_conn.close()
-        self.send_conn.close()
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.recv_conn.close()
+        cls.send_conn.close()
+        os.remove(cls.model_pb_path)
 
     def test_rl_env(self):
         env = CartPoleSmoothReward(seed=1)
@@ -112,7 +112,9 @@ class ActorProcessTest(unittest.TestCase):
             remote_buffer_address=None,
         )
         actor_p.init_params(
-            "DQN", self.model_pb_path, init_version=0,
+            "DQN",
+            model_pb_path=self.model_pb_path,
+            init_version=0,
             buffer_size=500,
             request_id="dqn_train", max_episode=2, max_episode_step=20)
         g = tools.get_count_generator(-1)
@@ -138,7 +140,9 @@ class ActorProcessTest(unittest.TestCase):
             remote_buffer_address=None,
         )
         actor.init_params(
-            "DQNTrainer", self.model_pb_path, init_version=0,
+            "DQNTrainer",
+            model_pb_path=self.model_pb_path,
+            init_version=0,
             buffer_size=500,
             request_id="dqn_train", max_episode=2, max_episode_step=5)
         actor.start()
@@ -184,7 +188,6 @@ class ActorProcessTest(unittest.TestCase):
             max_episode=2,
             max_episode_step=20)
         actor_p.start()
-        actor_p.ns.new_model_path = self.model_ckpt_path
         actor_p.join()
 
         self.assertEqual(1, actor_p.ns.episode_num)
@@ -239,9 +242,11 @@ class ActorServiceTest(unittest.TestCase):
         cls.actor_stub.Terminate(actor_pb2.TerminateReq(requestId="tt"))
         cls.actor_server.stop(None)
         cls.buf_server.stop(None)
+        os.remove(cls.model_pb_path)
 
     def setUp(self) -> None:
-        model = rlearn.zoo.DQNSmall(4, 2)
+        model = rlearn.zoo.smallDQN(4, 2)
+        model.save(self.model_pb_path)
         self.model_weighs = model.get_flat_weights()
 
     def test_ready(self):
@@ -276,12 +281,11 @@ class ActorServiceTest(unittest.TestCase):
         self.assertTrue(resp.done)
         self.assertEqual("", resp.err)
 
-        time.sleep(0.5)
+        time.sleep(0.1)
         next_version = 1
         self.buf_stub.LearnerSetVersion(buffer_pb2.LearnerSetVersionReq(version=next_version, requestId="bl"))
         resp = self.actor_stub.ReplicateModel(tools.get_iter_values(
-            req=actor_pb2.ReplicateModelReq,
-            meta=actor_pb2.ModelMeta,
+            msg_handler=actor_pb2.ReplicateModelReq,
             values=self.model_weighs,
             version=next_version,
             request_id="replicate"
@@ -359,7 +363,7 @@ class LearnerTest(unittest.TestCase):
         learner = distributed.experience.Learner(
             trainer=trainer,
             remote_buffer_address=self.buf_address,
-            remote_actors_address=self.actors_address,
+            actors_address=self.actors_address,
             remote_buffer_size=1000,
             remote_buffer_type="RandomReplayBuffer",
             actor_buffer_size=10,

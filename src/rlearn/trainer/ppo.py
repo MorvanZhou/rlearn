@@ -133,9 +133,6 @@ class _PPOTrainer(BaseTrainer):
         self.buffer_done.clear()
 
     def compute_gradients(self) -> tp.Tuple[TrainResult, tp.Optional[tp.Dict[str, tp.Dict[str, list]]]]:
-        if self.opt_a is None or self.opt_c is None:
-            self._set_default_optimizer()
-
         res = TrainResult(
             value={"pi_loss": 0, "critic_loss": 0, "reward": 0},
             model_replaced=False,
@@ -199,15 +196,6 @@ class _PPOTrainer(BaseTrainer):
                         new_gs, grads["pi"]["g"]
                     )]
 
-        res.model_replaced = self.try_replace_params(
-            source=[self.model.models["pi"]], target=[self.model.models["pi_"]], ratio=1.)
-        if res.model_replaced:
-            self.replay_buffer.clear()
-            self.buffer_s.clear()
-            self.buffer_a.clear()
-            self.buffer_r.clear()
-            self.buffer_done.clear()
-
         res.value.update({
             "pi_loss": la.numpy(),
             "critic_loss": lc.numpy(),
@@ -216,21 +204,37 @@ class _PPOTrainer(BaseTrainer):
         return res, grads
 
     def apply_flat_gradients(self, gradients: np.ndarray):
+        assert gradients.dtype == np.float32, TypeError(f"gradients must be np.float32, but got {gradients.dtype}")
         a = self.model.models["pi"]
         c = self.model.models["critic"]
         reshaped_grads = tools.reshape_flat_gradients(
             grad_vars={"pi": [a], "critic": [c]},
             gradients=gradients,
         )
-
+        if self.opt_a is None or self.opt_c is None:
+            self._set_default_optimizer()
         self.opt_a.apply_gradients(zip(reshaped_grads["pi"], a.trainable_variables))
         self.opt_c.apply_gradients(zip(reshaped_grads["critic"], c.trainable_variables))
+        self.try_replace_params(
+            source=[self.model.models["pi"]], target=[self.model.models["pi_"]], ratio=1.
+        )
 
     def train_batch(self) -> TrainResult:
         res, grads = self.compute_gradients()
         if grads is not None:
+            if self.opt_a is None or self.opt_c is None:
+                self._set_default_optimizer()
             self.opt_c.apply_gradients(zip(grads["critic"]["g"], grads["critic"]["v"]))
             self.opt_a.apply_gradients(zip(grads["pi"]["g"], grads["pi"]["v"]))
+            res.model_replaced = self.try_replace_params(
+                source=[self.model.models["pi"]], target=[self.model.models["pi_"]], ratio=1.
+            )
+            if res.model_replaced:
+                self.replay_buffer.clear()
+                self.buffer_s.clear()
+                self.buffer_a.clear()
+                self.buffer_r.clear()
+                self.buffer_done.clear()
         return res
 
 

@@ -125,9 +125,6 @@ class _ActorCriticTrainer(BaseTrainer):
         if self.replay_buffer.current_loading_point < self.batch_size:
             return res, None
 
-        if self.opt_a is None or self.opt_c is None:
-            self._set_default_optimizer()
-
         batch = self.replay_buffer.sample(self.batch_size)
         with tf.GradientTape() as tape:
             # critic
@@ -174,6 +171,7 @@ class _ActorCriticTrainer(BaseTrainer):
         return res, grads
 
     def apply_flat_gradients(self, gradients: np.ndarray):
+        assert gradients.dtype == np.float32, TypeError(f"gradients must be np.float32, but got {gradients.dtype}")
         a = self.model.models["actor"]
         c = self.model.models["critic"]
         reshaped_grads = tools.reshape_flat_gradients(
@@ -181,12 +179,16 @@ class _ActorCriticTrainer(BaseTrainer):
             gradients=gradients,
         )
 
+        if self.opt_a is None or self.opt_c is None:
+            self._set_default_optimizer()
         self.opt_a.apply_gradients(zip(reshaped_grads["actor"], a.trainable_variables))
         self.opt_c.apply_gradients(zip(reshaped_grads["critic"], c.trainable_variables))
 
     def train_batch(self) -> TrainResult:
         res, grads = self.compute_gradients()
         if grads is not None:
+            if self.opt_a is None or self.opt_c is None:
+                self._set_default_optimizer()
             self.opt_a.apply_gradients(zip(grads["actor"]["g"], grads["actor"]["v"]))
             self.opt_c.apply_gradients(zip(grads["critic"]["g"], grads["critic"]["v"]))
         return res
