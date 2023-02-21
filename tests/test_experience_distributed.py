@@ -13,8 +13,8 @@ from tensorflow import keras
 
 import rlearn
 from rlearn import distributed
-from rlearn.distributed import tools, actor_pb2_grpc, actor_pb2
-from rlearn.distributed.experience import buffer_pb2, buffer_pb2_grpc
+from rlearn.distributed import tools
+from rlearn.distributed.experience import buffer_pb2, buffer_pb2_grpc, actor_pb2_grpc, actor_pb2
 from tests.test_gym_wrapper import CartPoleSmoothReward
 
 
@@ -227,7 +227,7 @@ class ActorServiceTest(unittest.TestCase):
         cls.buf_stub = buffer_pb2_grpc.ReplayBufferStub(channel=buf_channel)
 
         actor_port = tools.get_available_port()
-        cls.actor_server, _ = distributed.experience.actor._start_server(
+        cls.actor_server, _, _ = distributed.experience.actor._start_server(
             port=actor_port,
             remote_buffer_address=buf_address,
             env=CartPoleSmoothReward(),
@@ -370,4 +370,4 @@ class LearnerTest(unittest.TestCase):
             result_dir=self.result_dir,
             debug=True,
         )
-        learner.run(epoch=3, epoch_step=None)
+        learner.run(max_train_time=1, max_ep_step=-1)

@@ -25,11 +25,6 @@ class ActorStub(object):
             request_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartReq.SerializeToString,
             response_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartResp.FromString,
         )
-        self.GetGradients = channel.unary_stream(
-            '/actor.Actor/GetGradients',
-            request_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.GetGradientsReq.SerializeToString,
-            response_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.GetGradientsResp.FromString,
-        )
         self.ReplicateModel = channel.stream_unary(
             '/actor.Actor/ReplicateModel',
             request_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.ReplicateModelReq.SerializeToString,
@@ -53,12 +48,6 @@ class ActorServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def Start(self, request_iterator, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetGradients(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -88,11 +77,6 @@ def add_ActorServicer_to_server(servicer, server):
             servicer.Start,
             request_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartReq.FromString,
             response_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartResp.SerializeToString,
-        ),
-        'GetGradients': grpc.unary_stream_rpc_method_handler(
-            servicer.GetGradients,
-            request_deserializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.GetGradientsReq.FromString,
-            response_serializer=rlearn_dot_distributed_dot_experience_dot_actor__pb2.GetGradientsResp.SerializeToString,
         ),
         'ReplicateModel': grpc.stream_unary_rpc_method_handler(
             servicer.ReplicateModel,
@@ -146,24 +130,6 @@ class Actor(object):
         return grpc.experimental.stream_unary(request_iterator, target, '/actor.Actor/Start',
                                               rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartReq.SerializeToString,
                                               rlearn_dot_distributed_dot_experience_dot_actor__pb2.StartResp.FromString,
-                                              options, channel_credentials,
-                                              insecure, call_credentials, compression, wait_for_ready, timeout,
-                                              metadata)
-
-    @staticmethod
-    def GetGradients(request,
-                     target,
-                     options=(),
-                     channel_credentials=None,
-                     call_credentials=None,
-                     insecure=False,
-                     compression=None,
-                     wait_for_ready=None,
-                     timeout=None,
-                     metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/actor.Actor/GetGradients',
-                                              rlearn_dot_distributed_dot_experience_dot_actor__pb2.GetGradientsReq.SerializeToString,
-                                              rlearn_dot_distributed_dot_experience_dot_actor__pb2.GetGradientsResp.FromString,
                                               options, channel_credentials,
                                               insecure, call_credentials, compression, wait_for_ready, timeout,
                                               metadata)

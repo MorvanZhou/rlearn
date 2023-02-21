@@ -95,8 +95,10 @@ class BaseTrainer(ABC):
             raise TypeError(f"model must be {self.model.__class__}, but got {type(model)}")
         self.model = model
 
-    def compute_flat_gradients(self) -> np.ndarray:
+    def compute_flat_gradients(self) -> tp.Optional[np.ndarray]:
         _, grads = self.compute_gradients()
+        if grads is None:
+            return grads
         flat_grads = []
         keys = list(grads.keys())
         keys.sort()

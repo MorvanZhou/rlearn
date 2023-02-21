@@ -24,7 +24,8 @@ class Learner:
             actor_buffer_size: int,
             actors_address: tp.Sequence[str],
             remote_buffer_type: str = "RandomReplayBuffer",
-            result_dir: str = None,
+            save_dir: str = "",
+            save_frequency: int = 0,  # seconds
             debug: bool = False,
     ):
         self.trainer: BaseTrainer = trainer
@@ -56,10 +57,11 @@ class Learner:
         )
         self.keep_download_data = True
 
-        if result_dir is None:
-            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S%f")
-            result_dir = os.path.join("training_results", current_time)
-        self.result_dir = os.path.normpath(result_dir)
+        if save_dir is None or save_dir == "":
+            save_dir = os.path.join("savedModel", trainer.name)
+        self.save_dir = os.path.normpath(save_dir)
+        self.save_frequency = int(save_frequency)
+        self._last_save_time = time.time()
 
     def check_actors_ready(self):
         timeout = 15
@@ -180,6 +182,16 @@ class Learner:
             "init buffer with version=%d, modelTypeOnPolicy=%s, reqId='%s'",
             self.version_count, self.trainer.is_on_policy, req_id)
 
+    def try_save(self):
+        if self.save_frequency <= 0:
+            return
+        if self.save_frequency < time.time() - self._last_save_time:
+            self._last_save_time = time.time()
+            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            path = os.path.join(self.save_dir, current_time)
+            self.trainer.save_model(path)
+            self.logger.debug("save model to %s", path)
+
     def download_data(self, lock, max_size=1000):
         while self.keep_download_data:
             time.sleep(1)
@@ -224,8 +236,8 @@ class Learner:
 
     def run(
             self,
-            epoch: tp.Optional[int] = None,
-            epoch_step: tp.Optional[int] = None,
+            max_train_time: int = -1,
+            max_ep_step: int = -1,
             download_max_size: int = 1000,
             replicate_step: tp.Optional[int] = None,
     ):
@@ -234,9 +246,6 @@ class Learner:
         self.init_buffer()
         self.init_actors()
 
-        if epoch is None:
-            epoch = -1
-
         lock = threading.Lock()
         td = threading.Thread(target=self.download_data, kwargs=dict(lock=lock, max_size=download_max_size))
         td.start()
@@ -244,18 +253,20 @@ class Learner:
         if replicate_step is None and not self.trainer.is_on_policy:
             replicate_step = 100
         count = 0
-        epoch_generator = tools.get_count_generator(epoch)
-        for ep in epoch_generator:
+        start_time = time.time()
+        ep = 0
+        stop = False
+        while not stop:
             while self.trainer.replay_buffer.current_loading_point < 100:
                 time.sleep(0.5)
                 continue
-            if epoch_step is None:
+            if max_ep_step <= 0:
                 if self.trainer.replay_buffer.is_full():
                     _ep_step = self.trainer.replay_buffer.max_size // self.trainer.batch_size
                 else:
                     _ep_step = self.trainer.replay_buffer.current_loading_point // self.trainer.batch_size
             else:
-                _ep_step = epoch_step
+                _ep_step = max_ep_step
             t0 = time.perf_counter()
             for _step in range(_ep_step):
                 res = self.trainer.train_batch()
@@ -270,8 +281,14 @@ class Learner:
                         self.set_buffer_version()
                         self.replicate_actors_model()
                     count += 1
+
+                self.try_save()
+                if max_train_time > 0 and time.time() - start_time > max_train_time:
+                    stop = True
+                    break
             t1 = time.perf_counter()
             self.logger.debug("trained %d times in ep=%d, spend=%.2fs", _ep_step, ep, t1 - t0)
+            ep += 1
 
         # stop actors
         self.stop_actors()

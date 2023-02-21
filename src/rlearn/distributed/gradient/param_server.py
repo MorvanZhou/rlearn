@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import os
@@ -28,8 +29,11 @@ class ParamService(param_pb2_grpc.ParamsServicer):
             worker_buffer_type: str = "RandomReplayBuffer",
             max_ep_step: int = -1,
             max_train_time: int = -1,
+            save_dir: str = "",
+            save_frequency: int = 0,  # seconds
             debug: bool = False
     ):
+        logger.setLevel(logging.DEBUG if debug else logging.ERROR)
         self.trainer = trainer
         self.sync_step = sync_step
         self.worker_buffer_size = worker_buffer_size
@@ -41,7 +45,11 @@ class ParamService(param_pb2_grpc.ParamsServicer):
         self.workers_stop = {}
         self.start_time = time.time()
 
-        logger.setLevel(logging.DEBUG if debug else logging.ERROR)
+        if save_dir is None or save_dir == "":
+            save_dir = os.path.join("savedModel", trainer.name)
+        self.save_dir = os.path.normpath(save_dir)
+        self.save_frequency = int(save_frequency)
+        self._last_save_time = time.time()
 
     def ServiceReady(self, request, context):
         logger.debug("""ServiceReady | {"reqId": "%s"}""", request.requestId)
@@ -97,7 +105,7 @@ class ParamService(param_pb2_grpc.ParamsServicer):
             self.stop_event.set()
 
     def Sync(self, request_iterator, context):
-        if time.time() - self.start_time > self.max_train_time:
+        if self.max_train_time > 0 and time.time() - self.start_time > self.max_train_time:
             self.stop = True
             self.workers_stop[context.peer()] = True
 
@@ -112,7 +120,18 @@ class ParamService(param_pb2_grpc.ParamsServicer):
         d_data = zlib.decompress(data)
         gradients = np.frombuffer(d_data, dtype=np.float32)
         self.trainer.apply_flat_gradients(gradients=gradients)
+        self.try_save()
         return self.iter_weights(request_id=request_id, chunk_size=1024)
+
+    def try_save(self):
+        if self.save_frequency <= 0:
+            return
+        if self.save_frequency > time.time() - self._last_save_time:
+            self._last_save_time = time.time()
+            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            path = os.path.join(self.save_dir, current_time)
+            self.trainer.save_model(path)
+            logger.debug("save model to %s", path)
 
     def Terminate(self, request, context):
         logger.debug("""Terminate | {"reqId": "%s"}""", request.requestId)
@@ -127,8 +146,8 @@ def _start_server(
         sync_step: int,
         worker_buffer_size: int,
         worker_buffer_type: str = "RandomReplayBuffer",
-        max_ep_step: int = -1,
         max_train_time: int = -1,
+        max_ep_step: int = -1,
         debug: bool = False
 ) -> tp.Tuple[grpc.Server, threading.Event]:
     stop_event = threading.Event()
@@ -164,8 +183,8 @@ def start_param_server(
         sync_step: int,
         worker_buffer_size: int,
         worker_buffer_type: str = "RandomReplayBuffer",
-        max_ep_step: int = -1,
         max_train_time: int = -1,
+        max_ep_step: int = -1,
         debug: bool = False
 ):
     server, stop_event = _start_server(
@@ -174,8 +193,8 @@ def start_param_server(
         sync_step=sync_step,
         worker_buffer_size=worker_buffer_size,
         worker_buffer_type=worker_buffer_type,
-        max_ep_step=max_ep_step,
         max_train_time=max_train_time,
+        max_ep_step=max_ep_step,
         debug=debug,
     )
     stop_event.wait()

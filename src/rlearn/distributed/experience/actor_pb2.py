@@ -13,7 +13,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
-    b'\n)rlearn/distributed/experience/actor.proto\x12\x05\x61\x63tor\"$\n\x0fServiceReadyReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"4\n\x10ServiceReadyResp\x12\r\n\x05ready\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t\"\xc3\x01\n\tStartMeta\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x13\n\x0btrainerType\x18\x02 \x01(\t\x12\x12\n\nbufferType\x18\x03 \x01(\t\x12\x12\n\nbufferSize\x18\x04 \x01(\x04\x12\x12\n\nmaxEpisode\x18\x05 \x01(\x03\x12\x16\n\x0emaxEpisodeStep\x18\x06 \x01(\x03\x12\x17\n\x0f\x61\x63tionTransform\x18\x07 \x01(\t\x12\x0f\n\x07version\x18\x08 \x01(\x04\x12\x11\n\trequestId\x18\t \x01(\t\"L\n\x08StartReq\x12 \n\x04meta\x18\x01 \x01(\x0b\x32\x10.actor.StartMetaH\x00\x12\x13\n\tchunkData\x18\x02 \x01(\x0cH\x00\x42\t\n\x07request\"9\n\tStartResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"/\n\tModelMeta\x12\x0f\n\x07version\x18\x01 \x01(\x04\x12\x11\n\trequestId\x18\x02 \x01(\t\"$\n\x0fGetGradientsReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"T\n\x10GetGradientsResp\x12 \n\x04meta\x18\x01 \x01(\x0b\x32\x10.actor.ModelMetaH\x00\x12\x13\n\tchunkData\x18\x02 \x01(\x0cH\x00\x42\t\n\x07request\"U\n\x11ReplicateModelReq\x12 \n\x04meta\x18\x01 \x01(\x0b\x32\x10.actor.ModelMetaH\x00\x12\x13\n\tchunkData\x18\x02 \x01(\x0cH\x00\x42\t\n\x07request\"B\n\x12ReplicateModelResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"!\n\x0cTerminateReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"=\n\rTerminateResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t2\xc4\x02\n\x05\x41\x63tor\x12\x41\n\x0cServiceReady\x12\x16.actor.ServiceReadyReq\x1a\x17.actor.ServiceReadyResp\"\x00\x12.\n\x05Start\x12\x0f.actor.StartReq\x1a\x10.actor.StartResp\"\x00(\x01\x12\x43\n\x0cGetGradients\x12\x16.actor.GetGradientsReq\x1a\x17.actor.GetGradientsResp\"\x00\x30\x01\x12I\n\x0eReplicateModel\x12\x18.actor.ReplicateModelReq\x1a\x19.actor.ReplicateModelResp\"\x00(\x01\x12\x38\n\tTerminate\x12\x13.actor.TerminateReq\x1a\x14.actor.TerminateResp\"\x00\x42*\n\x14io.grpc.examples.envB\nActorProtoP\x01\xa2\x02\x03HLWb\x06proto3')
+    b'\n)rlearn/distributed/experience/actor.proto\x12\x05\x61\x63tor\"$\n\x0fServiceReadyReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"4\n\x10ServiceReadyResp\x12\r\n\x05ready\x18\x01 \x01(\x08\x12\x11\n\trequestId\x18\x02 \x01(\t\"\xc3\x01\n\tStartMeta\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x13\n\x0btrainerType\x18\x02 \x01(\t\x12\x12\n\nbufferType\x18\x03 \x01(\t\x12\x12\n\nbufferSize\x18\x04 \x01(\x04\x12\x12\n\nmaxEpisode\x18\x05 \x01(\x03\x12\x16\n\x0emaxEpisodeStep\x18\x06 \x01(\x03\x12\x17\n\x0f\x61\x63tionTransform\x18\x07 \x01(\t\x12\x0f\n\x07version\x18\x08 \x01(\x04\x12\x11\n\trequestId\x18\t \x01(\t\"L\n\x08StartReq\x12 \n\x04meta\x18\x01 \x01(\x0b\x32\x10.actor.StartMetaH\x00\x12\x13\n\tchunkData\x18\x02 \x01(\x0cH\x00\x42\t\n\x07request\"9\n\tStartResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"/\n\tModelMeta\x12\x0f\n\x07version\x18\x01 \x01(\x04\x12\x11\n\trequestId\x18\x02 \x01(\t\"U\n\x11ReplicateModelReq\x12 \n\x04meta\x18\x01 \x01(\x0b\x32\x10.actor.ModelMetaH\x00\x12\x13\n\tchunkData\x18\x02 \x01(\x0cH\x00\x42\t\n\x07request\"B\n\x12ReplicateModelResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t\"!\n\x0cTerminateReq\x12\x11\n\trequestId\x18\x01 \x01(\t\"=\n\rTerminateResp\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0b\n\x03\x65rr\x18\x02 \x01(\t\x12\x11\n\trequestId\x18\x03 \x01(\t2\xff\x01\n\x05\x41\x63tor\x12\x41\n\x0cServiceReady\x12\x16.actor.ServiceReadyReq\x1a\x17.actor.ServiceReadyResp\"\x00\x12.\n\x05Start\x12\x0f.actor.StartReq\x1a\x10.actor.StartResp\"\x00(\x01\x12I\n\x0eReplicateModel\x12\x18.actor.ReplicateModelReq\x1a\x19.actor.ReplicateModelResp\"\x00(\x01\x12\x38\n\tTerminate\x12\x13.actor.TerminateReq\x1a\x14.actor.TerminateResp\"\x00\x42*\n\x14io.grpc.examples.envB\nActorProtoP\x01\xa2\x02\x03HLWb\x06proto3')
 
 _SERVICEREADYREQ = DESCRIPTOR.message_types_by_name['ServiceReadyReq']
 _SERVICEREADYRESP = DESCRIPTOR.message_types_by_name['ServiceReadyResp']
@@ -21,8 +21,6 @@ _STARTMETA = DESCRIPTOR.message_types_by_name['StartMeta']
 _STARTREQ = DESCRIPTOR.message_types_by_name['StartReq']
 _STARTRESP = DESCRIPTOR.message_types_by_name['StartResp']
 _MODELMETA = DESCRIPTOR.message_types_by_name['ModelMeta']
-_GETGRADIENTSREQ = DESCRIPTOR.message_types_by_name['GetGradientsReq']
-_GETGRADIENTSRESP = DESCRIPTOR.message_types_by_name['GetGradientsResp']
 _REPLICATEMODELREQ = DESCRIPTOR.message_types_by_name['ReplicateModelReq']
 _REPLICATEMODELRESP = DESCRIPTOR.message_types_by_name['ReplicateModelResp']
 _TERMINATEREQ = DESCRIPTOR.message_types_by_name['TerminateReq']
@@ -69,20 +67,6 @@ ModelMeta = _reflection.GeneratedProtocolMessageType('ModelMeta', (_message.Mess
 })
 _sym_db.RegisterMessage(ModelMeta)
 
-GetGradientsReq = _reflection.GeneratedProtocolMessageType('GetGradientsReq', (_message.Message,), {
-    'DESCRIPTOR': _GETGRADIENTSREQ,
-    '__module__': 'rlearn.distributed.experience.actor_pb2'
-    # @@protoc_insertion_point(class_scope:actor.GetGradientsReq)
-})
-_sym_db.RegisterMessage(GetGradientsReq)
-
-GetGradientsResp = _reflection.GeneratedProtocolMessageType('GetGradientsResp', (_message.Message,), {
-    'DESCRIPTOR': _GETGRADIENTSRESP,
-    '__module__': 'rlearn.distributed.experience.actor_pb2'
-    # @@protoc_insertion_point(class_scope:actor.GetGradientsResp)
-})
-_sym_db.RegisterMessage(GetGradientsResp)
-
 ReplicateModelReq = _reflection.GeneratedProtocolMessageType('ReplicateModelReq', (_message.Message,), {
     'DESCRIPTOR': _REPLICATEMODELREQ,
     '__module__': 'rlearn.distributed.experience.actor_pb2'
@@ -127,18 +111,14 @@ if _descriptor._USE_C_DESCRIPTORS == False:
     _STARTRESP._serialized_end = 477
     _MODELMETA._serialized_start = 479
     _MODELMETA._serialized_end = 526
-    _GETGRADIENTSREQ._serialized_start = 528
-    _GETGRADIENTSREQ._serialized_end = 564
-    _GETGRADIENTSRESP._serialized_start = 566
-    _GETGRADIENTSRESP._serialized_end = 650
-    _REPLICATEMODELREQ._serialized_start = 652
-    _REPLICATEMODELREQ._serialized_end = 737
-    _REPLICATEMODELRESP._serialized_start = 739
-    _REPLICATEMODELRESP._serialized_end = 805
-    _TERMINATEREQ._serialized_start = 807
-    _TERMINATEREQ._serialized_end = 840
-    _TERMINATERESP._serialized_start = 842
-    _TERMINATERESP._serialized_end = 903
-    _ACTOR._serialized_start = 906
-    _ACTOR._serialized_end = 1230
+    _REPLICATEMODELREQ._serialized_start = 528
+    _REPLICATEMODELREQ._serialized_end = 613
+    _REPLICATEMODELRESP._serialized_start = 615
+    _REPLICATEMODELRESP._serialized_end = 681
+    _TERMINATEREQ._serialized_start = 683
+    _TERMINATEREQ._serialized_end = 716
+    _TERMINATERESP._serialized_start = 718
+    _TERMINATERESP._serialized_end = 779
+    _ACTOR._serialized_start = 782
+    _ACTOR._serialized_end = 1037
 # @@protoc_insertion_point(module_scope)

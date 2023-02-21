@@ -17,8 +17,6 @@ from rlearn.env.env_wrapper import EnvWrapper
 from rlearn.trainer.base import BaseTrainer
 from rlearn.trainer.tools import get_trainer_by_name, set_trainer_action_transformer
 
-_name = "".join([random.choice(string.ascii_lowercase) for _ in range(4)])
-_logger = get_logger(f"actor-{_name}")
 # linux default is fork, force set to spawn
 mp = mp.get_context('spawn')
 
@@ -28,12 +26,14 @@ class ActorProcess(mp.Process):
             self,
             weights_conn: Connection,
             env: EnvWrapper,
+            logger: logging.Logger = None,
             remote_buffer_address: tp.Optional[str] = None,
             debug: bool = False,
     ):
         super().__init__()
-
-        self.logger = _logger
+        if logger is None:
+            logger = get_logger("actor")
+        self.logger = logger
         self.weights_conn = weights_conn
         self.debug = debug
         self.trainer_type = ""
@@ -137,6 +137,7 @@ class ActorProcess(mp.Process):
             s = self.env.reset()
 
             step = 0
+            ep_r = 0
             episode_step_generator = tools.get_count_generator(self.max_episode_step)
             for step in episode_step_generator:
                 with self.lock:
@@ -150,6 +151,7 @@ class ActorProcess(mp.Process):
                 s_, r, done = self.env.step(a)
                 self.trainer.store_transition(s=s, a=_a, r=r, s_=s_, done=done)
                 s = s_
+                ep_r += r
                 if self.trainer.replay_buffer.is_full() and buf_stub is not None:
                     self.send_data_to_remote_buffer(buf_stub)
                     self.trainer.replay_buffer.clear()
@@ -159,7 +161,7 @@ class ActorProcess(mp.Process):
             if self.ns.exit:
                 break
 
-            self.logger.debug("ep=%d, total_step=%d", ep, step)
+            self.logger.info("ep=%d, total_step=%d, ep_r=%.3f", ep, step, ep_r)
 
         if channel is not None:
             channel.close()
@@ -173,29 +175,30 @@ class ActorService(actor_pb2_grpc.ActorServicer):
             actor: ActorProcess,
             weights_conn: Connection,
             stop_event: threading.Event,
+            logger: logging.Logger,
             debug: bool = False,
     ):
         self.actor = actor
         self.weights_conn = weights_conn
         self.stop_event = stop_event
-
-        _logger.setLevel(logging.DEBUG if debug else logging.ERROR)
+        self.logger = logger
+        self.logger.setLevel(logging.DEBUG if debug else logging.ERROR)
         with grpc.insecure_channel(self.actor.buffer_address) as channel:
             timeout = 15
             try:
                 grpc.channel_ready_future(channel).result(timeout=timeout)
             except grpc.FutureTimeoutError:
                 raise ValueError(f"connect replay buffer at {self.actor.buffer_address} timeout: {timeout}")
-        _logger.debug("connected to buffer %s", self.actor.buffer_address)
+        self.logger.debug("connected to buffer %s", self.actor.buffer_address)
 
     def ServiceReady(self, request, context):
-        _logger.debug("""ServiceReady | {"reqId": "%s"}""", request.requestId)
+        self.logger.debug("""ServiceReady | {"reqId": "%s"}""", request.requestId)
         return actor_pb2.ServiceReadyResp(ready=True, requestId=request.requestId)
 
     def Start(self, request_iterator, context):
         return tools.initialize_model(
             request_iterator=request_iterator,
-            logger=_logger,
+            logger=self.logger,
             process=self.actor,
             resp=actor_pb2.StartResp,
         )
@@ -203,13 +206,13 @@ class ActorService(actor_pb2_grpc.ActorServicer):
     def ReplicateModel(self, request_iterator, context):
         return tools.replicate_model(
             request_iterator=request_iterator,
-            logger=_logger,
+            logger=self.logger,
             model_loaded_event=self.actor.model_loaded,
             weights_conn=self.weights_conn,
         )
 
     def Terminate(self, request, context):
-        _logger.debug("""Terminate | {"reqId": "%s"}""", request.requestId)
+        self.logger.debug("""Terminate | {"reqId": "%s"}""", request.requestId)
         self.weights_conn.close()
         self.actor.ns.exit = True
         self.actor.join()
@@ -221,8 +224,9 @@ def _start_server(
         port: int,
         remote_buffer_address: str,
         env: EnvWrapper,
+        name: str = "",
         debug: bool = False
-) -> tp.Tuple[grpc.Server, threading.Event]:
+) -> tp.Tuple[grpc.Server, threading.Event, logging.Logger]:
     stop_event = threading.Event()
     server = grpc.server(
         futures.ThreadPoolExecutor(
@@ -232,10 +236,14 @@ def _start_server(
             ('grpc.max_send_message_length', 1024 * 1024 * 100),
         ]
     )
+    if name == "":
+        name = "".join([random.choice(string.ascii_lowercase) for _ in range(4)])
+    logger = get_logger(f"actor-{name}")
     recv_conn, send_conn = mp.Pipe(duplex=False)
     actor_p = ActorProcess(
         weights_conn=recv_conn,
         env=env,
+        logger=logger,
         remote_buffer_address=remote_buffer_address,
         debug=debug,
     )
@@ -243,24 +251,26 @@ def _start_server(
         actor=actor_p,
         weights_conn=send_conn,
         stop_event=stop_event,
+        logger=logger,
         debug=debug
     )
 
     actor_pb2_grpc.add_ActorServicer_to_server(service, server)
     server.add_insecure_port(f'[::]:{port}')
     server.start()
-    _logger.info("actor has started at http://localhost:%d", port)
-    return server, stop_event
+    logger.info("actor has started at http://localhost:%d", port)
+    return server, stop_event, logger
 
 
 def start_actor_server(
         port: int,
         remote_buffer_address: str,
         env: EnvWrapper,
+        name: str = "",
         debug: bool = False
 ):
-    server, stop_event = _start_server(port, remote_buffer_address, env, debug)
+    server, stop_event, logger = _start_server(port, remote_buffer_address, env, name=name, debug=debug)
     stop_event.wait()
     server.stop(None)
     server.wait_for_termination()
-    _logger.info("%s server is down", _logger.name)
+    logger.info("%s server is down", logger.name)

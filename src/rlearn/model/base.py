@@ -142,7 +142,8 @@ class BaseRLModel(ABC):
         shutil.rmtree(unzipped_dir, ignore_errors=True)
 
     def get_flat_weights(self) -> np.ndarray:
-        weights = np.array([], dtype=np.float32)
+
+        weights = []
         keys = list(self.models.keys())
         keys.sort()
         for model_name in keys:
@@ -155,8 +156,8 @@ class BaseRLModel(ABC):
                 layer_shape = []
                 for w in layer.get_weights():
                     layer_shape.append(w.shape)
-                    weights = np.concatenate((weights, w.ravel()), dtype=np.float32, axis=0)
-        return weights
+                    weights.append(w.ravel())
+        return np.concatenate(weights, dtype=np.float32, axis=0)
 
     def set_flat_weights(self, weights: np.ndarray):
         assert weights.dtype == np.float32, TypeError(f"gradients must be np.float32, but got {weights.dtype}")
@@ -177,13 +178,14 @@ class BaseRLModel(ABC):
                     layer_weights.append(w.reshape(lw.shape))
                     p = p_
                 layer.set_weights(layer_weights)
+        assert p == len(weights), ValueError("reshape size not right")
 
     def save(self, path: str):
         model_tmp_dir = path
         if path.endswith(".zip"):
             model_tmp_dir = path.rsplit(".zip")[0]
         for k, v in self.models.items():
-            v.save(os.path.join(model_tmp_dir, k))
+            keras.models.save_model(v, os.path.join(model_tmp_dir, k), include_optimizer=False)
         with open(os.path.join(model_tmp_dir, "info.json"), "w", encoding="utf-8") as f:
             json.dump({
                 "modelName": self.name,
@@ -197,7 +199,9 @@ class BaseRLModel(ABC):
             path += ".zip"
         unzipped_dir = unzip_model(path)
         self.models[self.predicted_model_name] = keras.models.load_model(
-            os.path.join(unzipped_dir, self.predicted_model_name))
+            os.path.join(unzipped_dir, self.predicted_model_name),
+            compile=False,
+        )
         if self.training:
             for filename in os.listdir(unzipped_dir):
                 if filename.endswith(".json"):
@@ -205,7 +209,10 @@ class BaseRLModel(ABC):
                 if os.path.isfile(os.path.join(unzipped_dir, filename)):
                     continue
                 model_name = filename.rsplit(".zip", 1)[0]
-                self.models[model_name] = keras.models.load_model(os.path.join(unzipped_dir, model_name))
+                self.models[model_name] = keras.models.load_model(
+                    os.path.join(unzipped_dir, model_name),
+                    compile=False
+                )
         shutil.rmtree(unzipped_dir, ignore_errors=True)
 
     def get_model_for_prediction(self) -> keras.Model:

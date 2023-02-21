@@ -8,7 +8,7 @@ from tensorflow import keras
 
 import rlearn
 from rlearn import distributed
-from rlearn.distributed import tools
+from rlearn.distributed import tools, logger
 from rlearn.distributed.gradient import param_pb2, param_pb2_grpc, worker
 from rlearn.distributed.gradient.param_server import _start_server
 from tests.test_gym_wrapper import CartPoleSmoothReward
@@ -41,8 +41,9 @@ class GradientParamTest(unittest.TestCase):
         address = f'localhost:{port}'
         channel = grpc.insecure_channel(address)
         stub = param_pb2_grpc.ParamsStub(channel=channel)
+        lg = logger.get_logger("worker")
 
-        w_trainer, max_episode_step, sync_step = worker.init(stub)
+        w_trainer, max_episode_step, sync_step = worker.init(lg, stub)
         self.assertEqual(-1, max_episode_step)
         self.assertEqual(5, sync_step)
         self.assertAlmostEqual(0.8, w_trainer.gamma)
@@ -56,7 +57,7 @@ class GradientParamTest(unittest.TestCase):
 
         [w_trainer.store_transition(s=s, a=_a, r=r, s_=s_, done=done) for _ in range(5)]
 
-        stop = worker.sync(stub=stub, trainer=w_trainer)
+        stop = worker.sync(logger=lg, stub=stub, trainer=w_trainer)
         self.assertFalse(stop)
 
         resp = stub.Terminate(param_pb2.TerminateReq(requestId="t"))
@@ -64,7 +65,7 @@ class GradientParamTest(unittest.TestCase):
         self.assertEqual("", resp.err)
         self.assertEqual(True, resp.done)
 
-        stop = worker.sync(stub=stub, trainer=w_trainer)
+        stop = worker.sync(logger=lg, stub=stub, trainer=w_trainer)
         self.assertTrue(stop)
 
         stop_event.wait()

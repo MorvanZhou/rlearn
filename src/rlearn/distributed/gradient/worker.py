@@ -19,13 +19,11 @@ from rlearn.trainer import get_trainer_by_name
 from rlearn.trainer.base import BaseTrainer
 from rlearn.trainer.tools import set_trainer_action_transformer
 
-_name = "".join([random.choice(string.ascii_lowercase) for _ in range(4)])
-logger = get_logger(f"worker-{_name}")
-
 
 def connect_params_server(
+        logger: logging.Logger,
         params_server_address: str,
-        timeout: int = 15
+        timeout: int = 15,
 ) -> tp.Tuple[param_pb2_grpc.ParamsStub, grpc.Channel]:
     channel = grpc.insecure_channel(params_server_address)
     stub = param_pb2_grpc.ParamsStub(channel=channel)
@@ -47,7 +45,7 @@ def iter_gradients(gradients: np.ndarray, chunk_size: int = 1024):
         yield param_pb2.SyncReq(chunkData=compressed_data[i: i + chunk_size])
 
 
-def parse_weights(resp_iter) -> tp.Tuple[np.ndarray, bool]:
+def parse_weights(logger: logging.Logger, resp_iter) -> tp.Tuple[np.ndarray, bool]:
     data = bytearray()
     stop = False
     for r in resp_iter:
@@ -63,7 +61,7 @@ def parse_weights(resp_iter) -> tp.Tuple[np.ndarray, bool]:
     return weights, stop
 
 
-def init(stub: param_pb2_grpc.ParamsStub) -> tp.Tuple[BaseTrainer, int, int]:
+def init(logger: logging.Logger, stub: param_pb2_grpc.ParamsStub) -> tp.Tuple[BaseTrainer, int, int]:
     resp_iter = stub.Start(param_pb2.StartReq(
         requestId=str(uuid4())
     ))
@@ -103,13 +101,15 @@ def init(stub: param_pb2_grpc.ParamsStub) -> tp.Tuple[BaseTrainer, int, int]:
     return trainer, max_episode_step, sync_step
 
 
-def sync(stub: param_pb2_grpc.ParamsStub, trainer: BaseTrainer) -> bool:
+def sync(logger: logging.Logger, stub: param_pb2_grpc.ParamsStub, trainer: BaseTrainer) -> bool:
     gradients = trainer.compute_flat_gradients()
+    if gradients is None:
+        return False
 
     resp_iter = stub.Sync(iter_gradients(
         gradients=gradients, chunk_size=1024
     ))
-    weights, stop = parse_weights(resp_iter=resp_iter)
+    weights, stop = parse_weights(logger=logger, resp_iter=resp_iter)
     trainer.model.set_flat_weights(weights=weights)
     return stop
 
@@ -117,17 +117,23 @@ def sync(stub: param_pb2_grpc.ParamsStub, trainer: BaseTrainer) -> bool:
 def run(
         env: EnvWrapper,
         params_server_address: str,
+        name: str = "",
         debug: bool = False
 ):
-    logger.setLevel(logging.DEBUG if debug else logging.ERROR)
+    if name == "":
+        name = "".join([random.choice(string.ascii_lowercase) for _ in range(4)])
+    logger = get_logger(f"worker-{name}")
+    logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
-    stub, channel = connect_params_server(params_server_address=params_server_address, timeout=15)
+    stub, channel = connect_params_server(
+        logger=logger, params_server_address=params_server_address, timeout=15)
 
-    trainer, max_episode_step, sync_step = init(stub)
+    trainer, max_episode_step, sync_step = init(logger=logger, stub=stub)
 
     ep = 0
     stop = False
     while True:
+        ep_r = 0
         s = env.reset()
 
         step = 0
@@ -140,13 +146,13 @@ def run(
             s_, r, done = env.step(a)
             trainer.store_transition(s=s, a=_a, r=r, s_=s_, done=done)
             s = s_
-
-            if done or step % sync_step == 0 or step == max_episode_step - 1:
-                stop = sync(stub=stub, trainer=trainer)
+            ep_r += r
+            if done or (step % sync_step == 0 and step != 0) or step == max_episode_step - 1:
+                stop = sync(logger=logger, stub=stub, trainer=trainer)
             if done or stop:
                 break
 
-        logger.debug("ep=%d, total_step=%d", ep, step)
+        logger.info("ep=%d, total_step=%d, ep_r=%.3f", ep, step, ep_r)
         if stop:
             break
         ep += 1

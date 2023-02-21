@@ -40,12 +40,12 @@ class CartPoleDiscreteReward(CartPoleSmoothReward):
 
 
 class Pendulum(rlearn.EnvWrapper):
-    def __init__(self, render_mode=None, seed=None):
+    def __init__(self, render_mode=None, ep_step=100, seed=None):
         self.env = gymnasium.make('Pendulum-v1', render_mode=render_mode)
         if seed is not None:
             self.env.reset(seed=seed)
         self.step_count = 0
-        self.ep_step = 100
+        self.ep_step = ep_step
 
     def reset(self) -> np.ndarray:
         s, _ = self.env.reset()
