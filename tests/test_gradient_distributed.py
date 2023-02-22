@@ -92,18 +92,6 @@ class ParamServerTest(unittest.TestCase):
         trainer.set_action_transformer(rlearn.transformer.DiscreteAction([0, 1]))
 
         port = tools.get_available_port()
-        p = multiprocessing.Process(target=distributed.gradient.start_param_server, kwargs=dict(
-            port=port,
-            trainer=trainer,
-            sync_step=5,
-            worker_buffer_size=1000,
-            worker_buffer_type="RandomReplayBuffer",
-            max_ep_step=-1,
-            max_train_time=2,
-            debug=True
-        ))
-        p.start()
-        ps.append(p)
 
         for _ in range(2):
             p = multiprocessing.Process(target=distributed.gradient.worker.run, kwargs=dict(
@@ -114,5 +102,15 @@ class ParamServerTest(unittest.TestCase):
             p.start()
             ps.append(p)
 
+        distributed.gradient.start_param_server(
+            port=port,
+            trainer=trainer,
+            sync_step=5,
+            worker_buffer_size=1000,
+            worker_buffer_type="RandomReplayBuffer",
+            max_ep_step=-1,
+            max_train_time=2,
+            debug=True
+        )
         [p.join() for p in ps]
         [p.terminate() for p in ps]
