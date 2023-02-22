@@ -75,7 +75,8 @@ class GradientParamTest(unittest.TestCase):
 
 class ParamServerTest(unittest.TestCase):
     def test_run(self):
-        ps: tp.List[multiprocessing.Process] = []
+        context = multiprocessing.get_context('spawn')
+        ps: tp.List[context.Process] = []
 
         trainer = rlearn.DQNTrainer()
         trainer.set_model_encoder(q=keras.Sequential([
@@ -92,17 +93,7 @@ class ParamServerTest(unittest.TestCase):
         trainer.set_action_transformer(rlearn.transformer.DiscreteAction([0, 1]))
 
         port = tools.get_available_port()
-
-        for _ in range(2):
-            p = multiprocessing.Process(target=distributed.gradient.worker.run, kwargs=dict(
-                env=CartPoleSmoothReward(),
-                params_server_address=f"localhost:{port}",
-                debug=True,
-            ))
-            p.start()
-            ps.append(p)
-
-        distributed.gradient.start_param_server(
+        p = multiprocessing.Process(target=distributed.gradient.start_param_server, kwargs=dict(
             port=port,
             trainer=trainer,
             sync_step=5,
@@ -111,6 +102,18 @@ class ParamServerTest(unittest.TestCase):
             max_ep_step=-1,
             max_train_time=2,
             debug=True
-        )
+        ))
+        p.start()
+        ps.append(p)
+
+        for _ in range(2):
+            p = context.Process(target=distributed.gradient.worker.run, kwargs=dict(
+                env=CartPoleSmoothReward(),
+                params_server_address=f"localhost:{port}",
+                debug=True,
+            ))
+            p.start()
+            ps.append(p)
+
         [p.join() for p in ps]
         [p.terminate() for p in ps]
