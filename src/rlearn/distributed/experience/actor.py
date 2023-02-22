@@ -216,10 +216,10 @@ class ActorService(actor_pb2_grpc.ActorServicer):
 
     def Terminate(self, request, context):
         self.logger.debug("""Terminate | {"reqId": "%s"}""", request.requestId)
-        self.weights_conn.close()
         self.actor.ns.exit = True
         self.actor.join()
         self.stop_event.set()
+        self.weights_conn.close()
         return actor_pb2.TerminateResp(done=True, err="", requestId=request.requestId)
 
 
