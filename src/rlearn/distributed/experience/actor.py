@@ -84,8 +84,12 @@ class ActorProcess(mp.Process):
         self.max_episode_step = 0 if max_episode_step is None else max_episode_step
 
     def try_replicate_model(self):
-        if not self.weights_conn.closed and self.weights_conn.poll():
-            version, weights = self.weights_conn.recv()
+        if self.weights_conn.poll():
+            try:
+                version, weights = self.weights_conn.recv()
+            except EOFError as err:
+                self.logger.error(str(err))
+                return
             self.trainer.model.set_flat_weights(weights=weights)
             with self.lock:
                 self.ns.version = version

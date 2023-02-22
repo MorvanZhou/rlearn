@@ -367,7 +367,7 @@ class LearnerTest(unittest.TestCase):
             remote_buffer_size=1000,
             remote_buffer_type="RandomReplayBuffer",
             actor_buffer_size=10,
-            result_dir=self.result_dir,
+            save_dir=self.result_dir,
             debug=True,
         )
         learner.run(max_train_time=1, max_ep_step=-1)

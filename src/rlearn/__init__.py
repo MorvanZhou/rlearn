@@ -12,4 +12,4 @@ from rlearn.trainer import DQNTrainer, DDPGTrainer, DuelingDQNTrainer, PPODiscre
     SACDiscreteTrainer, TD3Trainer, PPOContinueTrainer, SACContinueTrainer, ActorCriticContinueTrainer
 from rlearn.trainer.tools import get_trainer_by_name, set_config_to_trainer
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
