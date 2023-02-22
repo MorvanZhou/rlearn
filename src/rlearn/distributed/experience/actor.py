@@ -9,7 +9,6 @@ from concurrent import futures
 from multiprocessing.connection import Connection
 
 import grpc
-
 from rlearn.distributed import tools
 from rlearn.distributed.experience import buffer_pb2_grpc, actor_pb2_grpc, actor_pb2
 from rlearn.distributed.logger import get_logger
@@ -84,7 +83,7 @@ class ActorProcess(mp.Process):
         self.max_episode_step = 0 if max_episode_step is None else max_episode_step
 
     def try_replicate_model(self):
-        if self.weights_conn.poll():
+        if not self.weights_conn.closed and self.weights_conn.poll():
             try:
                 version, weights = self.weights_conn.recv()
             except EOFError as err:
