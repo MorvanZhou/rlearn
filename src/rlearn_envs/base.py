@@ -6,8 +6,6 @@ import pygame
 
 from rlearn_envs.utils import load_image
 
-os.environ["DISPLAY"] = ":0"
-
 
 class Character(pygame.sprite.Sprite):
     image: pygame.Surface

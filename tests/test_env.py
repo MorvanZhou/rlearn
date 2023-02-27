@@ -7,7 +7,7 @@ import rlearn_envs
 
 class EnvTest(unittest.TestCase):
     def test_flappy_bird(self):
-        env = rlearn_envs.get("flappy_bird")
+        env = rlearn_envs.get("flappy_bird", headless=True)
         env.set_show(False)
         for _ in range(3):
             s = env.reset()
@@ -25,7 +25,7 @@ class EnvTest(unittest.TestCase):
         env.close()
 
     def test_junior(self):
-        env = rlearn_envs.get("junior")
+        env = rlearn_envs.get("junior", headless=True)
         env.set_show(False)
         for _ in range(3):
             s = env.reset()
@@ -42,14 +42,13 @@ class EnvTest(unittest.TestCase):
         env.close()
 
     def test_jumping_dino(self):
-        env = rlearn_envs.get("jumping_dino")
+        env = rlearn_envs.get("jumping_dino", headless=True)
         env.set_show(False)
         for _ in range(3):
             s = env.reset()
 
             while True:
                 s, reward, done = env.step(
-                    # np.array([0]),
                     np.random.choice([0, 1], p=[0.7, 0.3], size=(1,))
                 )
                 if s is not None:

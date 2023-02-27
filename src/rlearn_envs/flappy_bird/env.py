@@ -54,11 +54,12 @@ class Env(BaseEnv):
     game_name = "Flappy Bird"
     size = (600, 350)
 
-    def __init__(self):
+    def __init__(self, headless: bool = False):
         super().__init__(
             size=self.size,
             caption=self.game_name,
             mouse_visible=False,
+            headless=headless,
         )
         self.bird = Bird(self, BIRD_IMAGE)
         self.pipe1 = Pipe(self, PIPE_IMAGE, colorkey=(0, 0, 0, 255))

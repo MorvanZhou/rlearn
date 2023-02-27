@@ -24,11 +24,12 @@ class Env(BaseEnv):
     game_name = "Jumping dino"
     size = (600, 250)
 
-    def __init__(self):
+    def __init__(self, headless: bool = False):
         super().__init__(
             size=self.size,
             caption=self.game_name,
             mouse_visible=False,
+            headless=headless,
         )
         pygame.key.set_repeat(20, 200)
 

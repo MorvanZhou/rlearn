@@ -16,8 +16,8 @@ GAME_MAP = {
 }
 
 
-def get(name: str) -> BaseEnv:
-    e = GAME_MAP.get(name.lower(), None)()
+def get(name: str, headless: bool = False) -> BaseEnv:
+    e = GAME_MAP.get(name.lower(), None)(headless=headless)
     if e is None:
         raise ValueError("name of '{}' is not supported".format(name))
     return e
