@@ -196,8 +196,9 @@ class Background(pygame.sprite.Sprite):
 class Text:
     def __init__(self, font_name=None, size=23, color=(10, 10, 10), antialias=True, topleft=(0, 0)):
         if not pygame.font:
-            raise ImportError("not module named pygame.font")
-        self._font: pygame.font.Font = pygame.font.Font(font_name, size)
+            self._font: pygame.font.Font = pygame.font.SysFont(font_name, size)
+        else:
+            self._font: pygame.font.Font = pygame.font.Font(font_name, size)
         self._color = color
         self._antialias = antialias
         self._text = ""
