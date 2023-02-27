@@ -30,6 +30,9 @@ class Bird(Character):
         if pressed[pygame.K_SPACE] or self.jump:
             self.vy = -30
             self.jump = False
+        elif pressed[pygame.QUIT]:
+            pygame.quit()
+            exit()
         self.rect.y += self.vy * self.dt + 0.5 * self.g * self.dt ** 2
         self.vy += self.g * self.dt
 

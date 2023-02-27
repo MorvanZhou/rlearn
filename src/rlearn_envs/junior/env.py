@@ -68,7 +68,8 @@ class Env(BaseEnv):
         else:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    return None, reward, True
+                    pygame.quit()
+                    exit()
                 elif event.type == pygame.KEYDOWN:
                     if event.key in [pygame.K_SPACE, pygame.K_UP]:
                         self.energy = min(self.energy + 5, 100)
