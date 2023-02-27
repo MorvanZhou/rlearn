@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABC, abstractmethod
 from typing import Union, List, Tuple
@@ -197,6 +198,7 @@ class Text:
     def __init__(self, font_name=None, size=23, color=(10, 10, 10), antialias=True, topleft=(0, 0)):
         if not pygame.font:
             self._font = None
+            logging.warning("pygame.font is missing")
         else:
             self._font: pygame.font.Font = pygame.font.Font(font_name, size)
         self._color = color
