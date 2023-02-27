@@ -196,7 +196,7 @@ class Background(pygame.sprite.Sprite):
 class Text:
     def __init__(self, font_name=None, size=23, color=(10, 10, 10), antialias=True, topleft=(0, 0)):
         if not pygame.font:
-            self._font: pygame.font.Font = pygame.font.SysFont(font_name, size)
+            self._font = None
         else:
             self._font: pygame.font.Font = pygame.font.Font(font_name, size)
         self._color = color
@@ -205,6 +205,8 @@ class Text:
         self._topleft = topleft
 
     def draw(self, screen: pygame.Surface):
+        if self._font is None:
+            return
         t = self._font.render(self._text, self._antialias, self._color)
         screen.blit(t, t.get_rect(topleft=self._topleft))
 
