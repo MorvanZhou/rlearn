@@ -2,6 +2,7 @@ gymnasium[classic_control]>=0.27.1
 pygame>=2.1.0
 grpcio-tools>=1.42.0
 tox==3.24.3
+pathfind==0.0.8
 tox-conda
 build
 twine
