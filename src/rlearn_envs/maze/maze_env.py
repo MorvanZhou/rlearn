@@ -1,6 +1,7 @@
 import copy
 import json
 import math
+import os
 import random
 import time
 import typing as tp
@@ -8,7 +9,7 @@ import typing as tp
 import numpy as np
 import pygame
 
-from rlearn import EnvWrapper
+from rlearn import EnvWrapper, State
 from rlearn_envs.maze import load
 
 
@@ -22,7 +23,8 @@ def game_over():
 class Maze(EnvWrapper):
     def __init__(self):
         super().__init__()
-        self._map_data = self.load("./data/map.json")
+        game_dir = os.path.dirname(__file__)
+        self._map_data = self.load(os.path.join(game_dir, "data", "map.json"))
         self.board = np.array(self._map_data.get("mapData", [[]]))
         self.copy_board = copy.deepcopy(self.board)
         self.row = self.board.shape[0]
@@ -121,7 +123,7 @@ class Maze(EnvWrapper):
 
         self.render_board = np.multiply(np.floor(np.random.rand(self.row, self.col) * len(self.map_param)), self.board)
 
-    def reset(self):
+    def reset(self) -> State:
         # 存储玩家id值，避免出现重复id
         exist_id = set()
         # 默认先手玩家为id = 0的玩家
@@ -146,23 +148,22 @@ class Maze(EnvWrapper):
             player_action_point = player.get("actionPoints", None)
             if not isinstance(player_action_point, int) or player_action_point <= 0:
                 raise ValueError("玩家活动点数必须为大于0的int类型数值，请检查json文件中的players参数！")
-            exits_position = exits.get("position", None)
-            if not exits_position:
+            exit_position = exits.get("position", None)
+            if not exit_position:
                 raise ValueError("终点初始坐标值不能为空，请检查json文件中的exits参数！")
-            if exits_position["x"] < 0 or exits_position["x"] >= self.row or exits_position["y"] < 0 or \
-                    exits_position["y"] >= self.col:
+            if exit_position["x"] < 0 or exit_position["x"] >= self.row or exit_position["y"] < 0 or \
+                    exit_position["y"] >= self.col:
                 raise ValueError("终点初始坐标值不在地图范围内，请检查json文件中的exits参数！")
-            self.exits_pos_set.add((exits_position["x"], exits_position["y"]))
+            self.exits_pos_set.add((exit_position["x"], exit_position["y"]))
             self.players_dict[player_id] = dict()
-            self.players_dict[player_id]["id"] = player_id
             self.players_dict[player_id]["position"] = {"x": player_position["x"], "y": player_position["y"]}
             self.players_dict[player_id]["action_point"] = player_action_point
-            self.players_dict[player_id]["exits_position"] = exits_position
+            self.players_dict[player_id]["exit_position"] = exit_position
             self.players_dict[player_id]["score"] = 0
             self.players_dict[player_id]["bonus"] = 0
             self.players_dict[player_id]["gem"] = dict()
             self.copy_board[player_position["x"]][player_position["y"]] = 1
-            self.copy_board[exits_position["x"]][exits_position["y"]] = 1
+            self.copy_board[exit_position["x"]][exit_position["y"]] = 1
             for t in self.gem_type:
                 self.players_dict[player_id]["gem"][t] = 0
         for gem_id in range(len(self.gem_info)):
@@ -179,33 +180,32 @@ class Maze(EnvWrapper):
         self.finish = False
         self.info = None
         self.reward = 0
-        return {"players_info": self.players_dict, "gem_info": self.gem_dict, "board": self.board}, self.reward, self.\
-            finish
+        return {"players": self.players_dict, "gem": self.gem_dict, "maze": self.board, "my_id": self.cur_player}
 
     def step(self, action):
         if self.finish:
             return {"players_info": self.players_dict, "gem_info": self.gem_dict, "board": self.board}, self.reward, \
-                   self.finish
-        player_id = self.cur_player % self.players_num
-        player = self.players_dict[player_id]
-        self.cur_player = player_id + 1
+                self.finish
+        self.cur_player = (self.cur_player + 1) % self.players_num
+
+        player = self.players_dict[self.cur_player]
         move_data = self.action_dict[action]
         target_x = player["position"]["x"] + move_data[0]
         target_y = player["position"]["y"] + move_data[1]
         if action == "s":
-            self.players_dict[player_id]["action_point"] -= self.map_weights["stay"]
+            self.players_dict[self.cur_player]["action_point"] -= self.map_weights["stay"]
         else:
-            self.players_dict[player_id]["action_point"] -= self.map_weights["move"]
+            self.players_dict[self.cur_player]["action_point"] -= self.map_weights["move"]
         if 0 <= target_x < self.row and 0 <= target_y < self.col and self.board[target_x][target_y] == 0:
             self.copy_board[player["position"]["x"]][player["position"]["y"]] = 0
-            self.players_dict[player_id]["position"] = {"x": target_x, "y": target_y}
+            self.players_dict[self.cur_player]["position"] = {"x": target_x, "y": target_y}
             self.copy_board[target_x][target_y] = 1
             for gem in self.gem_dict:
                 gem_pos_x = self.gem_dict[gem]["x"]
                 gem_pos_y = self.gem_dict[gem]["y"]
                 if gem_pos_x == target_x and gem_pos_y == target_y:
-                    self.players_dict[player_id]["score"] += self.effect_value
-                    self.players_dict[player_id]["gem"][gem] += 1
+                    self.players_dict[self.cur_player]["score"] += self.effect_value
+                    self.players_dict[self.cur_player]["gem"][gem] += 1
                     while self.copy_board[gem_pos_x][gem_pos_y] != 0 or (gem_pos_x, gem_pos_y) in self.exits_pos_set:
                         gem_pos_x = math.floor(random.random() * self.row)
                         gem_pos_y = math.floor(random.random() * self.col)
@@ -214,15 +214,18 @@ class Maze(EnvWrapper):
                     self.gem_dict[gem]["y"] = gem_pos_y
                     if len(list(
                             filter(lambda x:
-                                   self.players_dict[player_id]["gem"][x] <=
-                                   self.players_dict[player_id]["bonus"], self.players_dict[player_id]["gem"]))) == 0:
-                        self.players_dict[player_id]["bonus"] += 1
-                        self.players_dict[player_id]["score"] += 30
+                                   self.players_dict[self.cur_player]["gem"][x] <=
+                                   self.players_dict[self.cur_player]["bonus"],
+                                   self.players_dict[self.cur_player]["gem"]))) == 0:
+                        self.players_dict[self.cur_player]["bonus"] += 1
+                        self.players_dict[self.cur_player]["score"] += 30
                     break
         if len(list(filter(lambda x: self.players_dict[x]["action_point"] > 0, self.players_dict))) == 0:
             self.finish = True
-        return {"players_info": self.players_dict, "gem_info": self.gem_dict, "board": self.board}, self.reward, self.\
-            finish
+        return {
+            "players": self.players_dict, "gem": self.gem_dict,
+            "maze": self.board, "my_id": self.cur_player
+        }, self.reward, self.finish
 
     def render(self):
         gem_width = 20
@@ -253,8 +256,8 @@ class Maze(EnvWrapper):
                             (self.limit_distance_y, self.limit_distance_x)),
                         (y * self.limit_distance_y, x * self.limit_distance_x))
         for index, player in enumerate(self.players_dict):
-            exits_x = self.players_dict[player]["exits_position"]["x"]
-            exits_y = self.players_dict[player]["exits_position"]["y"]
+            exits_x = self.players_dict[player]["exit_position"]["x"]
+            exits_y = self.players_dict[player]["exit_position"]["y"]
             self.viewer.blit(pygame.transform.scale(
                 self.exits_param[index], (self.limit_distance_y, self.limit_distance_x)),
                 (exits_y * self.limit_distance_y, exits_x * self.limit_distance_x))

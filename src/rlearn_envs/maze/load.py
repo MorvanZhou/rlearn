@@ -3,38 +3,42 @@ import os
 import pygame
 
 # 得到当前工程目录
-current_dir = os.path.split(os.path.realpath(__file__))[0]
+img_dir = os.path.join(os.path.dirname(__file__), "assets", "img")
 
 # 地图图片
-bush_file = current_dir + "/asserts/img/map/bush.png"
-grass_file = current_dir + "/asserts/img/map/grass.png"
-land_file = current_dir + "/asserts/img/map/land.png"
-stone_file = current_dir + "/asserts/img/map/stone.png"
-tree_file = current_dir + "/asserts/img/map/tree.png"
-water1_file = current_dir + "/asserts/img/map/water1.png"
-water2_file = current_dir + "/asserts/img/map/water2.png"
-wood1_file = current_dir + "/asserts/img/map/wood1.png"
-wood2_file = current_dir + "/asserts/img/map/wood2.png"
+map_img_dir = os.path.join(img_dir, "map")
+bush_file = os.path.join(map_img_dir, "bush.png")
+grass_file = os.path.join(map_img_dir, "grass.png")
+land_file = os.path.join(map_img_dir, "land.png")
+stone_file = os.path.join(map_img_dir, "stone.png")
+tree_file = os.path.join(map_img_dir, "tree.png")
+water1_file = os.path.join(map_img_dir, "water1.png")
+water2_file = os.path.join(map_img_dir, "water2.png")
+wood1_file = os.path.join(map_img_dir, "wood1.png")
+wood2_file = os.path.join(map_img_dir, "wood2.png")
 
 # 玩家图片
-blue_player_file = current_dir + "/asserts/img/penguin/blue.png"
-green_player_file = current_dir + "/asserts/img/penguin/green.png"
-red_player_file = current_dir + "/asserts/img/penguin/red.png"
-yellow_player_file = current_dir + "/asserts/img/penguin/yellow.png"
+player_img_dir = os.path.join(img_dir, "penguin")
+blue_player_file = os.path.join(player_img_dir, "blue.png")
+green_player_file = os.path.join(player_img_dir, "green.png")
+red_player_file = os.path.join(player_img_dir, "red.png")
+yellow_player_file = os.path.join(player_img_dir, "yellow.png")
 
 # 终点图片
-blue_flag_file = current_dir + "/asserts/img/flag/blue.png"
-green_flag_file = current_dir + "/asserts/img/flag/green.png"
-red_flag_file = current_dir + "/asserts/img/flag/red.png"
-yellow_flag_file = current_dir + "/asserts/img/flag/yellow.png"
+flag_dir = os.path.join(img_dir, "flag")
+blue_flag_file = os.path.join(flag_dir, "blue.png")
+green_flag_file = os.path.join(flag_dir, "green.png")
+red_flag_file = os.path.join(flag_dir, "red.png")
+yellow_flag_file = os.path.join(flag_dir, "yellow.png")
 
 # 宝石图片
-blue_gem_file = current_dir + "/asserts/img/gem/blue.png"
-red_gem_file = current_dir + "/asserts/img/gem/red.png"
-yellow_gem_file = current_dir + "/asserts/img/gem/yellow.png"
-pink_gem_file = current_dir + "/asserts/img/gem/pink.png"
-purple_gem_file = current_dir + "/asserts/img/gem/purple.png"
-bonus_file = current_dir + "/asserts/img/gem/bonus.png"
+gem_dir = os.path.join(img_dir, "gem")
+blue_gem_file = os.path.join(gem_dir, "blue.png")
+red_gem_file = os.path.join(gem_dir, "red.png")
+yellow_gem_file = os.path.join(gem_dir, "yellow.png")
+pink_gem_file = os.path.join(gem_dir, "pink.png")
+purple_gem_file = os.path.join(gem_dir, "purple.png")
+bonus_file = os.path.join(gem_dir, "bonus.png")
 
 
 # 得到地图
