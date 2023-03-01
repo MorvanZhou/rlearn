@@ -69,10 +69,7 @@ class Maze(EnvWrapper):
             "r": [0, 1],
             "s": [0, 0]
         }
-        self.finish = False
-        self.info = None
         self.exits_pos_set = set()
-        self.reward = 0
 
         # 用于render渲染
         pygame.init()
@@ -177,16 +174,11 @@ class Maze(EnvWrapper):
                 raise ValueError("宝石初始坐标值不在地图范围内，请检查json文件中的items参数！")
             self.gem_dict[gem_type] = {"x": gem_position["x"], "y": gem_position["y"]}
             self.copy_board[gem_position["x"]][gem_position["y"]] = 1
-        self.finish = False
-        self.info = None
-        self.reward = 0
         return {"players": self.players_dict, "gem": self.gem_dict, "maze": self.board, "my_id": self.cur_player}
 
     def step(self, action):
-        if self.finish:
-            return {"players_info": self.players_dict, "gem_info": self.gem_dict, "board": self.board}, self.reward, \
-                self.finish
-        self.cur_player = (self.cur_player + 1) % self.players_num
+        reward = -0.01
+        finish = False
 
         player = self.players_dict[self.cur_player]
         move_data = self.action_dict[action]
@@ -204,6 +196,7 @@ class Maze(EnvWrapper):
                 gem_pos_x = self.gem_dict[gem]["x"]
                 gem_pos_y = self.gem_dict[gem]["y"]
                 if gem_pos_x == target_x and gem_pos_y == target_y:
+                    reward += 1
                     self.players_dict[self.cur_player]["score"] += self.effect_value
                     self.players_dict[self.cur_player]["gem"][gem] += 1
                     while self.copy_board[gem_pos_x][gem_pos_y] != 0 or (gem_pos_x, gem_pos_y) in self.exits_pos_set:
@@ -221,11 +214,18 @@ class Maze(EnvWrapper):
                         self.players_dict[self.cur_player]["score"] += 30
                     break
         if len(list(filter(lambda x: self.players_dict[x]["action_point"] > 0, self.players_dict))) == 0:
-            self.finish = True
+            finish = True
+            reward = -1
+        elif all([(p["position"]["x"] == p["exit_position"]["x"]) and (p["position"]["y"] == p["exit_position"]["y"])
+                  for p in self.players_dict.values()]):
+            finish = True
+            reward = 2
+
+        self.cur_player = (self.cur_player + 1) % self.players_num
         return {
             "players": self.players_dict, "gem": self.gem_dict,
             "maze": self.board, "my_id": self.cur_player
-        }, self.reward, self.finish
+        }, reward, finish
 
     def render(self):
         gem_width = 20
@@ -313,13 +313,18 @@ class Maze(EnvWrapper):
         pygame.display.update()
         game_over()
         time.sleep(0)  # 控制每帧渲染持续时间
-        self.FPS_CLOCK.tick(20)  # 控制刷新速度，值越大刷新越快
+        self.FPS_CLOCK.tick(400)  # 控制刷新速度，值越大刷新越快
 
     def load(self, map_json: tp.Any):
         with open(map_json) as file:
             map_data = json.load(file)
             return map_data
 
+    @staticmethod
+    def close():
+        pygame.display.quit()
+        pygame.quit()
+        exit()
 
 if __name__ == "__main__":
     maze = Maze()

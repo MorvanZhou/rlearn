@@ -320,6 +320,7 @@ class BaseEnv(ABC):
     def name(self):
         return self._caption
 
-    def close(self):
+    @staticmethod
+    def close():
         pygame.display.quit()
         pygame.quit()
