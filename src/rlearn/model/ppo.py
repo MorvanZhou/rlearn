@@ -29,6 +29,8 @@ class _PPO(BaseStochasticModel, ABC):
         if self.training:
             self.models["pi"] = self.clone_model(self.models["pi_"])
             self.models["critic"] = critic
+            for layer in self.models["pi_"].layers:
+                layer.trainable = False
 
     @staticmethod
     def build_critic_callback(encoder: keras.Sequential):

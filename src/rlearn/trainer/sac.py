@@ -1,4 +1,5 @@
 import typing as tp
+from abc import ABC
 
 import numpy as np
 import tensorflow as tf
@@ -11,7 +12,7 @@ from rlearn.trainer import tools
 from rlearn.trainer.base import BaseTrainer, TrainResult
 
 
-class _SACTrainer(BaseTrainer):
+class _SACTrainer(BaseTrainer, ABC):
     name = __qualname__
 
     def __init__(
@@ -189,6 +190,39 @@ class SACDiscreteTrainer(_SACTrainer):
             alpha=alpha,
         )
 
+    def train_supervised(
+            self,
+            x: np.ndarray,
+            y: np.ndarray,
+            epoch: int,
+            learning_rate: float = 0.001,
+            batch_size: int = 32,
+            shuffle: bool = True,
+            save_dir: str = None,
+            verbose: int = 0,
+    ):
+        loss_fn = keras.losses.MeanSquaredError()
+        opt = keras.optimizers.Adam(learning_rate=learning_rate)
+
+        for loss_list, bx, by in self._supervised_train_batch_generator(
+                x=x,
+                y=y,
+                epoch=epoch,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                save_dir=save_dir,
+                verbose=verbose,
+        ):
+            with tf.GradientTape() as tape:
+                logits = self.model.models["actor"](bx)
+                a_size = logits.shape[1] // 2
+                loc = tf.tanh(logits[:, :a_size])
+                loss = loss_fn(by, loc)
+            tv = self.model.models["actor"].trainable_variables
+            grads = tape.gradient(loss, tv)
+            opt.apply_gradients(zip(grads, tv))
+            loss_list.append(loss)
+
 
 class SACContinueTrainer(_SACTrainer):
     name = __qualname__
@@ -203,3 +237,36 @@ class SACContinueTrainer(_SACTrainer):
             log_dir=log_dir,
             alpha=alpha,
         )
+
+    def train_supervised(
+            self,
+            x: np.ndarray,
+            y: np.ndarray,
+            epoch: int,
+            learning_rate: float = 0.001,
+            batch_size: int = 32,
+            shuffle: bool = True,
+            save_dir: str = None,
+            verbose: int = 0,
+    ):
+        loss_fn = keras.losses.MeanSquaredError()
+        opt = keras.optimizers.Adam(learning_rate=learning_rate)
+
+        for loss_list, bx, by in self._supervised_train_batch_generator(
+                x=x,
+                y=y,
+                epoch=epoch,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                save_dir=save_dir,
+                verbose=verbose,
+        ):
+            with tf.GradientTape() as tape:
+                logits = self.model.models["actor"](bx)
+                a_size = logits.shape[1] // 2
+                loc = tf.tanh(logits[:, :a_size])
+                loss = loss_fn(by, loc)
+            tv = self.model.models["actor"].trainable_variables
+            grads = tape.gradient(loss, tv)
+            opt.apply_gradients(zip(grads, tv))
+            loss_list.append(loss)

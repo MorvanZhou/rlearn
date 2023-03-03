@@ -50,6 +50,9 @@ class DDPG(BaseRLModel):
             self.models["actor_"] = self.clone_model(self.models["actor"])
             self.models["critic"] = critic
             self.models["critic_"] = self.clone_model(self.models["critic"])
+            for mn in ["actor_", "critic_"]:
+                for layer in self.models[mn].layers:
+                    layer.trainable = False
 
     def predict(self, s) -> np.ndarray:
         a = self.models[self.predicted_model_name].predict(np.expand_dims(s, axis=0), verbose=0).ravel()

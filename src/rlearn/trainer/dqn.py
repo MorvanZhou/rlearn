@@ -112,3 +112,34 @@ class DQNTrainer(BaseTrainer):
                 source=self.model.models["q"], target=self.model.models["q_"]
             )
         return res
+
+    def train_supervised(
+            self,
+            x: np.ndarray,
+            y: np.ndarray,
+            epoch: int,
+            learning_rate: float = 0.001,
+            batch_size: int = 32,
+            shuffle: bool = True,
+            save_dir: str = None,
+            verbose: int = 0,
+    ):
+        loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        opt = keras.optimizers.Adam(learning_rate=learning_rate)
+        for loss_list, bx, by in self._supervised_train_batch_generator(
+                x=x,
+                y=y,
+                epoch=epoch,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                save_dir=save_dir,
+                replace_nets=("q", "q_"),
+                verbose=verbose,
+        ):
+            with tf.GradientTape() as tape:
+                logits = self.model.models["q"](bx)
+                loss = loss_fn(by, logits)
+            tv = self.model.models["q"].trainable_variables
+            grads = tape.gradient(loss, tv)
+            opt.apply_gradients(zip(grads, tv))
+            loss_list.append(loss)

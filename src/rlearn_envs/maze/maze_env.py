@@ -177,7 +177,7 @@ class Maze(EnvWrapper):
         return {"players": self.players_dict, "gem": self.gem_dict, "maze": self.board, "my_id": self.cur_player}
 
     def step(self, action):
-        reward = -0.01
+        reward = -0.05
         finish = False
 
         player = self.players_dict[self.cur_player]
@@ -189,7 +189,10 @@ class Maze(EnvWrapper):
         else:
             self.players_dict[self.cur_player]["action_point"] -= self.map_weights["move"]
         if 0 <= target_x < self.row and 0 <= target_y < self.col and self.board[target_x][target_y] == 0:
-            self.copy_board[player["position"]["x"]][player["position"]["y"]] = 0
+            if sum(list(1 if self.players_dict[p]["position"]["x"] == player["position"]["x"] and
+                             self.players_dict[p]["position"]["y"] == player["position"]["y"] else 0 for p in
+                        self.players_dict)) == 1:
+                self.copy_board[player["position"]["x"]][player["position"]["y"]] = 0
             self.players_dict[self.cur_player]["position"] = {"x": target_x, "y": target_y}
             self.copy_board[target_x][target_y] = 1
             for gem in self.gem_dict:
@@ -219,7 +222,6 @@ class Maze(EnvWrapper):
         elif all([(p["position"]["x"] == p["exit_position"]["x"]) and (p["position"]["y"] == p["exit_position"]["y"])
                   for p in self.players_dict.values()]):
             finish = True
-            reward = 2
 
         self.cur_player = (self.cur_player + 1) % self.players_num
         return {
@@ -324,7 +326,7 @@ class Maze(EnvWrapper):
     def close():
         pygame.display.quit()
         pygame.quit()
-        exit()
+
 
 if __name__ == "__main__":
     maze = Maze()

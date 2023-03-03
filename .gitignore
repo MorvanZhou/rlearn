@@ -12,6 +12,7 @@
 /logs
 **/*.log
 **/*.zip
+**/*.np*
 /htmlcov
 /tmp
 **/events.out.tfevents.*

@@ -158,13 +158,13 @@ class TrainerTest(unittest.TestCase):
         )
         self.assertEqual(1, trainer.epsilon)
         self.assertIsInstance(trainer.replay_buffer, rlearn.RandomReplayBuffer)
-        v = trainer.model.models["q"].trainable_variables[0][0][0].numpy()
-        v_ = trainer.model.models["q_"].trainable_variables[0][0][0].numpy()
+        v = trainer.model.models["q"].weights[0][0][0].numpy()
+        v_ = trainer.model.models["q_"].weights[0][0][0].numpy()
         replaced = trainer.try_replace_params(source=trainer.model.models["q"],
                                               target=trainer.model.models["q_"])
         self.assertTrue(replaced)
         self.assertAlmostEqual(
-            trainer.model.models["q_"].trainable_variables[0][0][0].numpy(),
+            trainer.model.models["q_"].weights[0][0][0].numpy(),
             v_ * (1 - replace_ratio) + v * replace_ratio)
         self.assertIsInstance(trainer.predict(np.zeros([2, ])), int)
 

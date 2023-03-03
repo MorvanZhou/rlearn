@@ -48,6 +48,9 @@ class TD3(DDPG):
             self.models["c1_"] = self.clone_model(self.models["c1"])
             self.models["c2"] = critic
             self.models["c2_"] = self.clone_model(self.models["c2"])
+            for mn in ["actor_", "c1_", "c2_"]:
+                for layer in self.models[mn].layers:
+                    layer.trainable = False
 
     def predict(self, s) -> np.ndarray:
         a = self.models[self.predicted_model_name].predict(np.expand_dims(s, axis=0), verbose=0).ravel()

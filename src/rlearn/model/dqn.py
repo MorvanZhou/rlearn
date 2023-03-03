@@ -29,6 +29,8 @@ class DQN(BaseRLModel):
         self.models["q"] = q
         if self.training:
             self.models["q_"] = self.clone_model(self.models["q"])
+            for layer in self.models["q_"].layers:
+                layer.trainable = False
 
     def predict(self, s: np.ndarray):
         """

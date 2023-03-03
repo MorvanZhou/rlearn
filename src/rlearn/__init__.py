@@ -1,4 +1,5 @@
 from rlearn import distributed
+from rlearn import supervised
 from rlearn import transformer
 from rlearn import type
 from rlearn import zoo

@@ -210,6 +210,37 @@ class ActorCriticDiscreteTrainer(_ActorCriticTrainer):
             lam=lam,
         )
 
+    def train_supervised(
+            self,
+            x: np.ndarray,
+            y: np.ndarray,
+            epoch: int,
+            learning_rate: float = 0.001,
+            batch_size: int = 32,
+            shuffle: bool = True,
+            save_dir: str = None,
+            verbose: int = 0,
+    ):
+        loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        opt = keras.optimizers.Adam(learning_rate=learning_rate)
+
+        for loss_list, bx, by in self._supervised_train_batch_generator(
+                x=x,
+                y=y,
+                epoch=epoch,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                save_dir=save_dir,
+                verbose=verbose,
+        ):
+            with tf.GradientTape() as tape:
+                logits = self.model.models["actor"](bx)
+                loss = loss_fn(by, logits)
+            tv = self.model.models["actor"].trainable_variables
+            grads = tape.gradient(loss, tv)
+            opt.apply_gradients(zip(grads, tv))
+            loss_list.append(loss)
+
 
 class ActorCriticContinueTrainer(_ActorCriticTrainer):
     name = __qualname__
@@ -226,3 +257,36 @@ class ActorCriticContinueTrainer(_ActorCriticTrainer):
             entropy_coef=entropy_coef,
             lam=lam,
         )
+
+    def train_supervised(
+            self,
+            x: np.ndarray,
+            y: np.ndarray,
+            epoch: int,
+            learning_rate: float = 0.001,
+            batch_size: int = 32,
+            shuffle: bool = True,
+            save_dir: str = None,
+            verbose: int = 0,
+    ):
+        loss_fn = keras.losses.MeanSquaredError()
+        opt = keras.optimizers.Adam(learning_rate=learning_rate)
+
+        for loss_list, bx, by in self._supervised_train_batch_generator(
+                x=x,
+                y=y,
+                epoch=epoch,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                save_dir=save_dir,
+                verbose=verbose,
+        ):
+            with tf.GradientTape() as tape:
+                logits = self.model.models["actor"](bx)
+                a_size = logits.shape[1] // 2
+                loc = tf.tanh(logits[:, :a_size])
+                loss = loss_fn(by, loc)
+            tv = self.model.models["actor"].trainable_variables
+            grads = tape.gradient(loss, tv)
+            opt.apply_gradients(zip(grads, tv))
+            loss_list.append(loss)

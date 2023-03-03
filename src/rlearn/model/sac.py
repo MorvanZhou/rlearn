@@ -48,6 +48,9 @@ class _SAC(BaseStochasticModel, ABC):
             self.models["c1_"] = self.clone_model(self.models["c1"])
             self.models["c2"] = critic
             self.models["c2_"] = self.clone_model(self.models["c2"])
+            for mn in ["c1_", "c2_"]:
+                for layer in self.models[mn].layers:
+                    layer.trainable = False
 
 
 class SACDiscrete(_SAC):

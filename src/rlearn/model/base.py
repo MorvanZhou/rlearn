@@ -119,6 +119,23 @@ class BaseRLModel(ABC):
         a = self.predict(x)
         return self.map_action(a)
 
+    def save_actor_weights(self, path):
+        model_tmp_dir = path
+        if path.endswith(".zip"):
+            model_tmp_dir = path.rsplit(".zip")[0]
+        self.get_model_for_prediction().save_weights(
+            os.path.join(model_tmp_dir, f"{self.predicted_model_name}.ckpt")
+        )
+        zip_ckpt_model(model_tmp_dir)
+        shutil.rmtree(model_tmp_dir, ignore_errors=True)
+
+    def load_actor_weights(self, path):
+        if not path.endswith(".zip"):
+            path += ".zip"
+        unzipped_dir = unzip_model(path)
+        self.get_model_for_prediction().load_weights(
+            os.path.join(unzipped_dir, f"{self.predicted_model_name}.ckpt"))
+
     def save_weights(self, path):
         model_tmp_dir = path
         if path.endswith(".zip"):
@@ -132,8 +149,7 @@ class BaseRLModel(ABC):
         if not path.endswith(".zip"):
             path += ".zip"
         unzipped_dir = unzip_model(path)
-        self.get_model_for_prediction().load_weights(
-            os.path.join(unzipped_dir, f"{self.predicted_model_name}.ckpt"))
+        self.load_actor_weights(path)
         if self.training:
             for k, v in self.models.items():
                 if k == self.predicted_model_name:

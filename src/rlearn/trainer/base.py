@@ -1,4 +1,5 @@
 import inspect
+import os
 import typing as tp
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -260,3 +261,62 @@ class BaseTrainer(ABC):
 
     def map_action(self, action: rlearn.type.Action) -> rlearn.type.Action:
         return self.model.map_action(action)
+
+    def _supervised_train_batch_generator(
+            self,
+            x: np.ndarray,
+            y: np.ndarray,
+            epoch: int,
+            batch_size: int = 32,
+            shuffle: bool = True,
+            save_dir: str = None,
+            replace_nets: tp.Tuple[str, str] = None,
+            verbose: int = 0,
+    ) -> tp.Tuple[int, int, np.ndarray, np.ndarray]:
+        assert len(x) == len(y), ValueError(f"x has different length than y, got {len(x)} and {len(y)}")
+        if len(self.model.models) == 0:
+            raise ValueError("trainer's model has not been set, please add encoder or model to this trainer")
+        all_loss = []
+        for ep in range(epoch):
+            if shuffle:
+                shuffle_index = np.random.permutation(len(x))
+                x = x[shuffle_index]
+                y = y[shuffle_index]
+            for i in range(0, len(x), batch_size):
+                bx = x[i: i + batch_size]
+                by = y[i: i + batch_size]
+                yield all_loss, bx, by
+
+            # end of epoch
+            avg_loss = np.mean(all_loss)
+            all_loss.clear()
+            if verbose > 0:
+                print(f"supervised training, epoch={ep + 1} | loss={avg_loss:.5f}")
+            if save_dir:
+                if replace_nets is not None:
+                    self.replace_target_net(
+                        source=self.model.models[replace_nets[0]],
+                        target=self.model.models[replace_nets[1]],
+                    )
+
+                save_path = os.path.normpath(os.path.join(save_dir, f"ep-{ep + 1}.zip"))
+                if os.path.exists(save_path):
+                    raise FileExistsError(f"model file exists, please remove it or use new directory. '{save_path}'")
+                os.makedirs(save_dir, exist_ok=True)
+                self.model.save_actor_weights(save_path)
+                if verbose > 0:
+                    print(f"supervised actor's weights is saved to: '{save_path}'")
+
+    @abstractmethod
+    def train_supervised(
+            self,
+            x: np.ndarray,
+            y: np.ndarray,
+            epoch: int,
+            learning_rate: float = 0.001,
+            batch_size: int = 32,
+            shuffle: bool = True,
+            save_dir: str = None,
+            verbose: int = 0,
+    ):
+        pass
