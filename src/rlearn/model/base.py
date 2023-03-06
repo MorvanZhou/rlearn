@@ -269,6 +269,13 @@ class BaseStochasticModel(BaseRLModel, ABC):
         return action
 
     def disturbed_action(self, x, epsilon: float):
+        # if np.random.random() < epsilon:
+        #     pm = self.models[self.predicted_model_name]
+        #     if self.is_discrete_action:
+        #         a_size = pm.outputs[0].shape[1]
+        #         return np.random.randint(0, a_size)
+        #     else:
+        #         return np.random.uniform(-1., 1., size=pm.output_shape[1])
         return self.predict(x)
 
     def set_actor_encoder_callback(self, encoder: keras.Sequential, action_num: int) -> keras.Model:
