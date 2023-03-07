@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 from rlearn.config import TrainConfig
+from rlearn.model.base import BaseRLModel
 from rlearn.model.ppo import PPOContinue, PPODiscrete
 from rlearn.model.tools import build_encoder_from_config
 from rlearn.trainer import tools
@@ -16,7 +17,7 @@ class _PPOTrainer(BaseTrainer, ABC):
 
     def __init__(
             self,
-            model: keras.Model,
+            model: BaseRLModel,
             log_dir: str = None,
             clip_epsilon: float = 0.2,
             entropy_coef: float = 0.01,
@@ -26,7 +27,7 @@ class _PPOTrainer(BaseTrainer, ABC):
     ):
         super().__init__(log_dir)
 
-        self.model: keras.Model = model
+        self.model: BaseRLModel = model
         self.opt_a = None
         self.opt_c = None
         self.loss = keras.losses.MeanSquaredError()

@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 from rlearn.config import TrainConfig
+from rlearn.model.base import BaseRLModel
 from rlearn.model.sac import SACContinue, SACDiscrete
 from rlearn.model.tools import build_encoder_from_config
 from rlearn.trainer import tools
@@ -17,12 +18,12 @@ class _SACTrainer(BaseTrainer, ABC):
 
     def __init__(
             self,
-            model: keras.Model,
+            model: BaseRLModel,
             log_dir: str = None,
             alpha: float = 0.2,
     ):
         super().__init__(log_dir)
-        self.model: keras.Model = model
+        self.model: BaseRLModel = model
         self.alpha = alpha
         self.opt_a, self.opt_c = None, None
         self.loss = keras.losses.MeanSquaredError()

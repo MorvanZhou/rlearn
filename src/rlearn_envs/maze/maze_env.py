@@ -228,11 +228,13 @@ class Maze(EnvWrapper):
             "maze": self.board,
             "my_id": self.cur_player,
             "exits": self.players_exit,
+            "collected": "",
         }
 
     def step(self, action):
         reward = -0.01
         finish = False
+        collected = ""
 
         player = self.players_dict[self.cur_player]
         move_data = self.action_dict[action]
@@ -254,6 +256,7 @@ class Maze(EnvWrapper):
                 gem_pos_x = gem.row
                 gem_pos_y = gem.col
                 if gem_pos_x == target_x and gem_pos_y == target_y:
+                    collected = gem_name
                     reward += 1
                     player.score += self.effect_value
                     player.item_count[gem_name] += 1
@@ -270,7 +273,7 @@ class Maze(EnvWrapper):
                                    [k for k in player.item_count.keys() if k.endswith("_gem")]))) == 0:
                         self.players_bonus[player.id] += 1
                         reward += 5
-                        player.score += 30
+                        player.score += 5
                     break
         if len(list(filter(lambda x: self.players_dict[x].energy > 0, self.players_dict))) == 0:
             finish = True
@@ -281,8 +284,12 @@ class Maze(EnvWrapper):
 
         self.cur_player = (self.cur_player + 1) % self.players_num
         return {
-            "players": self.players_dict, "gems": self.gem_dict,
-            "maze": self.board, "my_id": self.cur_player, "exits": self.players_exit,
+            "players": self.players_dict,
+            "gems": self.gem_dict,
+            "maze": self.board,
+            "my_id": self.cur_player,
+            "exits": self.players_exit,
+            "collected": collected,
         }, reward, finish
 
     def render(self):

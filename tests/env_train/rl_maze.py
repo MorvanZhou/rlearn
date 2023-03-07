@@ -11,6 +11,13 @@ from rlearn_envs.maze import Maze
 TMP_DIR = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "tmp", "superRlTest")
 ACTION_ORDER = ["u", "d", "l", "r"]
 PAD_SIZE = 2
+ACTION_MOVE_DELTA = {
+    "u": (-1, 0),
+    "d": (1, 0),
+    "l": (0, -1),
+    "r": (0, 1),
+    "s": (0, 0)
+}
 
 
 def parse_state1(s: dict, maze: np.ndarray):
@@ -76,9 +83,8 @@ def parse_state2(s: dict, maze: np.ndarray):
     return state, me["action_point"]
 
 
-def parse_state3(s: dict, maze: np.ndarray):
+def parse_state3(players, me, gems, maze: np.ndarray):
     # input shape: (PAD_SIZE * 2 + 1) ** 2 - 1 + 8 + 10 + 5+16
-    me = s["players"][s["my_id"]]
     row, col = me.row + PAD_SIZE, me.col + PAD_SIZE
     # view: 5*5-1
     view = maze[row - PAD_SIZE: row + PAD_SIZE + 1, col - PAD_SIZE: col + PAD_SIZE + 1].ravel()
@@ -86,7 +92,9 @@ def parse_state3(s: dict, maze: np.ndarray):
     view = np.concatenate([view[:front + 1], view[front + 2:]], dtype=np.float32)
     # gd: [45, -45, 135, -135, 45~-45, 45~135, -45~-135, 135~180+-135~-180]
     gd = np.zeros((8,), dtype=np.float32)
-    for g in s["gems"].values():
+    for k, g in gems.items():
+        if not k.endswith("_gem"):
+            continue
         g = g[0]
         dy = -(g.row - me.row)
         dx = g.col - me.col
@@ -110,12 +118,11 @@ def parse_state3(s: dict, maze: np.ndarray):
             gd[6] += distance_co
         else:
             gd[7] += distance_co
-    gd /= 5.
 
     # other players:
-    players = np.zeros((8,), dtype=np.float32)
-    for k, p in s["players"].items():
-        if k == s["my_id"]:
+    ps = np.zeros((8,), dtype=np.float32)
+    for k, p in players.items():
+        if k == me.id:
             continue
         dy = -(p.row - me.row)
         dx = p.col - me.col
@@ -124,22 +131,21 @@ def parse_state3(s: dict, maze: np.ndarray):
         radian = np.arctan2(dy, dx)  # -pi, pi
 
         if math.isclose(radian, d45, abs_tol=1e-4):
-            players[0] += distance_co
+            ps[0] += distance_co
         elif math.isclose(radian, -d45, abs_tol=1e-4):
-            players[1] += distance_co
+            ps[1] += distance_co
         elif math.isclose(radian, d45 * 3, abs_tol=1e-4):
-            players[2] += distance_co
+            ps[2] += distance_co
         elif math.isclose(radian, -d45 * 3, abs_tol=1e-4):
-            players[3] += distance_co
+            ps[3] += distance_co
         elif abs(radian) < d45:
-            players[4] += distance_co
+            ps[4] += distance_co
         elif radian > d45 and radian < d45 * 3:
-            players[5] += distance_co
+            ps[5] += distance_co
         elif radian < -d45 and radian > -d45 * 3:
-            players[6] += distance_co
+            ps[6] += distance_co
         else:
-            players[7] += distance_co
-    players /= 5.
+            ps[7] += distance_co
 
     # keys = list(me.item_count.keys())
     # item_collection = np.zeros((len(keys),), dtype=np.float32)
@@ -169,17 +175,17 @@ def parse_state3(s: dict, maze: np.ndarray):
     state = np.concatenate([
         view,
         gd,
-        players,
+        ps,
         # item_collection,
         # coll_data
     ], dtype=np.float32)
 
-    return state, me.energy
+    return state
 
 
-def pad_maze(maze, d=2):
-    m = np.ones((maze.shape[0] + d * 2, maze.shape[1] + d * 2), dtype=np.float32)
-    m[d:-d, d:-d] = maze
+def pad_maze(maze):
+    m = np.ones((maze.shape[0] + PAD_SIZE * 2, maze.shape[1] + PAD_SIZE * 2), dtype=np.float32)
+    m[PAD_SIZE:-PAD_SIZE, PAD_SIZE:-PAD_SIZE] = maze
     return m
 
 
@@ -215,21 +221,20 @@ def get_graph(maze):
 
 
 def build_trainer():
-    tmp = os.path.join(os.path.dirname(__file__), "tmp")
-    trainer = rlearn.PPODiscreteTrainer(log_dir=tmp)
+    trainer = rlearn.PPODiscreteTrainer()
     input_size = (PAD_SIZE * 2 + 1) ** 2 - 1 + 8 + 8  # + 10 + 5
     trainer.set_model_encoder(pi=keras.Sequential([
         keras.layers.InputLayer(input_size),
-        keras.layers.Dense(256),
-        keras.layers.ReLU(),
+        # keras.layers.Dense(256),
+        # keras.layers.ReLU(),
         keras.layers.Dense(128),
         keras.layers.ReLU(),
         keras.layers.Dense(32),
         keras.layers.ReLU(),
     ]), critic=keras.Sequential([
         keras.layers.InputLayer(input_size),
-        keras.layers.Dense(256),
-        keras.layers.ReLU(),
+        # keras.layers.Dense(256),
+        # keras.layers.ReLU(),
         keras.layers.Dense(128),
         keras.layers.ReLU(),
         keras.layers.Dense(32),
@@ -240,10 +245,10 @@ def build_trainer():
     )
     trainer.set_params(
         learning_rate=(1e-4, 1e-3),
-        batch_size=32,
+        batch_size=16,
         gamma=0.9,
-        replace_step=1000,
-        epsilon_decay=1e-3,
+        replace_step=800,
+        epsilon_decay=4e-5,
     )
     trainer.set_replay_buffer(max_size=50000)
     return trainer
@@ -259,19 +264,30 @@ def train_rl(load_ep=None):
         raw_s = env.reset()
         maze = pad_maze(raw_s["maze"])
         gp = get_graph(raw_s["maze"])
-        s, energy = parse_state3(raw_s, maze=maze)
+        me = raw_s["players"][raw_s["my_id"]]
+        exit = raw_s["exits"][raw_s["my_id"]]
+        players = raw_s["players"]
+        gems = raw_s["gems"]
+        s = parse_state3(
+            me=me,
+            players=players,
+            gems=gems,
+            maze=maze
+        )
+
         step = 0
         ep_r = 0
         while True:
             if args.display:
                 env.render()
-            me = raw_s["players"][raw_s["my_id"]]
-            exit = raw_s["exits"][raw_s["my_id"]]
             path = pathfind.find(graph=gp, start=f'{me.row},{me.col}', end=f"{exit.row},{exit.col}")
             a = -1
-            if len(path) - 1 <= energy:
+            if len(path) - 1 <= me.energy:
                 a = trainer.predict(s)
                 action = trainer.map_action(a)
+                dr, dc = ACTION_MOVE_DELTA[action]
+                if me.row + dr == exit.row and me.col + dc == exit.col:
+                    action = "s"
             else:
                 if len(path) == 0:
                     action = "s"
@@ -280,8 +296,12 @@ def train_rl(load_ep=None):
                     nr, nc = int(next_n[0]), int(next_n[1])
                     action = move(nr, nc, me.row, me.col)
             raw_s, r, done = env.step(action)
+            me = raw_s["players"][raw_s["my_id"]]
+            exit = raw_s["exits"][raw_s["my_id"]]
+            players = raw_s["players"]
+            gems = raw_s["gems"]
             ep_r += r
-            s_, energy = parse_state3(raw_s, maze=maze)
+            s_ = parse_state3(me=me, players=players, gems=gems, maze=maze)
             if a != -1:
                 trainer.store_transition(s=s, a=a, r=r, s_=s_, done=done)
                 trainer.train_batch()
@@ -291,7 +311,7 @@ def train_rl(load_ep=None):
 
             step += 1
         trainer.save_model_weights(os.path.join(TMP_DIR, "rlModel", f"ep-{ep + 1}.zip"))
-        print(f"{ep=}, {ep_r=:.3f}, {trainer.epsilon=:.3f}")
+        print(f"ep={ep + 1}, {ep_r=:.3f}, {trainer.epsilon=:.3f}")
 
     env.close()
 

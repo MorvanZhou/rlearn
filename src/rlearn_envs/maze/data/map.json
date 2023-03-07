@@ -10,6 +10,134 @@
       1,
       1,
       1,
+      1,
+      1,
+      1
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
       1
     ],
     [
@@ -18,6 +146,8 @@
       0,
       0,
       0,
+      1,
+      1,
       0,
       0,
       0,
@@ -26,89 +156,7 @@
     ],
     [
       1,
-      0,
-      0,
       1,
-      0,
-      0,
-      1,
-      0,
-      0,
-      1
-    ],
-    [
-      1,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      1
-    ],
-    [
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1
-    ],
-    [
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1
-    ],
-    [
-      1,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      1
-    ],
-    [
-      1,
-      0,
-      0,
-      1,
-      0,
-      0,
-      1,
-      0,
-      0,
-      1
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
       1,
       1,
       1,
@@ -138,141 +186,225 @@
       "id": 1,
       "position": {
         "x": 1,
-        "y": 8
+        "y": 10
       },
       "objectType": 0,
       "direction": 3,
-      "team": 0,
+      "team": 1,
       "order": 0,
       "actionPoints": 300
-    },
-    {
-      "id": 2,
-      "position": {
-        "x": 8,
-        "y": 8
-      },
-      "objectType": 0,
-      "direction": 3,
-      "team": 0,
-      "order": 0,
-      "actionPoints": 300
-    },
-        {
-      "id": 3,
-      "position": {
-        "x": 8,
-        "y": 1
-      },
-      "objectType": 0,
-      "direction": 3,
-      "team": 0,
-      "order": 0,
-          "actionPoints": 300
     }
   ],
   "exits": [
     {
+      "id": 2,
       "position": {
-        "x": 8,
-        "y": 9
-      },
-      "objectType": 1,
-      "direction": 0
-    },
-    {
-      "position": {
-        "x": 8,
+        "x": 10,
         "y": 0
       },
       "objectType": 1,
-      "direction": 0
+      "direction": 0,
+      "team": 0,
+      "allowTeam": [
+        0
+      ]
     },
     {
+      "id": 3,
       "position": {
-        "x": 1,
-        "y": 0
+        "x": 10,
+        "y": 11
       },
       "objectType": 1,
-      "direction": 0
+      "direction": 0,
+      "team": 1,
+      "allowTeam": [
+        1
+      ]
+    }
+  ],
+  "items": [
+    {
+      "isAim": false,
+      "objectType": 101,
+      "position": {
+        "x": 3,
+        "y": 3
+      },
+      "id": 4
     },
     {
+      "isAim": false,
+      "objectType": 102,
       "position": {
-        "x": 1,
-        "y": 9
+        "x": 3,
+        "y": 8
       },
-      "objectType": 1,
-      "direction": 0
+      "id": 5
+    },
+    {
+      "isAim": false,
+      "objectType": 103,
+      "position": {
+        "x": 5,
+        "y": 5
+      },
+      "id": 6
+    },
+    {
+      "isAim": false,
+      "objectType": 104,
+      "position": {
+        "x": 8,
+        "y": 3
+      },
+      "id": 7
+    },
+    {
+      "isAim": false,
+      "objectType": 105,
+      "position": {
+        "x": 8,
+        "y": 8
+      },
+      "id": 8
+    },
+    {
+      "objectType": 201,
+      "position": {
+        "x": 6,
+        "y": 6
+      },
+      "id": 9
     }
   ],
   "mapWeights": {
     "move": {
-      "0": 1
+      "0": 1,
+      "1": 1
     },
     "stay": {
-      "0": 1
+      "0": 1,
+      "1": 1
     }
   },
-  "items": [
-    {
-      "objectType": 101,
-      "position": {
-        "x": 2,
-        "y": 2
-      }
-    },
-    {
-      "objectType": 102,
-      "position": {
-        "x": 7,
-        "y": 2
-      }
-    },
-    {
-      "objectType": 103,
-      "position": {
-        "x": 2,
-        "y": 7
-      }
-    },
-    {
-      "objectType": 104,
-      "position": {
-        "x": 7,
-        "y": 7
-      }
-    },
-    {
-      "objectType": 105,
-      "position": {
-        "x": 4,
-        "y": 4
-      }
-    }
-  ],
   "collectionsConfig": [
     {
       "items": [
         {
-          "objectType": 101
+          "presetPositions": [],
+          "objectType": 101,
+          "effectType": 1,
+          "effectValues": [
+            1
+          ],
+          "counts": null
         },
         {
-          "objectType": 102
+          "presetPositions": [],
+          "objectType": 102,
+          "effectType": 1,
+          "effectValues": [
+            1
+          ],
+          "counts": null
         },
         {
-          "objectType": 103
+          "presetPositions": [],
+          "objectType": 103,
+          "effectType": 1,
+          "effectValues": [
+            1
+          ],
+          "counts": null
         },
         {
-          "objectType": 104
+          "presetPositions": [],
+          "objectType": 104,
+          "effectType": 1,
+          "effectValues": [
+            1
+          ],
+          "counts": null
         },
         {
-          "objectType": 105
+          "presetPositions": [],
+          "objectType": 105,
+          "effectType": 1,
+          "effectValues": [
+            1
+          ],
+          "counts": null
         }
       ],
       "effectType": 1,
       "effectValues": [
-        10
+        5
+      ]
+    },
+    {
+      "effectType": 0,
+      "effectValues": [
+        0
+      ],
+      "items": [
+        {
+          "presetPositions": [],
+          "objectType": 201,
+          "counts": 0,
+          "effectType": 2,
+          "effectValues": [
+            1,
+            10,
+            10,
+            0,
+            -9999,
+            1,
+            10,
+            -10,
+            0,
+            -9999,
+            3,
+            10,
+            5,
+            0,
+            -9999,
+            3,
+            10,
+            -2,
+            0,
+            -9999,
+            4,
+            10,
+            1,
+            5,
+            101,
+            102,
+            103,
+            104,
+            105,
+            -9999,
+            4,
+            10,
+            -1,
+            5,
+            101,
+            102,
+            103,
+            104,
+            105,
+            -9999
+          ]
+        }
       ]
     }
+  ],
+  "hasGenId": true,
+  "winConditions": [
+    [
+      {
+        "winCondition": 0
+      }
+    ]
   ]
 }

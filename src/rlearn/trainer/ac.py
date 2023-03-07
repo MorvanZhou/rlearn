@@ -6,6 +6,7 @@ from tensorflow import keras
 
 from rlearn.config import TrainConfig
 from rlearn.model.ac import ActorCriticContinue, ActorCriticDiscrete
+from rlearn.model.base import BaseRLModel
 from rlearn.model.tools import build_encoder_from_config
 from rlearn.trainer import tools
 from rlearn.trainer.base import BaseTrainer, TrainResult
@@ -15,7 +16,7 @@ class _ActorCriticTrainer(BaseTrainer):
 
     def __init__(
             self,
-            model: keras.Model,
+            model: BaseRLModel,
             log_dir: str = None,
             entropy_coef: float = 0.01,
             lam: float = 0.9,
@@ -23,7 +24,7 @@ class _ActorCriticTrainer(BaseTrainer):
     ):
         super().__init__(log_dir)
 
-        self.model: keras.Model = model
+        self.model: BaseRLModel = model
         self.opt_a = None
         self.opt_c = None
 
