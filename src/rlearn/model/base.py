@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
+# import tensorflow_probability as tfp
 from tensorflow import keras
 
 import rlearn.type
@@ -251,12 +251,12 @@ class BaseStochasticModel(BaseRLModel, ABC):
     def dist(self, net: keras.Model, s: np.ndarray):
         if self.is_discrete_action:
             o = net(s)
-            return tfp.distributions.Categorical(logits=o)
+            # return tfp.distributions.Categorical(logits=o)
 
         o = net(s)
         a_size = o.shape[1] // 2
         loc, scale = tf.tanh(o[:, :a_size]), tf.nn.sigmoid(o[:, a_size:])
-        return tfp.distributions.MultivariateNormalDiag(loc=loc, scale_diag=scale)
+        # return tfp.distributions.MultivariateNormalDiag(loc=loc, scale_diag=scale)
 
     def predict(self, s: np.ndarray):
         s = np.expand_dims(s, axis=0)

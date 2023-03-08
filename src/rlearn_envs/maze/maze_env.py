@@ -27,14 +27,14 @@ class Player:
     Player 类，包含用户 id，行列坐标，当前朝向，体力
 
     Attributes:
-        id (int): 用户 id，全局唯一
-        row (int): 行坐标，从 0 开始计数
-        col (int): 列坐标，从 0 开始计数
-        direction (int): 当前朝向，为 ["U", "D", "L", "R"] 中的一种
-        energy (float): 当前体力
-        score (float): 当前得分
-        finished (bool): 是否已结束
-        item_count (dict[str, int]): 收集到的宝石和宝箱计数
+    id (int): 用户 id，全局唯一
+    row (int): 行坐标，从 0 开始计数
+    col (int): 列坐标，从 0 开始计数
+    direction (int): 当前朝向，为 ["U", "D", "L", "R"] 中的一种
+    energy (float): 当前体力
+    score (float): 当前得分
+    finished (bool): 是否已结束
+    item_count (dict[str, int]): 收集到的宝石和宝箱计数
     """
     id: int
     row: int
@@ -52,8 +52,8 @@ class Item:
     Item 类，可访问具体物品的行列坐标
 
     Attributes:
-        row (int): 行坐标，从 0 开始计数
-        col (int): 列坐标，从 0 开始计数
+    row (int): 行坐标，从 0 开始计数
+    col (int): 列坐标，从 0 开始计数
     """
     row: int
     col: int
@@ -70,7 +70,7 @@ class Maze(EnvWrapper):
         self.col = self.board.shape[1]
         # 获取地图网格信息
         if self.row == 0 or self.col == 0:
-            raise ValueError("地图网格数据异常，请检查json文件中的maoData参数！")
+            raise ValueError("地图网格数据异常，请检查json文件中的mapData参数！")
         # 获取玩家信息
         self.players_info = self._map_data.get("players", [])
         self.players_num = len(self.players_info)
@@ -94,15 +94,14 @@ class Maze(EnvWrapper):
             self.map_weights["move"] = map_weights.get("move", {"0": 1}).get("0", 1)
             self.map_weights["stay"] = map_weights.get("stay", {"0": 1}).get("0", 1)
         # 获取宝石信息
-        self.gem_type = {101: "red_gem", 102: "pink_gem", 103: "blue_gem", 104: "yellow_gem",
-                         105: "purple_gem", 201: "box"}
+        self.gem_type = {101: "pink_gem", 102: "red_gem", 103: "yellow_gem", 104: "purple_gem",
+                         105: "blue_gem", 201: "box"}
         self.gem_info = self._map_data.get("items", [])
         if len(self.gem_info) > 6:
             raise ValueError("items数量不能大于6个，请检查json文件中的items参数")
         self.gem_dict: tp.Dict[str, tp.List[Item]] = dict()
         self.collections_config = self._map_data.get("collectionsConfig")
         self.effect_value = self.collections_config[0].get("effectValues", [10])[0]
-        print(self.effect_value)
         self.action_dict = {
             "u": [-1, 0],
             "d": [1, 0],
@@ -116,38 +115,41 @@ class Maze(EnvWrapper):
         pygame.init()
         self.FPS_CLOCK = pygame.time.Clock()
         self.screen_size = (1050, 1400)
-        self.limit_distance_x = int(self.screen_size[0] / self.row)
-        self.limit_distance_y = int(self.screen_size[0] / self.col)
-        self.screen_size = (self.limit_distance_x * self.row, self.limit_distance_y * self.col + 350)
+        self.screen_size = (200 + 1000 + 200, 1000)
+        self.limit_distance_x = int(self.screen_size[1] / self.row)
+        self.limit_distance_y = int(self.screen_size[1] / self.col)
+        self.screen_size = (200 + self.limit_distance_x * self.row + 200, self.limit_distance_y * self.col)
         self.viewer = pygame.display.set_mode(self.screen_size, 0, 32)
+        pygame.display.set_caption("maze")
+        self.viewer.fill(pygame.Color("white"))
         # 加载地图元素
-        self.bush = load.bush()
-        self.grass = load.grass()
-        self.land = load.land()
-        self.stone = load.stone()
-        self.tree = load.tree()
-        self.water1 = load.water1()
-        self.water2 = load.water2()
-        self.wood1 = load.wood1()
-        self.wood2 = load.wood2()
+        self.bush = load.load_img("bush")
+        self.grass = load.load_img("grass")
+        self.land = load.load_img("land")
+        self.stone = load.load_img("stone")
+        self.tree = load.load_img("tree")
+        self.water1 = load.load_img("water1")
+        self.water2 = load.load_img("water2")
+        self.wood1 = load.load_img("wood1")
+        self.wood2 = load.load_img("wood2")
         # 加载玩家元素
-        self.blue_player = load.blue_player()
-        self.green_player = load.green_player()
-        self.red_player = load.red_player()
-        self.yellow_player = load.yellow_player()
+        self.blue_player = load.load_img("blue_player")
+        self.green_player = load.load_img("green_player")
+        self.red_player = load.load_img("red_player")
+        self.yellow_player = load.load_img("yellow_player")
         # 加载终点元素
-        self.blue_exits = load.blue_exits()
-        self.green_exits = load.green_exits()
-        self.red_exits = load.red_exits()
-        self.yellow_exits = load.yellow_exits()
+        self.blue_exits = load.load_img("blue_exits")
+        self.green_exits = load.load_img("green_exits")
+        self.red_exits = load.load_img("red_exits")
+        self.yellow_exits = load.load_img("yellow_exits")
         # 加载宝石图片
-        self.pink_gem = load.pink_gem()
-        self.red_gem = load.red_gem()
-        self.blue_gem = load.blue_gem()
-        self.yellow_gem = load.yellow_gem()
-        self.purple_gem = load.purple_gem()
-        self.bonus = load.bonus()
-        self.box = load.box()
+        self.pink_gem = load.load_img("pink_gem")
+        self.red_gem = load.load_img("red_gem")
+        self.blue_gem = load.load_img("blue_gem")
+        self.yellow_gem = load.load_img("yellow_gem")
+        self.purple_gem = load.load_img("purple_gem")
+        self.bonus = load.load_img("bonus")
+        self.box = load.load_img("box")
         self.players_bonus: tp.Dict[int, int] = dict()
         self.players_exit: tp.Dict[int, Item] = dict()
 
@@ -164,7 +166,22 @@ class Maze(EnvWrapper):
                           "box": self.box}
 
         self.render_board = np.multiply(np.floor(np.random.rand(self.row, self.col) * len(self.map_param)), self.board)
+        pygame.draw.lines(self.viewer, (0, 0, 0), True,
+                          ((0, self.screen_size[1]/2),
+                           (1400, self.screen_size[1]/2)), 5)
 
+        for x in range(self.row):
+            for y in range(self.col):
+                if self.board[x][y] == 0:
+                    self.viewer.blit(
+                        pygame.transform.scale(self.land, (self.limit_distance_y, self.limit_distance_x)),
+                        (200 + y * self.limit_distance_y, x * self.limit_distance_x))
+                else:
+                    self.viewer.blit(
+                        pygame.transform.scale(
+                            self.map_param[int(self.render_board[x][y])],
+                            (self.limit_distance_y, self.limit_distance_x)),
+                        (200 + y * self.limit_distance_y, x * self.limit_distance_x))
 
     def reset(self) -> State:
         # 存储玩家id值，避免出现重复id
@@ -227,7 +244,27 @@ class Maze(EnvWrapper):
                 raise ValueError("宝石/宝箱初始坐标值不在地图范围内，请检查json文件中的items参数！")
             self.gem_dict[gem_type] = [Item(row=gem_position["x"], col=gem_position["y"])]
             self.copy_board[gem_position["x"]][gem_position["y"]] = 1
-        print(self.players_dict)
+        for index, player in enumerate(self.players_dict):
+            p = self.players_dict[player]
+            player_x = p.row
+            player_y = p.col
+            player_img = self.player_param[index]
+            player_img = pygame.transform.scale(player_img, (self.limit_distance_y, self.limit_distance_x))
+            player_rect = player_img.get_rect()
+            player_rect.x = 200 + player_y * self.limit_distance_y
+            player_rect.y = player_x * self.limit_distance_x
+            print(player_rect)
+            self.viewer.blit(player_img, player_rect)
+            # self.viewer.blit(pygame.transform.scale(
+            #     self.player_param[index], (self.limit_distance_y, self.limit_distance_x)).get_rect(),
+            #     (200 + player_y * self.limit_distance_y, player_x * self.limit_distance_x))
+            # background = pygame.Surface((self.limit_distance_x, self.limit_distance_y))
+            # background.set_alpha(1)
+            # background.fill(pygame.Color("white"))
+            # background.set_alpha(1)
+            # background.blit(pygame.transform.scale(
+            #     self.player_param[index], (self.limit_distance_y, self.limit_distance_x)), (0, 0))
+            # self.viewer.blit(background, (200 + player_y * self.limit_distance_y, player_x * self.limit_distance_x))
         return {
             "players": self.players_dict,
             "gems": self.gem_dict,
@@ -243,13 +280,14 @@ class Maze(EnvWrapper):
         collected = ""
         player = self.players_dict[self.cur_player]
         # 当玩家行动点为零且游戏未结束（部分用户吃到宝箱可能导致行动点增加或减少），用户的action设置为"s"且该行为不会影响用户的行动点数值
-        if player.energy == 0 or player.energy < self.map_weights["stay"] or player.energy < self.map_weights["move"]:
-            action = "s"
-        else:
-            if action == "s":
+        if action == "s":
+            if player.energy >= self.map_weights["stay"]:
                 player.energy -= self.map_weights["stay"]
-            else:
+        else:
+            if player.energy >= self.map_weights["move"]:
                 player.energy -= self.map_weights["move"]
+            else:
+                action = "s"
         move_data = self.action_dict[action]
         target_x = player.row + move_data[0]
         target_y = player.col + move_data[1]
@@ -288,7 +326,9 @@ class Maze(EnvWrapper):
                         reward += 5
                         player.score += 5
                     break
-        if len(list(filter(lambda x: self.players_dict[x].energy > self.map_weights["stay"] and self.players_dict[x].energy > self.map_weights["move"], self.players_dict))) == 0:
+        if len(list(filter(
+                lambda x: self.players_dict[x].energy > self.map_weights["stay"] and self.players_dict[x].energy >
+                          self.map_weights["move"], self.players_dict))) == 0:
             finish = True
             reward = -1
         elif all([(p.row == self.players_exit[p.id].row) and (p.col == self.players_exit[p.id].col)
@@ -297,103 +337,163 @@ class Maze(EnvWrapper):
 
         self.cur_player = (self.cur_player + 1) % self.players_num
         return {
-            "players": self.players_dict,
-            "gems": self.gem_dict,
-            "maze": self.board,
-            "my_id": self.cur_player,
-            "exits": self.players_exit,
-            "collected": collected,
-        }, reward, finish
+                   "players": self.players_dict,
+                   "gems": self.gem_dict,
+                   "maze": self.board,
+                   "my_id": self.cur_player,
+                   "exits": self.players_exit,
+                   "collected": collected,
+               }, reward, finish
 
     def render(self):
         gem_width = 20
         font_size = 20
-        pygame.display.set_caption("maze")
-        self.viewer.fill(pygame.Color("white"))
+        # pygame.display.set_caption("maze")
+        # self.viewer.fill(pygame.Color("white"))
 
         # 画直线
-        for c in range(self.col):
-            pygame.draw.lines(self.viewer, (255, 255, 255), True,
-                              ((self.limit_distance_x * c, 0),
-                               (self.limit_distance_x * c, self.col * self.limit_distance_x)), 1)
-        for r in range(self.row):
-            pygame.draw.lines(self.viewer, (255, 255, 255), True,
-                              ((0, self.limit_distance_y * r),
-                               (self.row * self.limit_distance_y, self.limit_distance_y * r)), 1)
+        # pygame.draw.lines(self.viewer, (0, 0, 0), True,
+        #                   ((0, self.screen_size[1]/2),
+        #                    (1400, self.screen_size[1]/2)), 5)
+        #
+        # for x in range(self.row):
+        #     for y in range(self.col):
+        #         if self.board[x][y] == 0:
+        #             self.viewer.blit(
+        #                 pygame.transform.scale(self.land, (self.limit_distance_y, self.limit_distance_x)),
+        #                 (200 + y * self.limit_distance_y, x * self.limit_distance_x))
+        #         else:
+        #             self.viewer.blit(
+        #                 pygame.transform.scale(
+        #                     self.map_param[int(self.render_board[x][y])],
+        #                     (self.limit_distance_y, self.limit_distance_x)),
+        #                 (200 + y * self.limit_distance_y, x * self.limit_distance_x))
 
-        for x in range(self.row):
-            for y in range(self.col):
-                if self.board[x][y] == 0:
-                    self.viewer.blit(
-                        pygame.transform.scale(self.land, (self.limit_distance_y, self.limit_distance_x)),
-                        (y * self.limit_distance_y, x * self.limit_distance_x))
-                else:
-                    self.viewer.blit(
-                        pygame.transform.scale(
-                            self.map_param[int(self.render_board[x][y])],
-                            (self.limit_distance_y, self.limit_distance_x)),
-                        (y * self.limit_distance_y, x * self.limit_distance_x))
         for index, player in enumerate(self.players_dict):
+            basic_x = 20 + math.floor(index / 2) * 1200
+            basic_y = 20 + index % 2 * 500
             exits_x = self.players_exit[index].row
             exits_y = self.players_exit[index].col
             self.viewer.blit(pygame.transform.scale(
                 self.exits_param[index], (self.limit_distance_y, self.limit_distance_x)),
-                (exits_y * self.limit_distance_y, exits_x * self.limit_distance_x))
+                (200 + exits_y * self.limit_distance_y, exits_x * self.limit_distance_x))
             p = self.players_dict[player]
             player_x = p.row
             player_y = p.col
-            self.viewer.blit(pygame.transform.scale(
-                self.player_param[index], (self.limit_distance_y, self.limit_distance_x)),
-                (player_y * self.limit_distance_y, player_x * self.limit_distance_x))
+            # self.viewer.blit(pygame.transform.scale(
+            #     self.player_param[index], (self.limit_distance_y, self.limit_distance_x)),
+            #     (200 + player_y * self.limit_distance_y, player_x * self.limit_distance_x))
             font = pygame.font.SysFont('inkfree', font_size)
+
             text = font.render(self.player_queue[index] + " id:", True, (0, 0, 0))
             self.viewer.blit(text, (50 + 250 * index, self.screen_size[0] + 20))
+            text = font.render(self.player_queue[index] + " id:", True, (0, 0, 0))
+            self.viewer.blit(text, (0 + basic_x, 0 + basic_y))
+
             text = font.render(str(index), True, (0, 0, 0))
             self.viewer.blit(text, (180 + 250 * index, self.screen_size[0] + 20))
+            text = font.render(str(index), True, (0, 0, 0))
+            self.viewer.blit(text, (120 + basic_x, 0 + basic_y))
+
             text = font.render(self.player_queue[index] + " score:", True, (0, 0, 0))
             self.viewer.blit(text, (50 + 250 * index, self.screen_size[0] + 55))
+            text = font.render(self.player_queue[index] + " score:", True, (0, 0, 0))
+            self.viewer.blit(text, (0 + basic_x, 35 + basic_y))
+
             text = font.render(str(p.score), True, (0, 0, 0))
             self.viewer.blit(text, (180 + 250 * index, self.screen_size[0] + 55))
+            text = font.render(str(p.score), True, (0, 0, 0))
+            self.viewer.blit(text, (120 + basic_x, 35 + basic_y))
+            background = pygame.Surface((60, 40))
+            background.fill(pygame.Color("white"))
+            background.blit(text, (0, 0))
+            self.viewer.blit(background, (120 + basic_x, 35 + basic_y))
+
             text = font.render(self.player_queue[index] + " step:", True, (0, 0, 0))
             self.viewer.blit(text, (50 + 250 * index, self.screen_size[0] + 90))
-            text = font.render(str(p.energy), False, (0, 0, 0))
+            text = font.render(self.player_queue[index] + " step:", True, (0, 0, 0))
+            self.viewer.blit(text, (0 + basic_x, 70 + basic_y))
+
+            text = font.render(str(p.energy), True, (0, 0, 0))
             self.viewer.blit(text, (180 + 250 * index, self.screen_size[0] + 90))
+            text = font.render(str(p.energy), True, (0, 0, 0))
+            self.viewer.blit(text, (120 + basic_x, 70 + basic_y))
+            background = pygame.Surface((60, 40))
+            background.fill(pygame.Color("white"))
+            background.blit(text, (0, 0))
+            self.viewer.blit(background, (120 + basic_x, 70 + basic_y))
+
             # 绘制玩家获取的宝石数量
             self.viewer.blit(pygame.transform.scale(self.pink_gem, (gem_width, gem_width)),
-                             (50 + 250 * index, self.screen_size[0] + 125))
-            text = font.render(" × " + str(p.item_count["pink_gem"]), True, (0, 0, 0))
-            self.viewer.blit(text, (70 + 250 * index, self.screen_size[0] + 122.5))
+                             (0 + basic_x, 105 + basic_y))
+            text = font.render(" ×   " + str(p.item_count["pink_gem"]), True, (0, 0, 0))
+            self.viewer.blit(text, (30 + basic_x, 105 + basic_y))
+            background = pygame.Surface((60, 40))
+            background.fill(pygame.Color("white"))
+            background.blit(text, (0, 0))
+            self.viewer.blit(background, (30 + basic_x, 105 + basic_y))
+
             self.viewer.blit(pygame.transform.scale(self.red_gem, (gem_width, gem_width)),
-                             (50 + 250 * index, self.screen_size[0] + 160))
-            text = font.render(" × " + str(p.item_count["red_gem"]), True, (0, 0, 0))
-            self.viewer.blit(text, (70 + 250 * index, self.screen_size[0] + 157.5))
+                             (0 + basic_x, 140 + basic_y))
+            text = font.render(" ×   " + str(p.item_count["red_gem"]), True, (0, 0, 0))
+            self.viewer.blit(text, (30 + basic_x, 140 + basic_y))
+            background = pygame.Surface((60, 40))
+            background.fill(pygame.Color("white"))
+            background.blit(text, (0, 0))
+            self.viewer.blit(background, (30 + basic_x, 140 + basic_y))
+
             self.viewer.blit(pygame.transform.scale(self.yellow_gem, (gem_width, gem_width)),
-                             (50 + 250 * index, self.screen_size[0] + 195))
-            text = font.render(" × " + str(p.item_count["yellow_gem"]), True, (0, 0, 0))
-            self.viewer.blit(text, (70 + 250 * index, self.screen_size[0] + 192.5))
+                             (0 + basic_x, 175 + basic_y))
+            text = font.render(" ×   " + str(p.item_count["yellow_gem"]), True, (0, 0, 0))
+            self.viewer.blit(text, (30 + basic_x, 175 + basic_y))
+            background = pygame.Surface((60, 40))
+            background.fill(pygame.Color("white"))
+            background.blit(text, (0, 0))
+            self.viewer.blit(background, (30 + basic_x, 175 + basic_y))
+
             self.viewer.blit(pygame.transform.scale(self.blue_gem, (gem_width, gem_width)),
-                             (50 + 250 * index, self.screen_size[0] + 230))
-            text = font.render(" × " + str(p.item_count["blue_gem"]), True, (0, 0, 0))
-            self.viewer.blit(text, (70 + 250 * index, self.screen_size[0] + 227.5))
+                             (0 + basic_x, 210 + basic_y))
+            text = font.render(" ×   " + str(p.item_count["blue_gem"]), True, (0, 0, 0))
+            self.viewer.blit(text, (30 + basic_x, 210 + basic_y))
+            background = pygame.Surface((60, 40))
+            background.fill(pygame.Color("white"))
+            background.blit(text, (0, 0))
+            self.viewer.blit(background, (30 + basic_x, 210 + basic_y))
+
             self.viewer.blit(pygame.transform.scale(self.purple_gem, (gem_width, gem_width)),
-                             (50 + 250 * index, self.screen_size[0] + 265))
-            text = font.render(" × " + str(p.item_count["purple_gem"]), True, (0, 0, 0))
-            self.viewer.blit(text, (70 + 250 * index, self.screen_size[0] + 262.5))
+                             (0 + basic_x, 245 + basic_y))
+            text = font.render(" ×   " + str(p.item_count["purple_gem"]), True, (0, 0, 0))
+            self.viewer.blit(text, (30 + basic_x, 245 + basic_y))
+            background = pygame.Surface((60, 40))
+            background.fill(pygame.Color("white"))
+            background.blit(text, (0, 0))
+            self.viewer.blit(background, (30 + basic_x, 245 + basic_y))
+
             self.viewer.blit(pygame.transform.scale(self.box, (gem_width, gem_width)),
-                             (50 + 250 * index, self.screen_size[0] + 300))
-            text = font.render(" × " + str(p.item_count["box"]), True, (0, 0, 0))
-            self.viewer.blit(text, (70 + 250 * index, self.screen_size[0] + 297.5))
+                             (0 + basic_x, 280 + basic_y))
+            text = font.render(" ×   " + str(p.item_count["box"]), True, (0, 0, 0))
+            self.viewer.blit(text, (30 + basic_x, 280 + basic_y))
+            background = pygame.Surface((60, 40))
+            background.fill(pygame.Color("white"))
+            background.blit(text, (0, 0))
+            self.viewer.blit(background, (30 + basic_x, 280 + basic_y))
+
             self.viewer.blit(pygame.transform.scale(self.bonus, (gem_width, gem_width)),
-                             (50 + 250 * index, self.screen_size[0] + 335))
-            text = font.render(" × " + str(self.players_bonus[player]), True, (0, 0, 0))
-            self.viewer.blit(text, (70 + 250 * index, self.screen_size[0] + 332.5))
+                             (0 + basic_x, 315 + basic_y))
+            text = font.render(" ×   " + str(self.players_bonus[player]), True, (0, 0, 0))
+            self.viewer.blit(text, (30 + basic_x, 315 + basic_y))
+            background = pygame.Surface((60, 40))
+            background.fill(pygame.Color("white"))
+            background.blit(text, (0, 0))
+            self.viewer.blit(background, (30 + basic_x, 315 + basic_y))
         for gem in self.gem_dict:
             g = self.gem_dict[gem][0]
             gem_x = g.row
             gem_y = g.col
             self.viewer.blit(
                 pygame.transform.scale(self.gem_param[gem], (self.limit_distance_y, self.limit_distance_x)),
-                (gem_y * self.limit_distance_y, gem_x * self.limit_distance_x))
+                (200 + gem_y * self.limit_distance_y, gem_x * self.limit_distance_x))
+
         pygame.display.update()
         game_over()
         time.sleep(0)  # 控制每帧渲染持续时间
