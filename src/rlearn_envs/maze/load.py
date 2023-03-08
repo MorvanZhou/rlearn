@@ -39,12 +39,18 @@ yellow_gem_file = os.path.join(gem_dir, "yellow.png")
 pink_gem_file = os.path.join(gem_dir, "pink.png")
 purple_gem_file = os.path.join(gem_dir, "purple.png")
 bonus_file = os.path.join(gem_dir, "bonus.png")
+box_file = os.path.join(gem_dir, "box_close.png")
 
 
 # 得到地图
 def bush():
     bush = pygame.image.load(bush_file).convert()
     return bush
+
+
+def box():
+    box = pygame.image.load(box_file).convert()
+    return box
 
 
 def grass():

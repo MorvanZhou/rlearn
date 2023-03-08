@@ -94,13 +94,15 @@ class Maze(EnvWrapper):
             self.map_weights["move"] = map_weights.get("move", {"0": 1}).get("0", 1)
             self.map_weights["stay"] = map_weights.get("stay", {"0": 1}).get("0", 1)
         # 获取宝石信息
-        self.gem_type = ["red_gem", "pink_gem", "blue_gem", "yellow_gem", "purple_gem"]
+        self.gem_type = {101: "red_gem", 102: "pink_gem", 103: "blue_gem", 104: "yellow_gem",
+                         105: "purple_gem", 201: "box"}
         self.gem_info = self._map_data.get("items", [])
-        if len(self.gem_info) > 5:
-            raise ValueError("items数量不能大于5个，请检查json文件中的items参数")
+        if len(self.gem_info) > 6:
+            raise ValueError("items数量不能大于6个，请检查json文件中的items参数")
         self.gem_dict: tp.Dict[str, tp.List[Item]] = dict()
         self.collections_config = self._map_data.get("collectionsConfig")
         self.effect_value = self.collections_config[0].get("effectValues", [10])[0]
+        print(self.effect_value)
         self.action_dict = {
             "u": [-1, 0],
             "d": [1, 0],
@@ -145,6 +147,7 @@ class Maze(EnvWrapper):
         self.yellow_gem = load.yellow_gem()
         self.purple_gem = load.purple_gem()
         self.bonus = load.bonus()
+        self.box = load.box()
         self.players_bonus: tp.Dict[int, int] = dict()
         self.players_exit: tp.Dict[int, Item] = dict()
 
@@ -157,11 +160,23 @@ class Maze(EnvWrapper):
                           "blue_gem": self.blue_gem,
                           "yellow_gem": self.yellow_gem,
                           "pink_gem": self.pink_gem,
-                          "purple_gem": self.purple_gem}
+                          "purple_gem": self.purple_gem,
+                          "box": self.box}
 
         self.render_board = np.multiply(np.floor(np.random.rand(self.row, self.col) * len(self.map_param)), self.board)
 
     def reset(self) -> State:
+        # 存储玩家id值，避免出现重复id
+        exist_id = set()
+        # 默认先手玩家为id = 0的玩家
+        self.cur_player = 0
+        self.players_bonus = {}
+        self.players_exit = {}
+        self.copy_board = copy.deepcopy(self.board)
+        self.exits_pos_set = set()
+        # 重置玩家初始信息
+
+    def resets(self) -> State:
         # 存储玩家id值，避免出现重复id
         exist_id = set()
         # 默认先手玩家为id = 0的玩家
@@ -203,7 +218,7 @@ class Maze(EnvWrapper):
                 direction="d",
                 score=0,
                 finished=False,
-                item_count={t: 0 for t in self.gem_type}
+                item_count={t: 0 for t in self.gem_type.values()}
             )
             self.players_bonus[player_id] = 0
             self.players_exit[player_id] = Item(row=exit_position["x"], col=exit_position["y"])
@@ -213,15 +228,16 @@ class Maze(EnvWrapper):
 
         for gem_id in range(len(self.gem_info)):
             gem_info = self.gem_info[gem_id]
-            gem_type = self.gem_type[gem_id]
+            gem_type = self.gem_type[gem_info["objectType"]]
             gem_position = gem_info.get("position", None)
             if not gem_position:
                 raise ValueError("玩家初始坐标值不能为空，请检查json文件中的players参数！")
             if gem_position["x"] < 0 or gem_position["x"] >= self.row or gem_position["y"] < 0 or \
                     gem_position["y"] >= self.col:
-                raise ValueError("宝石初始坐标值不在地图范围内，请检查json文件中的items参数！")
+                raise ValueError("宝石/宝箱初始坐标值不在地图范围内，请检查json文件中的items参数！")
             self.gem_dict[gem_type] = [Item(row=gem_position["x"], col=gem_position["y"])]
             self.copy_board[gem_position["x"]][gem_position["y"]] = 1
+        print(self.players_dict)
         return {
             "players": self.players_dict,
             "gems": self.gem_dict,
@@ -235,15 +251,18 @@ class Maze(EnvWrapper):
         reward = -0.01
         finish = False
         collected = ""
-
         player = self.players_dict[self.cur_player]
+        # 当玩家行动点为零且游戏未结束（部分用户吃到宝箱可能导致行动点增加或减少），用户的action设置为"s"且该行为不会影响用户的行动点数值
+        if player.energy == 0 or player.energy < self.map_weights["stay"] or player.energy < self.map_weights["move"]:
+            action = "s"
+        else:
+            if action == "s":
+                player.energy -= self.map_weights["stay"]
+            else:
+                player.energy -= self.map_weights["move"]
         move_data = self.action_dict[action]
         target_x = player.row + move_data[0]
         target_y = player.col + move_data[1]
-        if action == "s":
-            player.energy -= self.map_weights["stay"]
-        else:
-            player.energy -= self.map_weights["move"]
         if 0 <= target_x < self.row and 0 <= target_y < self.col and self.board[target_x][target_y] == 0:
             if sum(list(1 if p.row == player.row and p.col == player.col else 0 for p in
                         self.players_dict.values())) == 1:
@@ -257,9 +276,13 @@ class Maze(EnvWrapper):
                 gem_pos_y = gem.col
                 if gem_pos_x == target_x and gem_pos_y == target_y:
                     collected = gem_name
-                    reward += 1
-                    player.score += self.effect_value
                     player.item_count[gem_name] += 1
+                    if gem_name == "box":
+                        # todo
+                        print("this is box, do nothing!")
+                    else:
+                        reward += 1
+                        player.score += self.effect_value
                     while self.copy_board[gem_pos_x][gem_pos_y] != 0 or (gem_pos_x, gem_pos_y) in self.exits_pos_set:
                         gem_pos_x = math.floor(random.random() * self.row)
                         gem_pos_y = math.floor(random.random() * self.col)
@@ -275,7 +298,7 @@ class Maze(EnvWrapper):
                         reward += 5
                         player.score += 5
                     break
-        if len(list(filter(lambda x: self.players_dict[x].energy > 0, self.players_dict))) == 0:
+        if len(list(filter(lambda x: self.players_dict[x].energy > self.map_weights["stay"] and self.players_dict[x].energy > self.map_weights["move"], self.players_dict))) == 0:
             finish = True
             reward = -1
         elif all([(p.row == self.players_exit[p.id].row) and (p.col == self.players_exit[p.id].col)
@@ -366,10 +389,14 @@ class Maze(EnvWrapper):
                              (50 + 250 * index, self.screen_size[0] + 265))
             text = font.render(" × " + str(p.item_count["purple_gem"]), True, (0, 0, 0))
             self.viewer.blit(text, (70 + 250 * index, self.screen_size[0] + 262.5))
-            self.viewer.blit(pygame.transform.scale(self.bonus, (gem_width, gem_width)),
+            self.viewer.blit(pygame.transform.scale(self.box, (gem_width, gem_width)),
                              (50 + 250 * index, self.screen_size[0] + 300))
-            text = font.render(" × " + str(self.players_bonus[player]), True, (0, 0, 0))
+            text = font.render(" × " + str(p.item_count["box"]), True, (0, 0, 0))
             self.viewer.blit(text, (70 + 250 * index, self.screen_size[0] + 297.5))
+            self.viewer.blit(pygame.transform.scale(self.bonus, (gem_width, gem_width)),
+                             (50 + 250 * index, self.screen_size[0] + 335))
+            text = font.render(" × " + str(self.players_bonus[player]), True, (0, 0, 0))
+            self.viewer.blit(text, (70 + 250 * index, self.screen_size[0] + 332.5))
         for gem in self.gem_dict:
             g = self.gem_dict[gem][0]
             gem_x = g.row
@@ -380,7 +407,7 @@ class Maze(EnvWrapper):
         pygame.display.update()
         game_over()
         time.sleep(0)  # 控制每帧渲染持续时间
-        self.FPS_CLOCK.tick(400)  # 控制刷新速度，值越大刷新越快
+        self.FPS_CLOCK.tick(4)  # 控制刷新速度，值越大刷新越快
 
     def load(self, map_json: tp.Any):
         with open(map_json) as file:
@@ -396,8 +423,8 @@ class Maze(EnvWrapper):
 if __name__ == "__main__":
     maze = Maze()
     actions = ["u", "d", "l", "r", "s"]
-    for _ in range(10):
-        maze.reset()
+    for _ in range(10000):
+        maze.resets()
         while True:
             state, reward, done = maze.step(actions[math.floor(random.random() * 5)])
             maze.render()
