@@ -397,7 +397,7 @@ class Maze(EnvWrapper):
         pygame.display.update()
         game_over()
         time.sleep(0)  # 控制每帧渲染持续时间
-        self.FPS_CLOCK.tick(4)  # 控制刷新速度，值越大刷新越快
+        self.FPS_CLOCK.tick(400)  # 控制刷新速度，值越大刷新越快
 
     def load(self, map_json: tp.Any):
         with open(map_json) as file:
