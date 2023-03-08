@@ -165,18 +165,8 @@ class Maze(EnvWrapper):
 
         self.render_board = np.multiply(np.floor(np.random.rand(self.row, self.col) * len(self.map_param)), self.board)
 
-    def reset(self) -> State:
-        # 存储玩家id值，避免出现重复id
-        exist_id = set()
-        # 默认先手玩家为id = 0的玩家
-        self.cur_player = 0
-        self.players_bonus = {}
-        self.players_exit = {}
-        self.copy_board = copy.deepcopy(self.board)
-        self.exits_pos_set = set()
-        # 重置玩家初始信息
 
-    def resets(self) -> State:
+    def reset(self) -> State:
         # 存储玩家id值，避免出现重复id
         exist_id = set()
         # 默认先手玩家为id = 0的玩家
@@ -424,7 +414,7 @@ if __name__ == "__main__":
     maze = Maze()
     actions = ["u", "d", "l", "r", "s"]
     for _ in range(10000):
-        maze.resets()
+        maze.reset()
         while True:
             state, reward, done = maze.step(actions[math.floor(random.random() * 5)])
             maze.render()
