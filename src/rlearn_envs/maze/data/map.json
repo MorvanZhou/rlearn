@@ -180,7 +180,7 @@
       "direction": 3,
       "team": 0,
       "order": 0,
-      "actionPoints": 100
+      "actionPoints": 300
     },
     {
       "id": 1,
@@ -192,24 +192,12 @@
       "direction": 3,
       "team": 1,
       "order": 0,
-      "actionPoints": 100
-    },
-    {
-      "id": 2,
-      "position": {
-        "x": 10,
-        "y": 1
-      },
-      "objectType": 0,
-      "direction": 3,
-      "team": 0,
-      "order": 0,
-      "actionPoints": 100
+      "actionPoints": 300
     }
   ],
   "exits": [
     {
-      "id": 3,
+      "id": 2,
       "position": {
         "x": 10,
         "y": 0
@@ -222,22 +210,9 @@
       ]
     },
     {
-      "id": 4,
+      "id": 3,
       "position": {
         "x": 10,
-        "y": 11
-      },
-      "objectType": 1,
-      "direction": 0,
-      "team": 1,
-      "allowTeam": [
-        1
-      ]
-    },
-    {
-      "id": 5,
-      "position": {
-        "x": 1,
         "y": 11
       },
       "objectType": 1,
@@ -256,7 +231,7 @@
         "x": 3,
         "y": 3
       },
-      "id": 6
+      "id": 4
     },
     {
       "isAim": false,
@@ -265,7 +240,7 @@
         "x": 3,
         "y": 8
       },
-      "id": 7
+      "id": 5
     },
     {
       "isAim": false,
@@ -274,7 +249,7 @@
         "x": 5,
         "y": 5
       },
-      "id": 8
+      "id": 6
     },
     {
       "isAim": false,
@@ -283,7 +258,7 @@
         "x": 8,
         "y": 3
       },
-      "id": 9
+      "id": 7
     },
     {
       "isAim": false,
@@ -300,7 +275,7 @@
         "x": 6,
         "y": 6
       },
-      "id": 10
+      "id": 9
     }
   ],
   "mapWeights": {
