@@ -10,14 +10,11 @@ def deploy_rl(load_ep):
         raw_s = env.reset()
         maze = pad_maze(raw_s["maze"])
         gp = get_graph(raw_s["maze"])
-        me = raw_s["players"][raw_s["my_id"]]
-        exit = raw_s["exits"][raw_s["my_id"]]
-        players = raw_s["players"]
-        gems = raw_s["gems"]
+        me, players, exit, items = raw_state_convert(raw_s)
         s = parse_state3(
             me=me,
             players=players,
-            gems=gems,
+            items=items,
             maze=maze
         )
 
@@ -38,12 +35,9 @@ def deploy_rl(load_ep):
                     nr, nc = int(next_n[0]), int(next_n[1])
                     action = move(nr, nc, me.row, me.col)
             raw_s, r, done = env.step(action)
-            me = raw_s["players"][raw_s["my_id"]]
-            exit = raw_s["exits"][raw_s["my_id"]]
-            players = raw_s["players"]
-            gems = raw_s["gems"]
+            me, players, exit, items = raw_state_convert(raw_s)
             ep_r += r
-            s = parse_state3(me=me, players=players, gems=gems, maze=maze)
+            s = parse_state3(me=me, players=players, items=items, maze=maze)
             if done:
                 break
 

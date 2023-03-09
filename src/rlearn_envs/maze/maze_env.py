@@ -43,14 +43,14 @@ class Player:
     Player 类，包含用户 id，行列坐标，当前朝向，体力
 
     Attributes:
-    id (int): 用户 id，全局唯一
-    row (int): 行坐标，从 0 开始计数
-    col (int): 列坐标，从 0 开始计数
-    direction (int): 当前朝向，为 ["U", "D", "L", "R"] 中的一种
-    energy (float): 当前体力
-    score (float): 当前得分
-    finished (bool): 是否已结束
-    item_count (dict[str, int]): 收集到的宝石和宝箱计数
+        id (int): 用户 id，全局唯一
+        row (int): 行坐标，从 0 开始计数
+        col (int): 列坐标，从 0 开始计数
+        direction (int): 当前朝向，为 ["U", "D", "L", "R"] 中的一种
+        energy (float): 当前体力
+        score (float): 当前得分
+        finished (bool): 是否已结束
+        item_count (dict[str, int]): 收集到的宝石和宝箱计数
     """
     id: int
     row: int
@@ -68,15 +68,15 @@ class Item:
     Item 类，可访问具体物品的行列坐标
 
     Attributes:
-    row (int): 行坐标，从 0 开始计数
-    col (int): 列坐标，从 0 开始计数
+        row (int): 行坐标，从 0 开始计数
+        col (int): 列坐标，从 0 开始计数
     """
     row: int
     col: int
 
 
 class Maze(EnvWrapper):
-    def __init__(self):
+    def __init__(self, screen_width=700, screen_height=700):
         super().__init__()
         game_dir = os.path.dirname(__file__)
         self._map_data = self.load(os.path.join(game_dir, "data", "map.json"))
@@ -110,12 +110,12 @@ class Maze(EnvWrapper):
             self.map_weights["move"] = map_weights.get("move", {"0": 1}).get("0", 1)
             self.map_weights["stay"] = map_weights.get("stay", {"0": 1}).get("0", 1)
         # 获取宝石信息
-        self.gem_type = {101: "pink_gem", 102: "red_gem", 103: "yellow_gem", 104: "purple_gem",
-                         105: "blue_gem", 201: "box"}
-        self.gem_info = self._map_data.get("items", [])
-        if len(self.gem_info) > 6:
+        self.items_type = {101: "red_gem", 102: "pink_gem", 103: "blue_gem", 104: "yellow_gem",
+                           105: "purple_gem", 201: "box"}
+        self.items_info = self._map_data.get("items", [])
+        if len(self.items_info) > 6:
             raise ValueError("items数量不能大于6个，请检查json文件中的items参数")
-        self.gem_dict: tp.Dict[str, tp.List[Item]] = dict()
+        self.items_dict: tp.Dict[str, tp.List[Item]] = dict()
         self.collections_config = self._map_data.get("collectionsConfig")
         self.effect_value = self.collections_config[0].get("effectValues", [10])[0]
         self.action_dict = {
@@ -131,8 +131,8 @@ class Maze(EnvWrapper):
         pygame.init()
         self.FPS_CLOCK = pygame.time.Clock()
         # 控制渲染中间部分的地图范围
-        self.screen_width = 1000
-        self.screen_height = 1000
+        self.screen_width = screen_width
+        self.screen_height = screen_height
         # 控制渲染两侧的用户信息范围
         self.screen_pad = 200
         self.screen_size = (self.screen_pad + self.screen_width + self.screen_pad, self.screen_height)
@@ -183,12 +183,14 @@ class Maze(EnvWrapper):
         self.player_param = [self.blue_player, self.green_player, self.yellow_player, self.red_player]
         self.player_queue = ["blue", "green", "yellow", "red"]
         self.exits_param = [self.blue_exits, self.green_exits, self.yellow_exits, self.red_exits]
-        self.gem_param = {"red_gem": self.red_gem,
-                          "blue_gem": self.blue_gem,
-                          "yellow_gem": self.yellow_gem,
-                          "pink_gem": self.pink_gem,
-                          "purple_gem": self.purple_gem,
-                          "box": self.box}
+        self.items_param = {
+            "red_gem": self.red_gem,
+            "blue_gem": self.blue_gem,
+            "yellow_gem": self.yellow_gem,
+            "pink_gem": self.pink_gem,
+            "purple_gem": self.purple_gem,
+            "box": self.box
+        }
 
         pygame.draw.lines(self.viewer, (0, 0, 0), True,
                           ((0, self.screen_size[1] / 2),
@@ -320,7 +322,7 @@ class Maze(EnvWrapper):
                 direction="d",
                 score=0,
                 finished=False,
-                item_count={t: 0 for t in self.gem_type.values()}
+                item_count={t: 0 for t in self.items_type.values()}
             )
             self.players_bonus[player_id] = 0
             self.players_exit[player_id] = Item(row=exit_position["x"], col=exit_position["y"])
@@ -328,24 +330,27 @@ class Maze(EnvWrapper):
             self.copy_board[player_position["x"]][player_position["y"]] = 1
             self.copy_board[exit_position["x"]][exit_position["y"]] = 1
 
-        for gem_id in range(len(self.gem_info)):
-            gem_info = self.gem_info[gem_id]
-            gem_type = self.gem_type[gem_info["objectType"]]
-            gem_position = gem_info.get("position", None)
-            if not gem_position:
+        for iid in range(len(self.items_info)):
+            iinfo = self.items_info[iid]
+            itype = self.items_type[iinfo["objectType"]]
+            iposition = iinfo.get("position", None)
+            if not iposition:
                 raise ValueError("玩家初始坐标值不能为空，请检查json文件中的players参数！")
-            gem_x = gem_position["x"]
-            gem_y = gem_position["y"]
-            if gem_x < 0 or gem_x >= self.row or gem_y < 0 or gem_y >= self.col:
+            ix = iposition["x"]
+            iy = iposition["y"]
+            if ix < 0 or ix >= self.row or iy < 0 or iy >= self.col:
                 raise ValueError("宝石/宝箱初始坐标值不在地图范围内，请检查json文件中的items参数！")
-            self.gem_dict[gem_type] = [Item(row=gem_x, col=gem_y)]
-            self.copy_board[gem_x][gem_y] = 1
-            gem_img = self.gem_param[gem_type]
+            self.items_dict[itype] = [Item(row=iposition["x"], col=iposition["y"])]
+            self.copy_board[iposition["x"]][iposition["y"]] = 1
+            self.items_dict[itype] = [Item(row=ix, col=iy)]
+            self.copy_board[ix][iy] = 1
+            gem_img = self.items_param[itype]
             gem_img = pygame.transform.scale(gem_img, (self.limit_distance_y, self.limit_distance_x))
-            gem_sprite = Sprite(gem_img, self.screen_pad + gem_y * self.limit_distance_y, gem_x * self.limit_distance_x)
+            gem_sprite = Sprite(gem_img, self.screen_pad + iy * self.limit_distance_y, ix * self.limit_distance_x)
             self.gems_list.append(gem_sprite)
             self.gems_group.add(gem_sprite)
             self.gems_group.draw(self.viewer)
+
         for index, player in enumerate(self.players_dict):
             p = self.players_dict[player]
             player_x = p.row
@@ -370,7 +375,7 @@ class Maze(EnvWrapper):
             self.exits_group.draw(self.viewer)
         return {
             "players": self.players_dict,
-            "gems": self.gem_dict,
+            "items": self.items_dict,
             "maze": self.board,
             "my_id": self.cur_player,
             "exits": self.players_exit,
@@ -394,6 +399,17 @@ class Maze(EnvWrapper):
         move_data = self.action_dict[action]
         target_x = player.row + move_data[0]
         target_y = player.col + move_data[1]
+
+        hit_wall_penalty = -0.05
+        try:
+            tile_type = self.board[target_x][target_y]
+        except IndexError:
+            reward += hit_wall_penalty  # run into wall
+        else:
+            # run into wall
+            if tile_type != 0:
+                reward += hit_wall_penalty
+
         if 0 <= target_x < self.row and 0 <= target_y < self.col and self.board[target_x][target_y] == 0:
             if sum(list(1 if p.row == player.row and p.col == player.col else 0 for p in
                         self.players_dict.values())) == 1:
@@ -401,16 +417,17 @@ class Maze(EnvWrapper):
             player.row = target_x
             player.col = target_y
             self.copy_board[target_x][target_y] = 1
-            for gem_name, gem_list in self.gem_dict.items():
-                gem = gem_list[0]
+            for i_name, i_list in self.items_dict.items():
+                gem = i_list[0]
                 gem_pos_x = gem.row
                 gem_pos_y = gem.col
                 if gem_pos_x == target_x and gem_pos_y == target_y:
-                    collected = gem_name
-                    player.item_count[gem_name] += 1
-                    if gem_name == "box":
+                    collected = i_name
+                    player.item_count[i_name] += 1
+                    if i_name == "box":
                         # todo
-                        print("this is box, do nothing!")
+                        pass
+                        # print("this is box, do nothing!")
                     else:
                         reward += 1
                         player.score += self.effect_value
@@ -440,13 +457,13 @@ class Maze(EnvWrapper):
 
         self.cur_player = (self.cur_player + 1) % self.players_num
         return {
-                   "players": self.players_dict,
-                   "gems": self.gem_dict,
-                   "maze": self.board,
-                   "my_id": self.cur_player,
-                   "exits": self.players_exit,
-                   "collected": collected,
-               }, reward, finish
+            "players": self.players_dict,
+            "items": self.items_dict,
+            "maze": self.board,
+            "my_id": self.cur_player,
+            "exits": self.players_exit,
+            "collected": collected,
+        }, reward, finish
 
     def render(self):
         self.players_group.empty()
@@ -515,8 +532,8 @@ class Maze(EnvWrapper):
             self.viewer.blit(background, (30 + basic_x, 315 + basic_y))
 
         self.gems_group.empty()
-        for index, gem in enumerate(self.gem_dict):
-            g = self.gem_dict[gem][0]
+        for index, gem in enumerate(self.items_dict):
+            g = self.items_dict[gem][0]
             gem_x = g.row
             gem_y = g.col
             self.gems_list[index].move(self.screen_pad + gem_y * self.limit_distance_y, gem_x * self.limit_distance_x)

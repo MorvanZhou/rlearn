@@ -10,7 +10,7 @@ from rlearn_envs.maze import Maze
 
 TMP_DIR = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "tmp", "superRlTest")
 ACTION_ORDER = ["u", "d", "l", "r"]
-PAD_SIZE = 2
+PAD_SIZE = 4
 ACTION_MOVE_DELTA = {
     "u": (-1, 0),
     "d": (1, 0),
@@ -83,7 +83,7 @@ def parse_state2(s: dict, maze: np.ndarray):
     return state, me["action_point"]
 
 
-def parse_state3(players, me, gems, maze: np.ndarray):
+def parse_state3(players, me, items, maze: np.ndarray):
     # input shape: (PAD_SIZE * 2 + 1) ** 2 - 1 + 8 + 10 + 5+16
     row, col = me.row + PAD_SIZE, me.col + PAD_SIZE
     # view: 5*5-1
@@ -91,9 +91,11 @@ def parse_state3(players, me, gems, maze: np.ndarray):
     front = (view.size - 1) // 2
     view = np.concatenate([view[:front + 1], view[front + 2:]], dtype=np.float32)
     # gd: [45, -45, 135, -135, 45~-45, 45~135, -45~-135, 135~180+-135~-180]
-    gd = np.zeros((8,), dtype=np.float32)
-    for k, g in gems.items():
+    gd = np.zeros((8 * 2,), dtype=np.float32)
+    for k, g in items.items():
         if not k.endswith("_gem"):
+            continue
+        if len(g) == 0:
             continue
         g = g[0]
         dy = -(g.row - me.row)
@@ -104,20 +106,28 @@ def parse_state3(players, me, gems, maze: np.ndarray):
 
         if math.isclose(radian, d45, abs_tol=1e-4):
             gd[0] += distance_co
+            gd[8] += 0.2
         elif math.isclose(radian, -d45, abs_tol=1e-4):
             gd[1] += distance_co
+            gd[9] += 0.2
         elif math.isclose(radian, d45 * 3, abs_tol=1e-4):
             gd[2] += distance_co
+            gd[10] += 0.2
         elif math.isclose(radian, -d45 * 3, abs_tol=1e-4):
             gd[3] += distance_co
+            gd[11] += 0.2
         elif abs(radian) < d45:
             gd[4] += distance_co
+            gd[12] += 0.2
         elif radian > d45 and radian < d45 * 3:
             gd[5] += distance_co
+            gd[13] += 0.2
         elif radian < -d45 and radian > -d45 * 3:
             gd[6] += distance_co
+            gd[14] += 0.2
         else:
             gd[7] += distance_co
+            gd[15] += 0.2
 
     # other players:
     ps = np.zeros((8,), dtype=np.float32)
@@ -222,36 +232,46 @@ def get_graph(maze):
 
 def build_trainer():
     trainer = rlearn.PPODiscreteTrainer()
-    input_size = (PAD_SIZE * 2 + 1) ** 2 - 1 + 8 + 8  # + 10 + 5
+    input_size = (PAD_SIZE * 2 + 1) ** 2 - 1 + 8 + 8 * 2  # + 10 + 5
     trainer.set_model_encoder(pi=keras.Sequential([
         keras.layers.InputLayer(input_size),
-        # keras.layers.Dense(256),
-        # keras.layers.ReLU(),
-        keras.layers.Dense(128),
+        keras.layers.Dense(512),
         keras.layers.ReLU(),
-        keras.layers.Dense(32),
+        keras.layers.Dense(256),
         keras.layers.ReLU(),
-    ]), critic=keras.Sequential([
-        keras.layers.InputLayer(input_size),
-        # keras.layers.Dense(256),
-        # keras.layers.ReLU(),
-        keras.layers.Dense(128),
+        keras.layers.Dense(64),
         keras.layers.ReLU(),
-        keras.layers.Dense(32),
-        keras.layers.ReLU(),
-    ]), action_num=4)
+    ]),
+        critic=keras.Sequential([
+            keras.layers.InputLayer(input_size),
+            keras.layers.Dense(512),
+            keras.layers.ReLU(),
+            keras.layers.Dense(256),
+            keras.layers.ReLU(),
+            keras.layers.Dense(64),
+            keras.layers.ReLU(),
+        ]),
+        action_num=4)
     trainer.set_action_transformer(
         rlearn.transformer.DiscreteAction(ACTION_ORDER)
     )
     trainer.set_params(
-        learning_rate=(1e-4, 1e-3),
+        learning_rate=(1e-5, 1e-4),
         batch_size=16,
-        gamma=0.9,
-        replace_step=800,
-        epsilon_decay=4e-5,
+        gamma=0.96,
+        replace_step=500,
+        epsilon_decay=2e-5,
     )
     trainer.set_replay_buffer(max_size=50000)
     return trainer
+
+
+def raw_state_convert(raw_s):
+    me = raw_s["players"][raw_s["my_id"]]
+    exit = raw_s["exits"][raw_s["my_id"]]
+    players = raw_s["players"]
+    items = raw_s["items"]
+    return me, players, exit, items
 
 
 def train_rl(load_ep=None):
@@ -264,14 +284,11 @@ def train_rl(load_ep=None):
         raw_s = env.reset()
         maze = pad_maze(raw_s["maze"])
         gp = get_graph(raw_s["maze"])
-        me = raw_s["players"][raw_s["my_id"]]
-        exit = raw_s["exits"][raw_s["my_id"]]
-        players = raw_s["players"]
-        gems = raw_s["gems"]
+        me, players, exit, items = raw_state_convert(raw_s)
         s = parse_state3(
             me=me,
             players=players,
-            gems=gems,
+            items=items,
             maze=maze
         )
 
@@ -296,12 +313,9 @@ def train_rl(load_ep=None):
                     nr, nc = int(next_n[0]), int(next_n[1])
                     action = move(nr, nc, me.row, me.col)
             raw_s, r, done = env.step(action)
-            me = raw_s["players"][raw_s["my_id"]]
-            exit = raw_s["exits"][raw_s["my_id"]]
-            players = raw_s["players"]
-            gems = raw_s["gems"]
+            me, players, exit, items = raw_state_convert(raw_s)
             ep_r += r
-            s_ = parse_state3(me=me, players=players, gems=gems, maze=maze)
+            s_ = parse_state3(me=me, players=players, items=items, maze=maze)
             if a != -1:
                 trainer.store_transition(s=s, a=a, r=r, s_=s_, done=done)
                 trainer.train_batch()
