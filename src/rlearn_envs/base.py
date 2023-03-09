@@ -1,261 +1,326 @@
-import json
+import logging
 import os
-import shutil
-import typing as tp
-import zipfile
 from abc import ABC, abstractmethod
+from typing import Union, List, Tuple
 
-import numpy as np
-import tensorflow as tf
-import tensorflow_probability as tfp
-from tensorflow import keras
+import pygame
 
-import rlearn.type
-from rlearn.transformer import BaseTransformer
+from rlearn_envs.utils import load_image
 
 
-def zip_ckpt_model(src_dir, dest_path=None):
-    if dest_path is None:
-        dest_path = src_dir + ".zip"
-    dest_dir = os.path.dirname(dest_path)
-    if dest_dir != "":
-        os.makedirs(dest_dir, exist_ok=True)
-    with zipfile.ZipFile(dest_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for filename in os.listdir(src_dir):
-            if ".ckpt." not in filename:
-                continue
-            filepath = os.path.join(src_dir, filename)
-            zipf.write(filepath, os.path.relpath(filepath, src_dir))
+class Character(pygame.sprite.Sprite):
+    image: pygame.Surface
+    rect: pygame.Rect
+    images: List[pygame.Surface]
+    _images: List[pygame.Surface]
+    _images_path: List[str]
 
+    def __init__(self, images, scale=1., alpha=1., angle=0, colorkey=None, frame_rate=3, frame_idx=0):
+        super().__init__()
+        if isinstance(images, str):
+            self._images_path = [images]
+        elif isinstance(images, list):
+            assert len(images) > 0, ValueError
+            assert isinstance(images[0], str), TypeError
+            assert len(images) > frame_idx, ValueError
+            self._images_path = images
+        else:
+            raise TypeError
 
-def zip_pb_model(src_dir, dest_path=None):
-    if dest_path is None:
-        dest_path = src_dir + ".zip"
-    dest_dir = os.path.dirname(dest_path)
-    if dest_dir != "":
-        os.makedirs(dest_dir, exist_ok=True)
-    with zipfile.ZipFile(dest_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for root, _, filenames in os.walk(src_dir):
-            for filename in filenames:
-                filepath = os.path.join(root, filename)
-                zipf.write(filepath, os.path.relpath(filepath, src_dir))
+        self._alpha = alpha
+        self._scale = scale
+        self._angle = angle
+        self._frame_rate = frame_rate
+        self._frame_idx = frame_idx
+        self.images = []
+        self._images = []
 
+        for i, path in enumerate(self._images_path):
+            _img = load_image(path, colorkey)
+            self._images.append(_img)
+            img, _ = self.set_scale(_img, scale)
+            img, rect = self.set_angle(img, angle)
+            self.images.append(img)
+            if i == 0:
+                self.rect = rect
 
-def unzip_model(path, dest_dir=None):
-    if not path.endswith(".zip"):
-        path += ".zip"
-    if dest_dir is None:
-        dest_dir = os.path.normpath(path).rsplit(".zip")[0]
-        if os.path.exists(dest_dir):
-            print(f"folder exist at {dest_dir}, use cached files")
-            return dest_dir
-        os.makedirs(dest_dir, exist_ok=True)
-    with zipfile.ZipFile(path, "r") as zip_ref:
-        zip_ref.extractall(dest_dir)
-    return dest_dir
+        self.image = self.images[frame_idx]
+        self.set_alpha(alpha)
 
+    def update(self):
+        raise NotImplemented
 
-class BaseRLModel(ABC):
-    def __init__(
-            self,
-            training: bool = True,
-    ):
-        self.training: bool = training
-        self.models: tp.Dict[str, keras.Model] = {}
-        self.action_transformer: tp.Optional[BaseTransformer] = None
+    def set_alpha(self, v):
+        assert (v <= 1.) and (v >= 0), ValueError
+        if self._alpha == v:
+            return
+        self._alpha = v
+        alpha = int(255 * v)
+        [img.set_alpha(alpha) for img in self.images]
 
-    def __call__(self, *args, **kwargs):
-        return self.predict(*args, **kwargs)
+    def set_scale(self, img: pygame.Surface, v):
+        assert v > 0, ValueError
+        self._scale = v
+        w, h = int(img.get_width() * v), int(img.get_height() * v)
+        center = img.get_rect().center
+        _img: pygame.Surface = pygame.transform.scale(img, (w, h))
+        _rect = _img.get_rect(center=center)
+        return _img, _rect
 
-    @classmethod
+    def set_scale_ip(self, v):
+        assert v > 0, ValueError
+        self._scale = v
+        w, h = int(self._images[0].get_width() * v), int(self._images[0].get_height() * v)
+        center = self._images[0].get_rect().center
+        for i, _img in enumerate(self._images):
+            self.images[i] = pygame.transform.scale(_img, (w, h))
+        self.image = self.images[self._frame_idx]
+        self.rect = self.image.get_rect(center=center)
+
+    def set_angle(self, img: pygame.Surface, v):
+        self._angle = v
+        center = img.get_rect().center
+        _img: pygame.Surface = pygame.transform.rotate(img, v)
+        _rect = _img.get_rect(center=center)
+        return _img, _rect
+
+    def set_angle_ip(self, v):
+        self._angle = v
+        center = self._images[0].get_rect().center
+        for i, _img in enumerate(self._images):
+            self.images[i] = pygame.transform.rotate(_img, v)
+        self.image = self.images[self._frame_idx]
+        self.rect = self.image.get_rect(center=center)
+
+    def set_rotozoom(self, img: pygame.Surface, angle, scale):
+        self._angle = angle
+        self._scale = scale
+        center = img.get_rect().center
+        _img = pygame.transform.rotozoom(img, angle, scale)
+        _rect = _img.get_rect(center=center)
+        return _img, _rect
+
+    def set_rotozoom_ip(self, angle, scale):
+        self._angle = angle
+        self._scale = scale
+        center = self._images[0].get_rect().center
+        for i, _img in enumerate(self._images):
+            self.images[i] = pygame.transform.rotozoom(_img, angle, scale)
+        self.image = self.images[self._frame_idx]
+        self.rect = self.image.get_rect(center=center)
+
+    def set_frame_rate(self, v):
+        assert v > 0, ValueError
+        self._frame_rate = v
+
+    def flip(self, img: pygame.Surface, x: bool, y: bool):
+        center = img.get_rect().center
+        _img = pygame.transform.flip(img, x, y)
+        _rect = _img.get_rect(center=center)
+        return _img, _rect
+
+    def flip_ip(self, x: bool, y: bool):
+        center = self._images[0].get_rect().center
+        for i, _img in enumerate(self._images):
+            self.images[i] = pygame.transform.flip(_img, x, y)
+        self.image = self.images[self._frame_idx]
+        self.rect = self.image.get_rect(center=center)
+
+    def copy(self):
+        a = Character(self._images_path, self.scale, self.alpha, self.angle)
+        return a
+
+    def next_frame(self):
+        self._frame_idx += 1
+        self._frame_idx = self._frame_idx % len(self.images)
+        self.image = self.images[self._frame_idx]
+
+    def set_frame(self, idx: int):
+        self._frame_idx = idx
+        self.image = self.images[self._frame_idx]
+
+    def collide_boundary(self, env) -> (bool, bool, bool, bool):
+        l, t, r, b = False, False, False, False
+        if self.rect.midleft[0] < 0:
+            l = True
+        if self.rect.midtop[1] < 0:
+            t = True
+        if self.rect.midright[0] > env.size[0]:
+            r = True
+        if self.rect.midbottom[1] > env.size[1]:
+            b = True
+
+        return l, t, r, b
+
     @property
-    @abstractmethod
-    def name(cls):
-        ...
+    def alpha(self):
+        return self._alpha
 
-    @classmethod
     @property
-    @abstractmethod
-    def is_discrete_action(cls):
-        ...
+    def scale(self):
+        return self._scale
 
-    @classmethod
     @property
-    @abstractmethod
-    def predicted_model_name(cls):
-        ...
+    def angle(self):
+        return self._angle
 
-    @classmethod
     @property
-    @abstractmethod
-    def is_on_policy(cls):
-        ...
+    def frame_rate(self):
+        return self._frame_rate
+
+
+class Background(pygame.sprite.Sprite):
+    image: pygame.Surface
+    rect: pygame.Rect
+
+    def __init__(self, img_path=None, size=None, fill=None, colorkey=None):
+        super().__init__()
+        self.path = img_path
+        if img_path is None:
+            assert type(size) in [tuple, list], TypeError
+            assert len(size) == 2, ValueError
+            self._image = pygame.Surface(size).convert()
+            if not fill:
+                self._image.fill((250, 250, 250, 1))
+            else:
+                self._image.fill(fill)
+            self._rect = pygame.Rect(0, 0, *size)
+        else:
+            self._image: pygame.Surface = load_image(img_path, colorkey)
+            self._rect = self._image.get_rect()
+        self.image, self.rect = self._image, self._rect
+
+    def update(self):
+        raise NotImplemented
+
+
+class Text:
+    def __init__(self, font_name=None, size=23, color=(10, 10, 10), antialias=True, topleft=(0, 0)):
+        if not pygame.font:
+            self._font = None
+            logging.warning("pygame.font is missing")
+        else:
+            self._font: pygame.font.Font = pygame.font.Font(font_name, size)
+        self._color = color
+        self._antialias = antialias
+        self._text = ""
+        self._topleft = topleft
+
+    def draw(self, screen: pygame.Surface):
+        if self._font is None:
+            return
+        t = self._font.render(self._text, self._antialias, self._color)
+        screen.blit(t, t.get_rect(topleft=self._topleft))
+
+    def set_text(self, text):
+        self._text = text
+
+    def set_topleft(self, x, y):
+        self._topleft = (x, y)
+
+    def set_color(self, c: Union[Tuple[int], List[int]]):
+        self._color = c
+
+
+class Texts:
+
+    def __init__(self, *texts: Text):
+        self._dict = {}
+        if len(texts) != 0:
+            self.add(*texts)
+
+    def add(self, *texts: Text):
+        for t in texts:
+            if t in self._dict:
+                raise KeyError
+            self._dict[t] = True
+
+    def remove(self, *texts: Text):
+        for t in texts:
+            if t in self._dict:
+                self._dict.pop(t)
+
+    def draw(self, screen: pygame.Surface):
+        for t in self._dict.keys():
+            t.draw(screen)
+
+
+class BaseEnv(ABC):
+    _screen: pygame.Surface
+    backgrounds: pygame.sprite.Group
+    _sprite_group: pygame.sprite.Sprite
+    characters: pygame.sprite.Group
+    texts: Texts
+    render_rect_list: List
+
+    size: Tuple
+    game_name: str
+    headless: bool
+    _show: bool = True
+
+    clock = pygame.time.Clock()
+    default_clock_tick = 30
+
+    def __init__(self, size: Union[List, Tuple], caption: str, mouse_visible: bool = False, headless=False):
+        assert size is not None
+        assert caption is not None
+
+        self._caption = caption
+        self._mouse_visible = mouse_visible
+        self._headless = headless
+
+        if headless:
+            os.environ['SDL_VIDEODRIVER'] = "dummy"
+        pygame.init()
+        pygame.mixer.quit()
+        pygame.display.set_caption(self._caption)
+        pygame.mouse.set_visible(self._mouse_visible)
+        self._screen = pygame.display.set_mode(size)
+
+        self.backgrounds = pygame.sprite.Group()
+        self.characters = pygame.sprite.Group()
+        self.texts = Texts()
+        self.render_rect_list = []
 
     @abstractmethod
-    def set_encoder(self, *args, **kwargs):
-        pass
+    def step(self, action=None):
+        raise NotImplementedError
 
     @abstractmethod
-    def set_model(self, *args, **kwargs):
-        pass
+    def reset(self):
+        raise NotImplementedError
 
-    @abstractmethod
-    def predict(self, x: np.ndarray):
-        pass
+    def render(self):
+        if not self._show:
+            return
+        self.backgrounds.draw(self._screen)
+        self.characters.draw(self._screen)
+        self.texts.draw(self._screen)
+        if len(self.render_rect_list) > 0:
+            pygame.display.update(self.render_rect_list)
+        else:
+            pygame.display.update()
+        self.clock.tick(self.default_clock_tick)
 
-    @abstractmethod
-    def disturbed_action(self, x, epsilon: float):
-        pass
+    def render_with_event_clear(self, rect_list=None):
+        if rect_list is not None:
+            self.render_rect_list = rect_list
+        self.render()
+        self.render_rect_list.clear()
+        pygame.event.clear()
 
-    def set_action_transformer(self, transformer: BaseTransformer):
-        self.action_transformer = transformer
+    def set_show(self, yes: bool = True):
+        self._show = yes
 
-    def map_action(self, action: rlearn.type.Action) -> rlearn.type.Action:
-        if self.action_transformer is None:
-            return action
-        return self.action_transformer.transform(action)
+    @property
+    def is_show(self):
+        return self._show
 
-    def mapped_predict(self, x: np.ndarray) -> rlearn.type.Action:
-        a = self.predict(x)
-        return self.map_action(a)
-
-    def save_actor_weights(self, path):
-        model_tmp_dir = path
-        if path.endswith(".zip"):
-            model_tmp_dir = path.rsplit(".zip")[0]
-        self.get_model_for_prediction().save_weights(
-            os.path.join(model_tmp_dir, f"{self.predicted_model_name}.ckpt")
-        )
-        zip_ckpt_model(model_tmp_dir)
-        shutil.rmtree(model_tmp_dir, ignore_errors=True)
-
-    def load_actor_weights(self, path):
-        if not path.endswith(".zip"):
-            path += ".zip"
-        unzipped_dir = unzip_model(path)
-        self.get_model_for_prediction().load_weights(
-            os.path.join(unzipped_dir, f"{self.predicted_model_name}.ckpt"))
-
-    def save_weights(self, path):
-        model_tmp_dir = path
-        if path.endswith(".zip"):
-            model_tmp_dir = path.rsplit(".zip")[0]
-        for k, v in self.models.items():
-            v.save_weights(os.path.join(model_tmp_dir, f"{k}.ckpt"))
-        zip_ckpt_model(model_tmp_dir)
-        shutil.rmtree(model_tmp_dir, ignore_errors=True)
-
-    def load_weights(self, path):
-        if not path.endswith(".zip"):
-            path += ".zip"
-        unzipped_dir = unzip_model(path)
-        self.load_actor_weights(path)
-        if self.training:
-            for k, v in self.models.items():
-                if k == self.predicted_model_name:
-                    continue
-                v.load_weights(os.path.join(unzipped_dir, f"{k}.ckpt"))
-        shutil.rmtree(unzipped_dir, ignore_errors=True)
-
-    def get_flat_weights(self) -> np.ndarray:
-        weights = []
-        keys = list(self.models.keys())
-        keys.sort()
-        for model_name in keys:
-            model = self.models[model_name]
-            if not self.training and model_name != self.predicted_model_name:
-                continue
-            for layer in model.layers:
-                if len(layer.weights) == 0:
-                    continue
-                layer_shape = []
-                for w in layer.get_weights():
-                    layer_shape.append(w.shape)
-                    weights.append(w.ravel())
-        return np.concatenate(weights, dtype=np.float32, axis=0)
-
-    def set_flat_weights(self, weights: np.ndarray):
-        assert weights.dtype == np.float32, TypeError(f"gradients must be np.float32, but got {weights.dtype}")
-        p = 0
-        keys = list(self.models.keys())
-        keys.sort()
-        for model_name in keys:
-            model = self.models[model_name]
-            if not self.training and model_name != self.predicted_model_name:
-                continue
-            for layer in model.layers:
-                if len(layer.weights) == 0:
-                    continue
-                layer_weights = []
-                for lw in layer.weights:
-                    p_ = p + np.prod(lw.shape)
-                    w = weights[p: p_]
-                    layer_weights.append(w.reshape(lw.shape))
-                    p = p_
-                layer.set_weights(layer_weights)
-        assert p == len(weights), ValueError("reshape size not right")
-
-    def save(self, path: str):
-        model_tmp_dir = path
-        if path.endswith(".zip"):
-            model_tmp_dir = path.rsplit(".zip")[0]
-        for k, v in self.models.items():
-            keras.models.save_model(v, os.path.join(model_tmp_dir, k), include_optimizer=False)
-        with open(os.path.join(model_tmp_dir, "info.json"), "w", encoding="utf-8") as f:
-            json.dump({
-                "modelName": self.name,
-            },
-                f, indent=2, ensure_ascii=False)
-        zip_pb_model(model_tmp_dir)
-        shutil.rmtree(model_tmp_dir, ignore_errors=True)
-
-    def load(self, path: str):
-        if not path.endswith(".zip"):
-            path += ".zip"
-        unzipped_dir = unzip_model(path)
-        self.models[self.predicted_model_name] = keras.models.load_model(
-            os.path.join(unzipped_dir, self.predicted_model_name),
-            compile=False,
-        )
-        if self.training:
-            for filename in os.listdir(unzipped_dir):
-                if filename.endswith(".json"):
-                    continue
-                if os.path.isfile(os.path.join(unzipped_dir, filename)):
-                    continue
-                model_name = filename.rsplit(".zip", 1)[0]
-                self.models[model_name] = keras.models.load_model(
-                    os.path.join(unzipped_dir, model_name),
-                    compile=False
-                )
-        shutil.rmtree(unzipped_dir, ignore_errors=True)
-
-    def get_model_for_prediction(self) -> keras.Model:
-        return self.models[self.predicted_model_name]
+    @property
+    def name(self):
+        return self._caption
 
     @staticmethod
-    def clone_model(model):
-        try:
-            new_model = keras.models.clone_model(model)
-        except ValueError:
-            new_model = type(model)()
-            new_model.set_weights(model.get_weights())
-        return new_model
-
-
-class BaseStochasticModel(BaseRLModel, ABC):
-    def __init__(self, training: bool = True):
-        super().__init__(training=training)
-
-    def dist(self, net: keras.Model, s: np.ndarray):
-        if self.is_discrete_action:
-            o = net(s)
-            return tfp.distributions.Categorical(logits=o)
-
-        o = net(s)
-        a_size = o.shape[1] // 2
-        loc, scale = tf.tanh(o[:, :a_size]), tf.nn.sigmoid(o[:, a_size:])
-        return tfp.distributions.MultivariateNormalDiag(loc=loc, scale_diag=scale)
-
-    def predict(self, s: np.ndarray):
-        s = np.expand_dims(s, axis=0)
+    def close():
+        pygame.display.quit()
+        pygame.quit()

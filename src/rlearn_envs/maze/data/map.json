@@ -180,7 +180,7 @@
       "direction": 3,
       "team": 0,
       "order": 0,
-      "actionPoints": 10000
+      "actionPoints": 100
     },
     {
       "id": 1,
@@ -192,7 +192,7 @@
       "direction": 3,
       "team": 1,
       "order": 0,
-      "actionPoints": 5000
+      "actionPoints": 100
     },
     {
       "id": 2,
@@ -204,7 +204,7 @@
       "direction": 3,
       "team": 0,
       "order": 0,
-      "actionPoints": 5000
+      "actionPoints": 100
     }
   ],
   "exits": [
