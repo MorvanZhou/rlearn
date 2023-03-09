@@ -209,65 +209,65 @@ class Maze(EnvWrapper):
                 bg_sprite = Sprite(map_img, self.screen_pad + y * self.limit_distance_y, x * self.limit_distance_x)
                 self.map_group.add(bg_sprite)
 
-        self.font_size = 20  # 展示用户信息的字体的尺寸
-        self.gem_width = 20  # 展示用户信息中宝石的尺寸
+        self.font_size = int(25 * self.screen_width / 1000)  # 展示用户信息的字体的尺寸
+        self.gem_width = 20 * self.screen_width / 1000  # 展示用户信息中宝石的尺寸
         self.font = pygame.font.SysFont("arial", self.font_size)
         # 配置render过程中不会变化的元素
         for index in range(self.players_num):
             # 根据用户的id获取用户信息的展示区域
-            basic_x = 20 + math.floor(index / 2) * 1200
-            basic_y = 20 + index % 2 * 500
+            basic_x = 20 * self.screen_width / 1000 + math.floor(index / 2) * (self.screen_width + self.screen_pad)
+            basic_y = 20 * self.screen_width / 1000 + index % 2 * self.screen_width / 2
             # 设置用户id的展示位置
             text = self.font.render(self.player_queue[index] + " id:", True, (0, 0, 0))
-            self.viewer.blit(text, (0 + basic_x, 0 + basic_y))
+            self.viewer.blit(text, (0 * self.screen_width / 1000 + basic_x, 0 * self.screen_width / 1000 + basic_y))
             text = self.font.render(str(index), True, (0, 0, 0))
-            self.viewer.blit(text, (120 + basic_x, 0 + basic_y))
+            self.viewer.blit(text, (120 * self.screen_width / 1000 + basic_x, 0 * self.screen_width / 1000 + basic_y))
             # 设置用户分数score的展示位置
             text = self.font.render(self.player_queue[index] + " score:", True, (0, 0, 0))
-            self.viewer.blit(text, (0 + basic_x, 35 + basic_y))
+            self.viewer.blit(text, (0 * self.screen_width / 1000 + basic_x, 40 * self.screen_width / 1000 + basic_y))
             text = self.font.render(str(0), True, (0, 0, 0))
-            self.viewer.blit(text, (120 + basic_x, 35 + basic_y))
+            self.viewer.blit(text, (120 * self.screen_width / 1000 + basic_x, 40 * self.screen_width / 1000 + basic_y))
             # 设置用户剩余活动点step的展示位置
             text = self.font.render(self.player_queue[index] + " step:", True, (0, 0, 0))
-            self.viewer.blit(text, (0 + basic_x, 70 + basic_y))
+            self.viewer.blit(text, (0 * self.screen_width / 1000 + basic_x, 80 * self.screen_width / 1000 + basic_y))
             text = self.font.render(str(0), True, (0, 0, 0))
-            self.viewer.blit(text, (120 + basic_x, 70 + basic_y))
+            self.viewer.blit(text, (120 * self.screen_width / 1000 + basic_x, 80 * self.screen_width / 1000 + basic_y))
 
             # 绘制玩家获取的宝石数量
             self.viewer.blit(pygame.transform.scale(self.pink_gem, (self.gem_width, self.gem_width)),
-                             (0 + basic_x, 105 + basic_y))
+                             (0 * self.screen_width / 1000 + basic_x, 125 * self.screen_width / 1000 + basic_y))
             text = self.font.render(" ×   " + str(0), True, (0, 0, 0))
-            self.viewer.blit(text, (30 + basic_x, 105 + basic_y))
+            self.viewer.blit(text, (30 * self.screen_width / 1000 + basic_x, 120 * self.screen_width / 1000 + basic_y))
 
             self.viewer.blit(pygame.transform.scale(self.red_gem, (self.gem_width, self.gem_width)),
-                             (0 + basic_x, 140 + basic_y))
+                             (0 * self.screen_width / 1000 + basic_x, 170 * self.screen_width / 1000 + basic_y))
             text = self.font.render(" ×   " + str(0), True, (0, 0, 0))
-            self.viewer.blit(text, (30 + basic_x, 140 + basic_y))
+            self.viewer.blit(text, (30 * self.screen_width / 1000 + basic_x, 165 * self.screen_width / 1000 + basic_y))
 
             self.viewer.blit(pygame.transform.scale(self.yellow_gem, (self.gem_width, self.gem_width)),
-                             (0 + basic_x, 175 + basic_y))
+                             (0 * self.screen_width / 1000 + basic_x, 215 * self.screen_width / 1000 + basic_y))
             text = self.font.render(" ×   " + str(0), True, (0, 0, 0))
-            self.viewer.blit(text, (30 + basic_x, 175 + basic_y))
+            self.viewer.blit(text, (30 * self.screen_width / 1000 + basic_x, 210 * self.screen_width / 1000 + basic_y))
 
             self.viewer.blit(pygame.transform.scale(self.blue_gem, (self.gem_width, self.gem_width)),
-                             (0 + basic_x, 210 + basic_y))
+                             (0 * self.screen_width / 1000 + basic_x, 260 * self.screen_width / 1000 + basic_y))
             text = self.font.render(" ×   " + str(0), True, (0, 0, 0))
-            self.viewer.blit(text, (30 + basic_x, 210 + basic_y))
+            self.viewer.blit(text, (30 * self.screen_width / 1000 + basic_x, 255 * self.screen_width / 1000 + basic_y))
 
             self.viewer.blit(pygame.transform.scale(self.purple_gem, (self.gem_width, self.gem_width)),
-                             (0 + basic_x, 245 + basic_y))
+                             (0 * self.screen_width / 1000 + basic_x, 305 * self.screen_width / 1000 + basic_y))
             text = self.font.render(" ×   " + str(0), True, (0, 0, 0))
-            self.viewer.blit(text, (30 + basic_x, 245 + basic_y))
+            self.viewer.blit(text, (30 * self.screen_width / 1000 + basic_x, 300 * self.screen_width / 1000 + basic_y))
 
             self.viewer.blit(pygame.transform.scale(self.box, (self.gem_width, self.gem_width)),
-                             (0 + basic_x, 280 + basic_y))
+                             (0 * self.screen_width / 1000 + basic_x, 350 * self.screen_width / 1000 + basic_y))
             text = self.font.render(" ×   " + str(0), True, (0, 0, 0))
-            self.viewer.blit(text, (30 + basic_x, 280 + basic_y))
+            self.viewer.blit(text, (30 * self.screen_width / 1000 + basic_x, 345 * self.screen_width / 1000 + basic_y))
 
             self.viewer.blit(pygame.transform.scale(self.bonus, (self.gem_width, self.gem_width)),
-                             (0 + basic_x, 315 + basic_y))
+                             (0 * self.screen_width / 1000 + basic_x, 395 * self.screen_width / 1000 + basic_y))
             text = self.font.render(" ×   " + str(0), True, (0, 0, 0))
-            self.viewer.blit(text, (30 + basic_x, 315 + basic_y))
+            self.viewer.blit(text, (30 * self.screen_width / 1000 + basic_x, 390 * self.screen_width / 1000 + basic_y))
 
         # 用于保存用户sprite的group
         self.players_group = pygame.sprite.Group()
@@ -468,8 +468,8 @@ class Maze(EnvWrapper):
     def render(self):
         self.players_group.empty()
         for index, player in enumerate(self.players_dict):
-            basic_x = 20 + math.floor(index / 2) * 1200
-            basic_y = 20 + index % 2 * 500
+            basic_x = 20 * self.screen_width / 1000 + math.floor(index / 2) * (self.screen_width + self.screen_pad)
+            basic_y = 20 * self.screen_width / 1000 + index % 2 * self.screen_width / 2
             p = self.players_dict[player]
             player_x = p.row
             player_y = p.col
@@ -478,58 +478,58 @@ class Maze(EnvWrapper):
             self.players_group.add(self.players_list[index])
 
             text = self.font.render(str(p.score), True, (0, 0, 0))
-            background = pygame.Surface((60, 30))
+            background = pygame.Surface((100 * self.screen_width / 1000, 50 * self.screen_width / 1000))
             background.fill(pygame.Color("white"))
             background.blit(text, (0, 0))
-            self.viewer.blit(background, (120 + basic_x, 35 + basic_y))
+            self.viewer.blit(background, (120 * self.screen_width / 1000 + basic_x, 40 * self.screen_width / 1000 + basic_y))
 
             text = self.font.render(str(p.energy), True, (0, 0, 0))
-            background = pygame.Surface((60, 30))
+            background = pygame.Surface((100 * self.screen_width / 1000, 50 * self.screen_width / 1000))
             background.fill(pygame.Color("white"))
             background.blit(text, (0, 0))
-            self.viewer.blit(background, (120 + basic_x, 70 + basic_y))
+            self.viewer.blit(background, (120 * self.screen_width / 1000 + basic_x, 80 * self.screen_width / 1000 + basic_y))
 
             text = self.font.render(" ×   " + str(p.item_count["pink_gem"]), True, (0, 0, 0))
-            background = pygame.Surface((60, 30))
+            background = pygame.Surface((100 * self.screen_width / 1000, 50 * self.screen_width / 1000))
             background.fill(pygame.Color("white"))
             background.blit(text, (0, 0))
-            self.viewer.blit(background, (30 + basic_x, 105 + basic_y))
+            self.viewer.blit(background, (30 * self.screen_width / 1000 + basic_x, 120 * self.screen_width / 1000 + basic_y))
 
             text = self.font.render(" ×   " + str(p.item_count["red_gem"]), True, (0, 0, 0))
-            background = pygame.Surface((60, 30))
+            background = pygame.Surface((100 * self.screen_width / 1000, 50 * self.screen_width / 1000))
             background.fill(pygame.Color("white"))
             background.blit(text, (0, 0))
-            self.viewer.blit(background, (30 + basic_x, 140 + basic_y))
+            self.viewer.blit(background, (30 * self.screen_width / 1000 + basic_x, 165 * self.screen_width / 1000 + basic_y))
 
             text = self.font.render(" ×   " + str(p.item_count["yellow_gem"]), True, (0, 0, 0))
-            background = pygame.Surface((60, 30))
+            background = pygame.Surface((100 * self.screen_width / 1000, 50 * self.screen_width / 1000))
             background.fill(pygame.Color("white"))
             background.blit(text, (0, 0))
-            self.viewer.blit(background, (30 + basic_x, 175 + basic_y))
+            self.viewer.blit(background, (30 * self.screen_width / 1000 + basic_x, 210 * self.screen_width / 1000 + basic_y))
 
             text = self.font.render(" ×   " + str(p.item_count["blue_gem"]), True, (0, 0, 0))
-            background = pygame.Surface((60, 30))
+            background = pygame.Surface((100 * self.screen_width / 1000, 50 * self.screen_width / 1000))
             background.fill(pygame.Color("white"))
             background.blit(text, (0, 0))
-            self.viewer.blit(background, (30 + basic_x, 210 + basic_y))
+            self.viewer.blit(background, (30 * self.screen_width / 1000 + basic_x, 255 * self.screen_width / 1000 + basic_y))
 
             text = self.font.render(" ×   " + str(p.item_count["purple_gem"]), True, (0, 0, 0))
-            background = pygame.Surface((60, 30))
+            background = pygame.Surface((100 * self.screen_width / 1000, 50 * self.screen_width / 1000))
             background.fill(pygame.Color("white"))
             background.blit(text, (0, 0))
-            self.viewer.blit(background, (30 + basic_x, 245 + basic_y))
+            self.viewer.blit(background, (30 * self.screen_width / 1000 + basic_x, 300 * self.screen_width / 1000 + basic_y))
 
             text = self.font.render(" ×   " + str(p.item_count["box"]), True, (0, 0, 0))
-            background = pygame.Surface((60, 30))
+            background = pygame.Surface((100 * self.screen_width / 1000, 50 * self.screen_width / 1000))
             background.fill(pygame.Color("white"))
             background.blit(text, (0, 0))
-            self.viewer.blit(background, (30 + basic_x, 280 + basic_y))
+            self.viewer.blit(background, (30 * self.screen_width / 1000 + basic_x, 345 * self.screen_width / 1000 + basic_y))
 
             text = self.font.render(" ×   " + str(self.players_bonus[player]), True, (0, 0, 0))
-            background = pygame.Surface((60, 30))
+            background = pygame.Surface((100 * self.screen_width / 1000, 50 * self.screen_width / 1000))
             background.fill(pygame.Color("white"))
             background.blit(text, (0, 0))
-            self.viewer.blit(background, (30 + basic_x, 315 + basic_y))
+            self.viewer.blit(background, (30 * self.screen_width / 1000 + basic_x, 390 * self.screen_width / 1000 + basic_y))
 
         self.gems_group.empty()
         for index, gem in enumerate(self.items_dict):
