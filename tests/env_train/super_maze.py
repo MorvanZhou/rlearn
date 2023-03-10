@@ -4,10 +4,12 @@ import rlearn.supervised
 from rl_maze import *
 
 
-def short_gem(graph, gems, me):
+def short_gem(graph, items, me):
     short_path = None
     short_count = 9999999
-    for v in gems.values():
+    for k, v in items.items():
+        if not k.endswith("_gem"):
+            continue
         g = v[0]
         path = pathfind.find(graph=graph, start=f'{me.row},{me.col}', end=f"{g.row},{g.col}")
         if short_path is None:
@@ -30,11 +32,11 @@ def get_data():
         me = raw_s["players"][raw_s["my_id"]]
         exit = raw_s["exits"][raw_s["my_id"]]
         players = raw_s["players"]
-        gems = raw_s["gems"]
+        items = raw_s["items"]
         s = parse_state3(
             me=me,
             players=players,
-            gems=gems,
+            items=items,
             maze=maze
         )
 
@@ -42,7 +44,7 @@ def get_data():
             # env.render()
 
             e_path = pathfind.find(graph=gp, start=f'{me.row},{me.col}', end=f"{exit.row},{exit.col}")
-            g_path = short_gem(graph=gp, gems=raw_s["gems"], me=me)
+            g_path = short_gem(graph=gp, items=items, me=me)
             if len(e_path) - 1 > me.energy:
                 next_n = e_path[1].split(",")
             else:
@@ -57,11 +59,11 @@ def get_data():
             me = raw_s["players"][raw_s["my_id"]]
             exit = raw_s["exits"][raw_s["my_id"]]
             players = raw_s["players"]
-            gems = raw_s["gems"]
+            items = raw_s["items"]
             s = parse_state3(
                 me=me,
                 players=players,
-                gems=gems,
+                items=items,
                 maze=maze)
             if done:
                 break
@@ -95,11 +97,11 @@ def predict(load_ep):
         me = raw_s["players"][raw_s["my_id"]]
         exit = raw_s["exits"][raw_s["my_id"]]
         players = raw_s["players"]
-        gems = raw_s["gems"]
+        items = raw_s["items"]
         s = parse_state3(
             me=me,
             players=players,
-            gems=gems,
+            items=items,
             maze=maze
         )
         ep_r = 0
@@ -122,12 +124,12 @@ def predict(load_ep):
             me = raw_s["players"][raw_s["my_id"]]
             exit = raw_s["exits"][raw_s["my_id"]]
             players = raw_s["players"]
-            gems = raw_s["gems"]
+            items = raw_s["items"]
             ep_r += r
             s = parse_state3(
                 me=me,
                 players=players,
-                gems=gems,
+                items=items,
                 maze=maze)
             if done:
                 break
