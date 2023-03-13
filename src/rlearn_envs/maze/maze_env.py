@@ -135,13 +135,19 @@ class Maze(EnvWrapper):
         self.screen_height = screen_height
         # 控制渲染两侧的用户信息范围
         self.screen_pad = 200
-        self.screen_size = (self.screen_pad + self.screen_width + self.screen_pad, self.screen_height)
+        self.screen_size = (self.screen_pad + self.screen_height + self.screen_pad, self.screen_width)
         # 根据地图行列数动态控制地图中每个网格的尺寸
         self.limit_distance_x = int(self.screen_size[1] / self.row)
         self.limit_distance_y = int(self.screen_size[1] / self.col)
+        if self.limit_distance_x > self.limit_distance_y:
+            self.limit_distance_x = self.limit_distance_y
+        if self.limit_distance_y > self.limit_distance_x:
+            self.limit_distance_y = self.limit_distance_x
         # 处理动态获取每个网格尺寸时不能整除导致的细微尺寸偏差
         self.screen_size = (self.screen_pad +
-                            self.limit_distance_x * self.row + self.screen_pad, self.limit_distance_y * self.col)
+                            self.limit_distance_x * self.col + self.screen_pad, self.limit_distance_y * self.row)
+        self.screen_width = self.screen_size[1]
+        self.screen_height = self.screen_size[0]
         self.viewer = pygame.display.set_mode(self.screen_size, 0, 32)
         pygame.display.set_caption("maze")
         self.viewer.fill(pygame.Color("white"))
