@@ -125,7 +125,7 @@ class Maze(EnvWrapper):
             "r": [0, 1],
             "s": [0, 0]
         }
-        self.exits_pos_set = set()
+        self.exits_pos_set = list()
 
         # 用于render渲染
         pygame.init()
@@ -288,7 +288,7 @@ class Maze(EnvWrapper):
         self.players_bonus = {}
         self.players_exit = {}
         self.copy_board = copy.deepcopy(self.board)
-        self.exits_pos_set = set()
+        self.exits_pos_set = list()
         # 重置玩家初始信息
         for player, exits in zip(self.players_info, self.exits_info):
             player_id = player.get("id", None)
@@ -313,7 +313,8 @@ class Maze(EnvWrapper):
             if exit_position["x"] < 0 or exit_position["x"] >= self.row or exit_position["y"] < 0 or \
                     exit_position["y"] >= self.col:
                 raise ValueError("终点初始坐标值不在地图范围内，请检查json文件中的exits参数！")
-            self.exits_pos_set.add((exit_position["x"], exit_position["y"]))
+            self.exits_pos_set.append([exit_position["x"], exit_position["y"]])
+
             self.players_dict[player_id] = Player(
                 id=player_id,
                 row=player_position["x"],
@@ -430,7 +431,7 @@ class Maze(EnvWrapper):
                     else:
                         reward = 1
                         player.score += self.effect_value
-                    while self.copy_board[item_x][item_y] != 0 or (item_x, item_y) in self.exits_pos_set:
+                    while self.copy_board[item_x][item_y] != 0 or [item_x, item_y] in self.exits_pos_set:
                         item_x = math.floor(random.random() * self.row)
                         item_y = math.floor(random.random() * self.col)
                     self.copy_board[item_x][item_y] = 1
