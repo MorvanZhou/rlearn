@@ -1,170 +1,17 @@
 {
   "mapData": [
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
       1,
       1,
       1,
       1,
       1,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      1,
-      0,
-      0,
-      0,
-      1,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      1,
-      0,
-      0,
-      0,
-      1,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      1,
-      1,
-      0,
-      1,
-      1,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      1,
-      1,
-      1,
-      1,
-      0,
-      1,
-      1,
-      1,
-      1,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
       1,
       1,
       1,
       1,
       1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
       1,
-      1,
-      1,
-      1,
-      1,
-      null
-    ],
-    [
-      1,
-      1,
-      0,
-      0,
-      1,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      1,
-      0,
-      0,
       1,
       1
     ],
@@ -181,20 +28,26 @@
       0,
       0,
       0,
+      1
+    ],
+    [
+      1,
       0,
+      1,
+      1,
+      1,
+      1,
       0,
-      0,
-      0,
-      0,
+      1,
+      1,
+      1,
+      1,
       0,
       1
     ],
     [
       1,
-      1,
       0,
-      0,
-      1,
       1,
       0,
       0,
@@ -204,18 +57,12 @@
       0,
       0,
       1,
-      1,
       0,
-      0,
-      1,
       1
     ],
     [
-      null,
       1,
-      1,
-      1,
-      1,
+      0,
       1,
       0,
       0,
@@ -225,18 +72,12 @@
       0,
       0,
       1,
-      1,
-      1,
-      1,
-      1,
-      null
+      0,
+      1
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
+      1,
+      0,
       1,
       0,
       0,
@@ -246,136 +87,88 @@
       0,
       0,
       1,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      1
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      1,
-      1,
-      1,
       1,
       0,
       1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
       1,
-      1,
-      1,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      1
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      1,
       1,
       0,
       1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
       1,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      1
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      1,
-      0,
       0,
       0,
       1,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      1,
-      0,
-      0,
-      0,
-      1,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
       1,
       1,
       1,
       1,
       1,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
     ]
   ],
   "players": [
     {
       "id": 0,
       "position": {
-        "x": 8,
-        "y": 3
+        "x": 1,
+        "y": 1
       },
       "objectType": 0,
       "direction": 3,
-      "team": 0,
+      "team": 1,
       "order": 0,
       "actionPoints": 300
     },
     {
       "id": 1,
       "position": {
-        "x": 8,
-        "y": 15
+        "x": 1,
+        "y": 11
       },
       "objectType": 0,
       "direction": 3,
@@ -389,20 +182,7 @@
       "id": 2,
       "position": {
         "x": 8,
-        "y": 1
-      },
-      "objectType": 1,
-      "direction": 0,
-      "team": 0,
-      "allowTeam": [
-        0
-      ]
-    },
-    {
-      "id": 3,
-      "position": {
-        "x": 8,
-        "y": 17
+        "y": 12
       },
       "objectType": 1,
       "direction": 0,
@@ -410,56 +190,69 @@
       "allowTeam": [
         1
       ]
+    },
+    {
+      "id": 3,
+      "position": {
+        "x": 8,
+        "y": 0
+      },
+      "objectType": 1,
+      "direction": 0,
+      "team": 0,
+      "allowTeam": [
+        0
+      ]
     }
   ],
   "items": [
     {
       "isAim": false,
-      "objectType": 101,
-      "position": {
-        "x": 2,
-        "y": 9
-      },
-      "id": 4
-    },
-    {
-      "isAim": false,
-      "objectType": 102,
-      "position": {
-        "x": 14,
-        "y": 9
-      },
-      "id": 5
-    },
-    {
-      "isAim": false,
       "objectType": 103,
       "position": {
         "x": 8,
-        "y": 8
+        "y": 3
       },
-      "id": 6
+      "id": 4
     },
     {
       "isAim": false,
       "objectType": 104,
       "position": {
         "x": 8,
-        "y": 10
+        "y": 9
       },
-      "id": 7
+      "id": 5
     },
     {
       "isAim": false,
       "objectType": 105,
       "position": {
-        "x": 9,
-        "y": 9
+        "x": 3,
+        "y": 6
+      },
+      "id": 6
+    },
+    {
+      "objectType": 201,
+      "position": {
+        "x": 4,
+        "y": 6
+      },
+      "id": 7
+    },
+    {
+      "isAim": false,
+      "objectType": 101,
+      "position": {
+        "x": 7,
+        "y": 3
       },
       "id": 8
     },
     {
-      "objectType": 201,
+      "isAim": false,
+      "objectType": 102,
       "position": {
         "x": 7,
         "y": 9
@@ -480,24 +273,6 @@
   "collectionsConfig": [
     {
       "items": [
-        {
-          "presetPositions": [],
-          "objectType": 101,
-          "effectType": 1,
-          "effectValues": [
-            1
-          ],
-          "counts": 0
-        },
-        {
-          "presetPositions": [],
-          "objectType": 102,
-          "effectType": 1,
-          "effectValues": [
-            1
-          ],
-          "counts": 0
-        },
         {
           "presetPositions": [],
           "objectType": 103,
@@ -524,6 +299,24 @@
             1
           ],
           "counts": 0
+        },
+        {
+          "presetPositions": [],
+          "objectType": 101,
+          "effectType": 1,
+          "effectValues": [
+            1
+          ],
+          "counts": null
+        },
+        {
+          "presetPositions": [],
+          "objectType": 102,
+          "effectType": 1,
+          "effectValues": [
+            1
+          ],
+          "counts": null
         }
       ],
       "effectType": 1,
@@ -567,21 +360,21 @@
             10,
             1,
             5,
-            101,
-            102,
             103,
             104,
             105,
+            101,
+            102,
             -9999,
             4,
             10,
             -1,
             5,
-            101,
-            102,
             103,
             104,
             105,
+            101,
+            102,
             -9999
           ]
         }

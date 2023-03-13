@@ -8,14 +8,14 @@ def deploy_rl(load_ep):
 
     for ep in range(300):
         raw_s = env.reset()
-        maze = pad_maze(raw_s["maze"])
+        # maze = pad_maze(raw_s["maze"])
         gp = get_graph(raw_s["maze"])
         me, players, exit, items = raw_state_convert(raw_s)
-        s = parse_state3(
+        s = parse_state4(
             me=me,
             players=players,
             items=items,
-            maze=maze
+            graph=gp
         )
 
         ep_r = 0
@@ -37,7 +37,12 @@ def deploy_rl(load_ep):
             raw_s, r, done = env.step(action)
             me, players, exit, items = raw_state_convert(raw_s)
             ep_r += r
-            s = parse_state3(me=me, players=players, items=items, maze=maze)
+            s = parse_state4(
+                me=me,
+                players=players,
+                items=items,
+                graph=gp
+            )
             if done:
                 break
 

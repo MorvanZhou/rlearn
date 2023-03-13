@@ -230,7 +230,7 @@ def parse_state4(me, players, items, graph):
     d = np.zeros((4, len(item2id)), dtype=np.float32)
     for k, i in items.items():
         item = i[0]
-        path = pathfind.find(graph=graph, start=f'{me.row},{me.col}', end=f"{item.row},{item.col}")
+        path = pathfind.find(graph=graph, start=f'{me.row},{me.col}', end=f"{item.row},{item.col}", method="bfs")
         next_n = path[1].split(",")
         nr, nc = int(next_n[0]), int(next_n[1])
         action = move(nr, nc, me.row, me.col)
@@ -247,7 +247,7 @@ def parse_state4(me, players, items, graph):
     for k, p in players.items():
         if k == me.id:
             continue
-        path = pathfind.find(graph=graph, start=f'{me.row},{me.col}', end=f"{p.row},{p.col}")
+        path = pathfind.find(graph=graph, start=f'{me.row},{me.col}', end=f"{p.row},{p.col}", method="bfs")
         if len(path) == 0:
             continue
         next_n = path[1].split(",")
@@ -292,6 +292,7 @@ def get_graph(maze):
     _COST_MAP = {
         1: pathfind.INFINITY,
         0: 1,
+        None: pathfind.INFINITY,
     }
     matrix = []
     for row in maze:
@@ -313,7 +314,7 @@ def build_trainer():
             keras.layers.InputLayer(input_size),
             # keras.layers.Dense(256),
             # keras.layers.ReLU(),
-            keras.layers.Dense(128),
+            keras.layers.Dense(256),
             keras.layers.ReLU(),
             keras.layers.Dense(64),
             keras.layers.ReLU(),
@@ -322,7 +323,7 @@ def build_trainer():
             keras.layers.InputLayer(input_size),
             # keras.layers.Dense(256),
             # keras.layers.ReLU(),
-            keras.layers.Dense(128),
+            keras.layers.Dense(256),
             keras.layers.ReLU(),
             keras.layers.Dense(64),
             keras.layers.ReLU(),
@@ -335,8 +336,8 @@ def build_trainer():
         learning_rate=(1e-4, 1e-4),
         batch_size=32,
         gamma=0.9,
-        replace_step=200,
-        epsilon_decay=2e-4,
+        replace_step=300,
+        epsilon_decay=1e-4,
     )
     trainer.set_replay_buffer(max_size=50000)
     return trainer
@@ -356,9 +357,9 @@ def train_rl(load_ep=None):
     if load_ep is not None:
         rlearn.supervised.set_actor_weights(trainer, os.path.join(TMP_DIR, "superModel", f"ep-{load_ep}.zip"))
 
-    for ep in range(300):
+    for ep in range(400):
         raw_s = env.reset()
-        maze = pad_maze(raw_s["maze"])
+        # maze = pad_maze(raw_s["maze"])
         gp = get_graph(raw_s["maze"])
         me, players, exit, items = raw_state_convert(raw_s)
         # s = parse_state3(
@@ -378,7 +379,7 @@ def train_rl(load_ep=None):
         while True:
             if args.display:
                 env.render()
-            path = pathfind.find(graph=gp, start=f'{me.row},{me.col}', end=f"{exit.row},{exit.col}")
+            path = pathfind.find(graph=gp, start=f'{me.row},{me.col}', end=f"{exit.row},{exit.col}", method="bfs")
             a = -1
             if len(path) - 1 <= me.energy:
                 a = trainer.predict(s)
