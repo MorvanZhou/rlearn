@@ -1,8 +1,12 @@
-from rl_maze import *
+import os
+
+import pathfind
+
+from rl_maze import Maze, build_trainer, TMP_DIR, get_graph, raw_state_convert, parse_state4, ACTION_MOVE_DELTA, move
 
 
-def deploy_rl(load_ep):
-    env = Maze()
+def deploy_rl(load_ep, map_file):
+    env = Maze(map_file=map_file)
     trainer = build_trainer()
     trainer.load_model_weights(os.path.join(TMP_DIR, "rlModel", f"ep-{load_ep}.zip"))
 
@@ -56,5 +60,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--load", type=int)
+    parser.add_argument("-m", "--map", type=str, default="map.json")
     args = parser.parse_args()
-    deploy_rl(load_ep=args.load)
+    deploy_rl(load_ep=args.load, map_file=args.map)

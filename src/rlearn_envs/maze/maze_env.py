@@ -11,7 +11,7 @@ import numpy as np
 import pygame
 
 from rlearn import EnvWrapper, State
-from rlearn_envs.maze import load
+from rlearn_envs.maze import load, agents
 
 
 def game_over():
@@ -76,10 +76,10 @@ class Item:
 
 
 class Maze(EnvWrapper):
-    def __init__(self, screen_width=500, screen_height=500):
+    def __init__(self, map_file: str = "map.json", screen_width=500, screen_height=500):
         super().__init__()
         game_dir = os.path.dirname(__file__)
-        self._map_data = self.load(os.path.join(game_dir, "data", "map.json"))
+        self._map_data = self.load(os.path.join(game_dir, "data", map_file))
         self.board = np.array(self._map_data.get("mapData", [[]]))
         self.copy_board = copy.deepcopy(self.board)
         self.row = self.board.shape[0]
@@ -98,8 +98,6 @@ class Maze(EnvWrapper):
             raise ValueError("终点数量和玩家数量不匹配，请检查json文件中的exits参数！")
         self.players_dict: tp.Dict[int, Player] = dict()
         self.exits_dict = dict()
-        # 设定先手玩家
-        self.cur_player = 0
         # 获取移动损耗
         self.map_weights = dict()
         map_weights = self._map_data.get("mapWeights", None)
@@ -117,7 +115,7 @@ class Maze(EnvWrapper):
             raise ValueError("items数量不能大于6个，请检查json文件中的items参数")
         self.items_dict: tp.Dict[str, tp.List[Item]] = dict()
         self.collections_config = self._map_data.get("collectionsConfig")
-        self.effect_value = self.collections_config[0].get("effectValues", [10])[0]
+        self.effect_value = self.collections_config[0].get("effectValues", [5])[0]
         self.action_dict = {
             "u": [-1, 0],
             "d": [1, 0],
@@ -186,9 +184,9 @@ class Maze(EnvWrapper):
         # 地图背景网格元素
         self.map_param = [self.bush, self.grass, self.tree, self.stone,
                           self.water1, self.water2, self.wood1, self.wood2]
-        self.player_param = [self.blue_player, self.green_player, self.yellow_player, self.red_player]
-        self.player_queue = ["blue", "green", "yellow", "red"]
-        self.exits_param = [self.blue_exits, self.green_exits, self.yellow_exits, self.red_exits]
+        self.player_param = [self.red_player, self.blue_player, self.green_player, self.yellow_player]
+        self.player_queue = ["red", "blue", "green", "yellow"]
+        self.exits_param = [self.red_exits, self.blue_exits, self.green_exits, self.yellow_exits, ]
         self.items_param = {
             "red_gem": self.red_gem,
             "blue_gem": self.blue_gem,
@@ -290,7 +288,7 @@ class Maze(EnvWrapper):
         # 存储玩家id值，避免出现重复id
         exist_id = set()
         # 默认先手玩家为id = 0的玩家
-        self.cur_player = 0
+        self.me_id = 0
         self.players_bonus = {}
         self.players_exit = {}
         self.copy_board = copy.deepcopy(self.board)
@@ -381,19 +379,18 @@ class Maze(EnvWrapper):
             self.exits_group.add(exits_sprite)
             self.exits_group.draw(self.viewer)
         return {
+            "me": self.players_dict[self.me_id],
             "players": self.players_dict,
             "items": self.items_dict,
             "maze": self.board,
-            "my_id": self.cur_player,
-            "exits": self.players_exit,
+            "exits": self.players_exit[self.me_id],
             "collected": "",
         }
 
-    def step(self, action):
-        action = action.lower()
+    def move_player(self, player, action):
         finish = False
         collected = ""
-        player = self.players_dict[self.cur_player]
+        action = action.lower()
         # 当玩家行动点为零且游戏未结束（部分用户吃到宝箱可能导致行动点增加或减少），用户的action设置为"s"且该行为不会影响用户的行动点数值
         if action == "s":
             de = self.map_weights["stay"]
@@ -431,43 +428,56 @@ class Maze(EnvWrapper):
                     collected = i_name
                     player.item_count[i_name] += 1
                     if i_name == "box":
-                        # todo
-                        pass
-                        # print("this is box, do nothing!")
+                        reward = 1
                     else:
                         reward = 1
+                        player.score += 1
+
+                    has_new_set = 0
+                    for k, v in player.item_count.items():
+                        if not k.endswith("_gem"):
+                            continue
+                        if v > self.players_bonus[player.id]:
+                            has_new_set += 1
+                    if has_new_set == 5:
+                        reward += 5
                         player.score += self.effect_value
+                        self.players_bonus[player.id] += 1
+
                     while self.copy_board[item_x][item_y] != 0 or [item_x, item_y] in self.exits_pos_set:
                         item_x = math.floor(random.random() * self.row)
                         item_y = math.floor(random.random() * self.col)
                     self.copy_board[item_x][item_y] = 1
                     item.row = item_x
                     item.col = item_y
-                    if len(list(
-                            filter(lambda x:
-                                   player.item_count[x] <=
-                                   self.players_bonus[player.id],
-                                   [k for k in player.item_count.keys() if k.endswith("_gem")]))) == 0:
-                        self.players_bonus[player.id] += 1
-                        reward += 5
-                        player.score += 5
+
                     break
         if len(list(filter(
                 lambda x: self.players_dict[x].energy > self.map_weights["stay"] and self.players_dict[x].energy >
-                    self.map_weights["move"], self.players_dict))) == 0:
+                          self.map_weights["move"], self.players_dict))) == 0:
             finish = True
             reward = -1
         elif all([(p.row == self.players_exit[p.id].row) and (p.col == self.players_exit[p.id].col)
                   for p in self.players_dict.values()]):
             finish = True
 
-        self.cur_player = (self.cur_player + 1) % self.players_num
+        return finish, reward, collected
+
+    def step(self, action):
+        me = self.players_dict[self.me_id]
+        finish, reward, collected = self.move_player(me, action)
+        gp = agents.get_graph(self.board)
+        for i in range(1, self.players_num):
+            p = self.players_dict[i]
+            a = agents.go(me=p, exit=self.players_exit[i], items=self.items_dict, graph=gp)
+            self.move_player(p, a)
+
         return {
+            "me": self.players_dict[self.me_id],
             "players": self.players_dict,
             "items": self.items_dict,
             "maze": self.board,
-            "my_id": self.cur_player,
-            "exits": self.players_exit,
+            "exits": self.players_exit[self.me_id],
             "collected": collected,
         }, reward, finish
 

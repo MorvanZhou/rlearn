@@ -11,14 +11,7 @@ from rlearn_envs.maze import Maze
 
 TMP_DIR = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "tmp", "superRlTest")
 
-logging.basicConfig(
-    filename=os.path.join(TMP_DIR, "rl.log"),
-    filemode="w",
-    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-    datefmt='%H:%M:%S',
-    level=logging.DEBUG
-)
-logger = logging.getLogger()
+
 
 ACTION_ORDER = ["u", "d", "l", "r"]
 PAD_SIZE = 2
@@ -263,7 +256,18 @@ def parse_state4(me, players, items, graph):
             d[2][iid] += lp
         elif action == "r":
             d[3][iid] += lp
-    return d.ravel()
+
+    keys = list(me.item_count.keys())
+    keys.remove("box")
+    item_collection = np.zeros((len(keys),), dtype=np.float32)
+    keys.sort()
+    min_g_n = 0
+    for mgk in keys:
+        if me.item_count[mgk] < min_g_n:
+            min_g_n = me.item_count[mgk]
+    for n in range(len(keys)):
+        item_collection[n] = me.item_count[keys[n]] - min_g_n
+    return np.concatenate((d.ravel(), item_collection), axis=0, dtype=np.float32)
 
 
 def pad_maze(maze):
@@ -307,23 +311,23 @@ def get_graph(maze):
 def build_trainer():
     trainer = rlearn.PPODiscreteTrainer()
     # input_size = (PAD_SIZE * 2 + 1) ** 2 - 1 + 8 + 8 * 2 + 4  # + 10 + 5
-    input_size = 4 * 7
+    input_size = 4 * 7 + 5
 
     trainer.set_model_encoder(
         pi=keras.Sequential([
             keras.layers.InputLayer(input_size),
-            # keras.layers.Dense(256),
+            # keras.layers.Dense(512),
             # keras.layers.ReLU(),
-            keras.layers.Dense(256),
+            keras.layers.Dense(128),
             keras.layers.ReLU(),
             keras.layers.Dense(64),
             keras.layers.ReLU(),
         ]),
         critic=keras.Sequential([
             keras.layers.InputLayer(input_size),
-            # keras.layers.Dense(256),
+            # keras.layers.Dense(512),
             # keras.layers.ReLU(),
-            keras.layers.Dense(256),
+            keras.layers.Dense(128),
             keras.layers.ReLU(),
             keras.layers.Dense(64),
             keras.layers.ReLU(),
@@ -333,41 +337,35 @@ def build_trainer():
         rlearn.transformer.DiscreteAction(ACTION_ORDER)
     )
     trainer.set_params(
-        learning_rate=(1e-4, 1e-4),
+        learning_rate=(1e-3, 1e-3),
         batch_size=32,
         gamma=0.9,
-        replace_step=300,
+        replace_step=100,
         epsilon_decay=1e-4,
+        min_epsilon=0.,
     )
-    trainer.set_replay_buffer(max_size=50000)
+    trainer.set_replay_buffer(max_size=10000)
     return trainer
 
 
 def raw_state_convert(raw_s):
-    me = raw_s["players"][raw_s["my_id"]]
-    exit = raw_s["exits"][raw_s["my_id"]]
+    me = raw_s["me"]
+    exit = raw_s["exits"]
     players = raw_s["players"]
     items = raw_s["items"]
     return me, players, exit, items
 
 
-def train_rl(load_ep=None):
-    env = Maze()
+def train_rl(load_ep=None, map_file="map.json"):
+    env = Maze(map_file=map_file)
     trainer = build_trainer()
     if load_ep is not None:
         rlearn.supervised.set_actor_weights(trainer, os.path.join(TMP_DIR, "superModel", f"ep-{load_ep}.zip"))
 
-    for ep in range(400):
+    for ep in range(500):
         raw_s = env.reset()
-        # maze = pad_maze(raw_s["maze"])
         gp = get_graph(raw_s["maze"])
         me, players, exit, items = raw_state_convert(raw_s)
-        # s = parse_state3(
-        #     me=me,
-        #     players=players,
-        #     items=items,
-        #     maze=maze
-        # )
         s = parse_state4(
             me=me,
             players=players,
@@ -381,7 +379,7 @@ def train_rl(load_ep=None):
                 env.render()
             path = pathfind.find(graph=gp, start=f'{me.row},{me.col}', end=f"{exit.row},{exit.col}", method="bfs")
             a = -1
-            if len(path) - 1 <= me.energy:
+            if len(path) < me.energy:
                 a = trainer.predict(s)
                 action = trainer.map_action(a)
                 dr, dc = ACTION_MOVE_DELTA[action]
@@ -397,7 +395,6 @@ def train_rl(load_ep=None):
             raw_s, r, done = env.step(action)
             me, players, exit, items = raw_state_convert(raw_s)
             ep_r += r
-            # s_ = parse_state3(me=me, players=players, items=items, maze=maze)
             s_ = parse_state4(
                 me=me,
                 players=players,
@@ -406,7 +403,7 @@ def train_rl(load_ep=None):
             )
             if a != -1:
                 trainer.store_transition(s=s, a=a, r=r, s_=s_, done=done)
-                trainer.train_batch()
+
             s = s_
             if done:
                 break
@@ -421,13 +418,23 @@ def train_rl(load_ep=None):
 if __name__ == "__main__":
     import argparse
 
+    logging.basicConfig(
+        filename=os.path.join(TMP_DIR, "rl.log"),
+        filemode="w",
+        format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+        datefmt='%H:%M:%S',
+        level=logging.DEBUG
+    )
+    logger = logging.getLogger()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--display", action="store_true")
     parser.add_argument("-l", "--load", type=int, default=0)
+    parser.add_argument("-m", "--map", type=str, default="map.json")
     args = parser.parse_args()
     if not args.display:
         os.environ['SDL_VIDEODRIVER'] = "dummy"
     if args.load == 0:
-        train_rl(load_ep=None)
+        train_rl(load_ep=None, map_file=args.map)
     else:
-        train_rl(load_ep=args.load)
+        train_rl(load_ep=args.load, map_file=args.map)
