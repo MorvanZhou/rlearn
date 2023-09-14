@@ -11,6 +11,23 @@
   - TD3: Twin Delayed DDPG
   - SAC: Soft Actor Critic
 
+# Install
+
+```shell
+pip install rlearn
+```
+
+```shell
+git clone https://git.woa.com/TIPE/rlearn.git
+cd rlearn
+
+# apple m1 silicon should use conda command:
+conda install -c apple tensorflow-deps
+########
+
+python3 setup.py install
+```
+
 # Usage
 
 ## Classical way
@@ -263,15 +280,3 @@ m.set_encoder(encoder=keras.Sequential([
 action = m.predict(np.random.random((2,)))
 ```
 
-# Install
-
-```shell
-git clone https://git.woa.com/TIPE/rlearn.git
-cd rlearn
-
-# apple m1 silicon should use conda command:
-conda install -c apple tensorflow-deps
-########
-
-python3 setup.py install
-```
